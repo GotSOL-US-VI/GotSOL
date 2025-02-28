@@ -1,11 +1,20 @@
 use anchor_lang::prelude::*;
-// use anchor_spl::associated_token::AssociatedToken;
 use std::str::FromStr;
 
 // use anchor_spl::{
 //     associated_token::AssociatedToken,
 //     token::{Mint, Token, TokenAccount}
 // };
+
+use anchor_spl::{
+    associated_token::AssociatedToken,
+    token_interface::{
+        Mint,
+        TokenAccount,
+        TokenInterface,
+        // TransferChecked, close_account, transfer_checked, CloseAccount,
+    },
+};
 
 use crate::constants::*;
 use crate::state::*;
@@ -18,6 +27,25 @@ pub struct InitGlobal<'info> {
 
     #[account(init, payer = house, seeds = [b"global"], space = Global::LEN, bump)]
     pub global: Account<'info, Global>,
+
+    // main net USDC mint account
+    // #[account(constraint = usdc_mint.key() == Pubkey::from_str(USDC_MINT).unwrap())]
+    // pub usdc_mint: InterfaceAccount<'info, Mint>,
+
+    // devnet USDC mint account
+    // #[account(constraint = usdc_mint.key() == Pubkey::from_str(USDC_DEVNET_MINT).unwrap())]
+    pub usdc_mint: InterfaceAccount<'info, Mint>,
+
+    #[account(
+        init,
+        payer = house,
+        associated_token::mint = usdc_mint,
+        associated_token::authority = house
+    )]
+    pub house_usdc_ata: InterfaceAccount<'info, TokenAccount>,
+
+    pub associated_token_program: Program<'info, AssociatedToken>,
+    pub token_program: Interface<'info, TokenInterface>,
 
     pub system_program: Program<'info, System>,
 }
@@ -41,21 +69,24 @@ pub struct CreateMerchant<'info> {
     #[account(init, payer = owner, seeds = [b"merchant", name.as_str().as_bytes(), owner.key().as_ref()], space = Merchant::LEN, bump)]
     pub merchant: Account<'info, Merchant>,
 
+    // main net USDC mint account
     // #[account(constraint = usdc_mint.key() == Pubkey::from_str(USDC_MINT).unwrap())]
-    // pub usdc_mint: Account<'info, Mint>,
-    /// CHECK: This is the USDC mint
-    // pub usdc_mint: Account<'info, Mint>,
+    // pub usdc_mint: InterfaceAccount<'info, Mint>,
 
-    // #[account(
-    //     init,
-    //     payer = owner,
-    //     associated_token::mint = usdc_mint,
-    //     associated_token::authority = merchant
-    // )]
-    // pub merchant_usdc_ata: Account<'info, TokenAccount>,
+    // devnet USDC mint account
+    // #[account(constraint = usdc_mint.key() == Pubkey::from_str(USDC_DEVNET_MINT).unwrap())]
+    pub usdc_mint: InterfaceAccount<'info, Mint>,
 
-    // pub token_program: Program<'info, Token>,
-    // pub associated_token_program: Program<'info, AssociatedToken>,
+    #[account(
+        init,
+        payer = owner,
+        associated_token::mint = usdc_mint,
+        associated_token::authority = merchant
+    )]
+    pub merchant_usdc_ata: InterfaceAccount<'info, TokenAccount>,
+
+    pub associated_token_program: Program<'info, AssociatedToken>,
+    pub token_program: Interface<'info, TokenInterface>,
     pub system_program: Program<'info, System>,
 }
 
@@ -69,3 +100,5 @@ impl<'info> CreateMerchant<'info> {
         Ok(())
     }
 }
+
+

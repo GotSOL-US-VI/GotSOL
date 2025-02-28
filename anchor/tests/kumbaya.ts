@@ -17,6 +17,16 @@ describe("kumbaya", () => {
   // The expected house public key from the program
   const HOUSE = new PublicKey("Hth4EBxLWJSoRWj7raCKoniuzcvXt8MUFgGKty3B66ih");
 
+  // main net USDC address
+  const USDC_MINT = new PublicKey(
+    "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+  );
+
+  // devnet USDC address
+  const USDC_DEVNET_MINT = new PublicKey(
+    "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"
+  );
+
   // Create a mock USDC mint authority
   const mockUsdcMintAuthority = web3.Keypair.generate();
   let mockUsdcMint: PublicKey;
@@ -47,6 +57,12 @@ describe("kumbaya", () => {
   });
 
   it("should initialize global state", async () => {
+    // Get the merchant's USDC ATA address (TO MOCK USDC ON LOCALNET)
+    const [houseMockUsdcAta] = web3.PublicKey.findProgramAddressSync(
+      [HOUSE.toBuffer(), TOKEN_PROGRAM_ID.toBuffer(), mockUsdcMint.toBuffer()],
+      anchor.utils.token.ASSOCIATED_PROGRAM_ID
+    );
+
     try {
       // Execute the init_global instruction
       const tx = await program.methods
@@ -54,6 +70,10 @@ describe("kumbaya", () => {
         .accountsPartial({
           house: HOUSE,
           global,
+          usdcMint: mockUsdcMint,
+          houseUsdcAta: houseMockUsdcAta,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
           systemProgram: anchor.web3.SystemProgram.programId,
         })
         .rpc();
@@ -77,6 +97,7 @@ describe("kumbaya", () => {
         "HOUSE address in global state account: ",
         globalAccount.house.toString()
       );
+      console.log("HOUSE USDC ATA Address: ", houseMockUsdcAta.toString())
     } catch (error) {
       console.error("Error:", error);
       throw error;
@@ -97,8 +118,18 @@ describe("kumbaya", () => {
       program.programId
     );
 
-    // Get the merchant's USDC ATA address
-    const [merchantUsdcAta] = web3.PublicKey.findProgramAddressSync(
+    // Get the merchant's USDC ATA address (FOR DEVNET FOR TESTING)
+    // const [merchantUsdcAta] = web3.PublicKey.findProgramAddressSync(
+    //   [
+    //     merchant.toBuffer(),
+    //     TOKEN_PROGRAM_ID.toBuffer(),
+    //     USDC_DEVNET_MINT.toBuffer(),
+    //   ],
+    //   anchor.utils.token.ASSOCIATED_PROGRAM_ID
+    // );
+
+    // Get the merchant's USDC ATA address (TO MOCK USDC ON LOCALNET)
+    const [merchantMockUsdcAta] = web3.PublicKey.findProgramAddressSync(
       [
         merchant.toBuffer(),
         TOKEN_PROGRAM_ID.toBuffer(),
@@ -120,10 +151,10 @@ describe("kumbaya", () => {
         .accountsPartial({
           owner: owner.publicKey,
           merchant,
-          // usdcMint: mockUsdcMint,
-          // merchantUsdcAta,
-          // tokenProgram: TOKEN_PROGRAM_ID,
-          // associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
+          usdcMint: mockUsdcMint,
+          merchantUsdcAta: merchantMockUsdcAta,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
           systemProgram: anchor.web3.SystemProgram.programId,
         })
         .signers([owner])
