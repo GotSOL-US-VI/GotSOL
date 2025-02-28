@@ -6,7 +6,7 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-basic = "6z68wfurCMYkZG51s1Et9BJEd9nJGUusjHXNt4dGbNNF"
+kumbaya = "RKAxBK5mBxYta3FUfMLHafMj8xakd8PLsH3PXFa773r"
 
 [registry]
 url = "https://api.apr.dev"
@@ -16,7 +16,7 @@ cluster = "Localnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]
-test = "../node_modules/.bin/jest --preset ts-jest"
+test = "npx ts-mocha -p ./tsconfig.json -t 1000000 tests/kumbaya.ts"
 
 [test]
 startup_wait = 5000
