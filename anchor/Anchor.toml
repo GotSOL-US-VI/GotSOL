@@ -9,14 +9,20 @@ skip-lint = false
 kumbaya = "RKAxBK5mBxYta3FUfMLHafMj8xakd8PLsH3PXFa773r"
 
 [registry]
-url = "https://api.apr.dev"
+# url = "http://localhost:8899"
+# url = "https://api.mainnet-beta.solana.com"
+url = "https://api.devnet.solana.com" 
 
 [provider]
-cluster = "Localnet"
+# cluster = "mainnet"
+cluster = "devnet"
+# cluster = "localnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]
 test = "npx ts-mocha -p ./tsconfig.json -t 1000000 tests/kumbaya.ts"
+init-global-devnet = "npx ts-mocha -p ./tsconfig.json -t 1000000 tests/init-global-devnet.ts"
+init-global-mainnet = "npx ts-mocha -p ./tsconfig.json -t 1000000 tests/init-global-mainnet.ts"
 
 [test]
 startup_wait = 5000
