@@ -14,9 +14,11 @@ impl Global {
 pub struct Merchant {
     pub owner: Pubkey,
     pub entity_name: String,
+    pub total_withdrawn: u64,
+    pub total_refunded: u64,
     pub merchant_bump: u8,
 }
 
 impl Merchant {
-    pub const LEN: usize = 8 + 32 + 24 + 1;
+    pub const LEN: usize = 8 + 32 + 24 + 8 + 8 + 1;
 }

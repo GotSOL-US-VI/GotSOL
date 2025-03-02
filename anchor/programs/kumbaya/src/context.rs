@@ -89,6 +89,8 @@ impl<'info> CreateMerchant<'info> {
         self.merchant.set_inner(Merchant {
             owner: self.owner.key(),
             entity_name: trimmed_name,
+            total_withdrawn: 0,
+            total_refunded: 0,
             merchant_bump: bumps.merchant,
         });
         Ok(())
@@ -189,6 +191,8 @@ impl<'info> WithdrawUSDC<'info> {
             house_amount,
             self.usdc_mint.decimals,
         )?;
+
+        self.merchant.total_withdrawn += amount;
 
         Ok(())
     }
