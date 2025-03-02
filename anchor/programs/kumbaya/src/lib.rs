@@ -24,4 +24,9 @@ pub mod kumbaya {
         ctx.accounts.init(&ctx.bumps, name)?;
         Ok(())
     }
+
+    pub fn withdraw_usdc(ctx: Context<WithdrawUSDC>, amount: u64) -> Result<()> {
+        ctx.accounts.withdraw(amount)?;
+        Ok(())
+    }
 }
