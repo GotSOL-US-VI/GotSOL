@@ -99,7 +99,7 @@ export default function DashboardFeature() {
             {merchants.length > 0 ? (
               <div className="grid gap-6 md:grid-cols-2">
                 {merchants.map((merchant) => (
-                  <div key={merchant.publicKey.toString()} className="card bg-base-100 shadow-xl">
+                  <div key={merchant.publicKey.toString()} className="card bg-base-300 shadow-xl">
                     <div className="card-body">
                       <h2 className="card-title">{merchant.account.entityName}</h2>
                       <p className="text-sm text-gray-500">
@@ -107,10 +107,13 @@ export default function DashboardFeature() {
                       </p>
                       <div className="card-actions justify-end">
                         <button
-                          className="btn btn-primary"
+                          className="btn btn-primary btn-lg gap-2"
                           onClick={() => window.location.href = `/merchant/dashboard/${merchant.publicKey.toString()}`}
                         >
-                          Manage
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                          Enter Point of Sale
                         </button>
                       </div>
                     </div>
@@ -121,7 +124,7 @@ export default function DashboardFeature() {
 
             {showCreateForm ? (
               <div className="card bg-base-300 shadow-xl">
-                <div className="card-body">
+                <div className="card-body bg-base-300">
                   {/* <h2 className="card-title mb-4">Create New Merchant!</h2> */}
                   {program && <CreateMerchant program={program} onSuccess={handleMerchantCreated} />}
                 </div>

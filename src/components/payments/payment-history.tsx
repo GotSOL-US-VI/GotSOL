@@ -1,0 +1,257 @@
+'use client';
+
+import { useConnection } from '@solana/wallet-adapter-react';
+import { PublicKey, ParsedTransactionWithMeta, ConfirmedSignatureInfo } from '@solana/web3.js';
+import { getAssociatedTokenAddress } from '@solana/spl-token';
+import { useEffect, useState, useCallback, useRef } from 'react';
+import { Program, Idl } from '@coral-xyz/anchor';
+
+interface PaymentHistoryProps {
+    program: Program<Idl>;
+    merchantPubkey: PublicKey;
+    isDevnet?: boolean;
+}
+
+interface Payment {
+    signature: string;
+    amount: number;
+    memo: string | null;
+    timestamp: number;
+}
+
+const BATCH_SIZE = 10;
+
+export function PaymentHistory({ program, merchantPubkey, isDevnet = true }: PaymentHistoryProps) {
+    const { connection } = useConnection();
+    const [payments, setPayments] = useState<Payment[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [hasInitialData, setHasInitialData] = useState(false);
+    const [isLoadingMore, setIsLoadingMore] = useState(false);
+    const [hasMore, setHasMore] = useState(true);
+    const lastSignatureRef = useRef<string | null>(null);
+    const retryTimeoutRef = useRef<NodeJS.Timeout>();
+
+    // Helper function to add payments while preventing duplicates and maintaining order
+    const addPayments = (newPayments: Payment[]) => {
+        setPayments(prev => {
+            const uniquePayments = newPayments.filter(
+                newPayment => !prev.some(p => p.signature === newPayment.signature)
+            );
+            const updated = [...prev, ...uniquePayments];
+            return updated.sort((a, b) => b.timestamp - a.timestamp);
+        });
+    };
+
+    // Helper function to fetch transaction with retry
+    const fetchTransactionWithRetry = async (signature: string, retries = 3, delay = 1000): Promise<ParsedTransactionWithMeta | null> => {
+        for (let i = 0; i < retries; i++) {
+            try {
+                const tx = await connection.getParsedTransaction(signature);
+                return tx;
+            } catch (err) {
+                if (i === retries - 1) return null;
+                await new Promise(resolve => setTimeout(resolve, delay));
+            }
+        }
+        return null;
+    };
+
+    // Function to process transactions into payments
+    const processTransactions = (transactions: (ParsedTransactionWithMeta | null)[]): Payment[] => {
+        return transactions
+            .filter((tx): tx is ParsedTransactionWithMeta => tx !== null)
+            .map(tx => {
+                const preBalances = tx.meta?.preTokenBalances?.[0]?.uiTokenAmount.uiAmount || 0;
+                const postBalances = tx.meta?.postTokenBalances?.[0]?.uiTokenAmount.uiAmount || 0;
+                const amount = postBalances - preBalances;
+                
+                return {
+                    signature: tx.transaction.signatures[0],
+                    amount,
+                    memo: tx.meta?.logMessages?.find(log => log.includes('Program log: Memo'))?.split(': ')[2] || null,
+                    timestamp: tx.blockTime ? tx.blockTime * 1000 : Date.now(),
+                };
+            })
+            .filter(payment => payment.amount > 0);
+    };
+
+    // Function to fetch payments
+    const fetchPayments = async (beforeSignature?: string): Promise<Payment[]> => {
+        try {
+            const merchantUsdcAta = await getAssociatedTokenAddress(
+                isDevnet
+                    ? new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU')
+                    : new PublicKey('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'),
+                merchantPubkey,
+                true
+            );
+
+            const signatures = await connection.getSignaturesForAddress(
+                merchantUsdcAta,
+                { limit: BATCH_SIZE, before: beforeSignature }
+            );
+
+            if (signatures.length === 0) {
+                setHasMore(false);
+                return [];
+            }
+
+            const transactions = await Promise.all(
+                signatures.map(sig => fetchTransactionWithRetry(sig.signature))
+            );
+
+            const newPayments = processTransactions(transactions);
+            lastSignatureRef.current = signatures[signatures.length - 1].signature;
+
+            return newPayments;
+        } catch (err) {
+            console.error('Error fetching payments:', err);
+            return [];
+        }
+    };
+
+    // Function to load more payments
+    const loadMore = useCallback(async () => {
+        if (isLoadingMore || !hasMore) return;
+
+        setIsLoadingMore(true);
+        const newPayments = await fetchPayments(lastSignatureRef.current || undefined);
+        
+        if (newPayments.length > 0) {
+            addPayments(newPayments);
+        } else {
+            setHasMore(false);
+        }
+        
+        setIsLoadingMore(false);
+    }, [isLoadingMore, hasMore]);
+
+    useEffect(() => {
+        let subscriptionId: number | undefined;
+        let isSubscribed = true;
+
+        const setupPaymentListener = async () => {
+            try {
+                const merchantUsdcAta = await getAssociatedTokenAddress(
+                    isDevnet
+                        ? new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU')
+                        : new PublicKey('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'),
+                    merchantPubkey,
+                    true
+                );
+
+                // Initial fetch
+                const initialPayments = await fetchPayments();
+                if (isSubscribed) {
+                    addPayments(initialPayments);
+                    setHasInitialData(true);
+                    setIsLoading(false);
+                }
+
+                // Set up real-time listener
+                subscriptionId = connection.onAccountChange(
+                    merchantUsdcAta,
+                    async (accountInfo) => {
+                        try {
+                            const recentSigs = await connection.getSignaturesForAddress(merchantUsdcAta, { limit: 1 });
+                            if (recentSigs.length === 0) return;
+
+                            const recentTx = await fetchTransactionWithRetry(recentSigs[0].signature);
+                            if (!recentTx || !recentTx.meta) return;
+
+                            const newPayments = processTransactions([recentTx]);
+                            if (newPayments.length > 0 && isSubscribed) {
+                                addPayments(newPayments);
+                            }
+                        } catch (err) {
+                            console.error('Error processing new transaction:', err);
+                        }
+                    },
+                    'confirmed'
+                );
+            } catch (err) {
+                if (isSubscribed) {
+                    retryTimeoutRef.current = setTimeout(setupPaymentListener, 2000);
+                }
+            }
+        };
+
+        setupPaymentListener();
+
+        return () => {
+            isSubscribed = false;
+            if (subscriptionId) {
+                connection.removeAccountChangeListener(subscriptionId);
+            }
+            if (retryTimeoutRef.current) {
+                clearTimeout(retryTimeoutRef.current);
+            }
+        };
+    }, [connection, merchantPubkey, isDevnet]);
+
+    return (
+        <div className="bg-base-200 rounded-lg p-4 max-h-[600px] overflow-y-auto">
+            <h2 className="text-xl font-bold mb-4">Payment History</h2>
+            
+            {!hasInitialData || isLoading ? (
+                <div className="flex justify-center">
+                    <span className="loading loading-spinner loading-lg"></span>
+                </div>
+            ) : payments.length === 0 ? (
+                <div className="text-center text-gray-500">
+                    No payments received yet
+                </div>
+            ) : (
+                <div className="space-y-2">
+                    {payments.map((payment) => (
+                        <div
+                            key={payment.signature}
+                            className="bg-base-100 p-3 rounded-lg shadow-sm"
+                        >
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <div className="font-semibold">${payment.amount.toFixed(6)} USDC</div>
+                                    {payment.memo && (
+                                        <div className="text-sm text-gray-500">{payment.memo}</div>
+                                    )}
+                                </div>
+                                <div className="text-right">
+                                    <div className="text-sm text-gray-500">
+                                        {new Date(payment.timestamp).toLocaleDateString('en-US', {
+                                            weekday: 'long',
+                                            year: 'numeric',
+                                            month: 'long',
+                                            day: 'numeric'
+                                        })}
+                                    </div>
+                                    <div className="text-sm text-gray-500">
+                                        {new Date(payment.timestamp).toLocaleTimeString('en-US', {
+                                            hour: '2-digit',
+                                            minute: '2-digit',
+                                            second: '2-digit'
+                                        })}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                    {hasMore && (
+                        <div className="pt-4 text-center">
+                            <button 
+                                className="btn btn-outline btn-wide"
+                                onClick={loadMore}
+                                disabled={isLoadingMore}
+                            >
+                                {isLoadingMore ? (
+                                    <span className="loading loading-spinner loading-sm"></span>
+                                ) : (
+                                    'Load More'
+                                )}
+                            </button>
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+} 

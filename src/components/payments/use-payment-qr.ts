@@ -1,9 +1,12 @@
 import { useConnection } from '@solana/wallet-adapter-react';
-import { PublicKey, Transaction } from '@solana/web3.js';
-import { createTransferCheckedInstruction, getAssociatedTokenAddress } from '@solana/spl-token';
+import { PublicKey } from '@solana/web3.js';
+import { getAssociatedTokenAddress } from '@solana/spl-token';
 import { useCallback } from 'react';
 import { useAnchorProvider } from '../solana/solana-provider';
 import { Program, Idl } from '@coral-xyz/anchor';
+import { createTransferCheckedInstruction } from '@solana/spl-token';
+import { encodeURL, createTransfer } from '@solana/pay';
+import BigNumber from 'bignumber.js';
 import idl from '../../utils/kumbaya.json';
 import QRCode from 'qrcode';
 
@@ -17,104 +20,61 @@ const USDC_DEVNET_MINT = new PublicKey("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJD
 
 export interface PaymentQRResult {
   qrCode: string;
-  serializedTransaction: {
-    transaction: Uint8Array;
-    merchant: string;
-    amount: number;
-    splits: {
-      merchant: number;
-      house: number;
-    };
-  } | null;
+  paymentUrl: string;
   isLoading: boolean;
   error: Error | null;
 }
 
 export function usePaymentQR(program: Program<Idl>) {
   const { connection } = useConnection();
-  const provider = useAnchorProvider();
 
   const generatePaymentQR = useCallback(async (
     amount: number,
     merchantPubkey: PublicKey,
     isDevnet: boolean = true,
+    memo?: string,
   ): Promise<PaymentQRResult> => {
     try {
       // Verify the merchant exists by attempting to fetch their account
       await (program.account as any).merchant.fetch(merchantPubkey);
 
-      // Get the global account to find the house address
-      const [global] = PublicKey.findProgramAddressSync(
-        [Buffer.from("global")],
-        program.programId
-      );
-      const globalAccount = await (program.account as any).global.fetch(global);
-
-      // Use the appropriate USDC mint based on the network
-      const usdcMint = isDevnet ? USDC_DEVNET_MINT : USDC_MINT;
-
       // Get the merchant's USDC ATA
       const merchantUsdcAta = await getAssociatedTokenAddress(
-        usdcMint,
+        isDevnet ? USDC_DEVNET_MINT : USDC_MINT,
         merchantPubkey,
         true
       );
 
-      // Get the house's USDC ATA
-      const houseUsdcAta = await getAssociatedTokenAddress(
-        usdcMint,
-        globalAccount.house,
-        true
-      );
+      // Calculate the total amount in USDC base units (6 decimals for USDC)
+      const amountBaseUnits = new BigNumber(amount).times(1e6).integerValue();
 
-      // Calculate the split amounts (converting to USDC decimals - 6)
-      const amountBaseUnits = Math.floor(amount * 1_000_000);
-      const merchantAmount = Math.floor((amountBaseUnits * MERCHANT_SHARE) / 1000);
-      const houseAmount = Math.floor((amountBaseUnits * HOUSE_SHARE) / 1000);
+      console.log('Amount details:', {
+        input: amount,
+        baseUnits: amountBaseUnits.toString(),
+        inUSDC: amountBaseUnits.dividedBy(1e6).toString()
+      });
 
-      // Create a new transaction
-      const transaction = new Transaction();
+      // Create Solana Pay transfer URL
+      const url = encodeURL({
+        recipient: merchantUsdcAta,
+        amount: new BigNumber(amount), // Pass the original amount, Solana Pay will handle decimals
+        splToken: isDevnet ? USDC_DEVNET_MINT : USDC_MINT,
+        reference: [merchantPubkey],
+        label: "Kumbaya Payment",
+        message: `Payment to ${merchantPubkey.toString().slice(0, 4)}...${merchantPubkey.toString().slice(-4)}`,
+        ...(memo ? { memo } : { memo: `$${amount} USDC Payment for merchant ${merchantPubkey.toString()}` })
+      });
 
-      // Create a placeholder for the payer's token account and public key
-      const PAYER_PLACEHOLDER = new PublicKey("11111111111111111111111111111111");
-
-      // Add merchant transfer instruction
-      transaction.add(
-        createTransferCheckedInstruction(
-          PAYER_PLACEHOLDER,
-          usdcMint,
-          merchantUsdcAta,
-          PAYER_PLACEHOLDER,
-          merchantAmount,
-          6
-        )
-      );
-
-      // Add house fee transfer instruction
-      transaction.add(
-        createTransferCheckedInstruction(
-          PAYER_PLACEHOLDER,
-          usdcMint,
-          houseUsdcAta,
-          PAYER_PLACEHOLDER,
-          houseAmount,
-          6
-        )
-      );
-
-      // Serialize the transaction to JSON
-      const serializedTransaction = {
-        transaction: transaction.serialize({ requireAllSignatures: false }),
-        merchant: merchantPubkey.toBase58(),
-        amount: amount,
-        splits: {
-          merchant: merchantAmount / 1_000_000,
-          house: houseAmount / 1_000_000,
-        },
-      };
+      const urlString = url.toString();
+      console.log('Solana Pay URL:', urlString);
+      console.log('Payment details:', {
+        recipient: merchantUsdcAta.toString(),
+        amount: amountBaseUnits,
+        token: isDevnet ? USDC_DEVNET_MINT.toString() : USDC_MINT.toString()
+      });
 
       // Generate QR code
-      const qrCode = await QRCode.toDataURL(JSON.stringify(serializedTransaction), {
+      const qrCode = await QRCode.toDataURL(urlString, {
         errorCorrectionLevel: "H",
         margin: 4,
         width: 400,
@@ -122,7 +82,7 @@ export function usePaymentQR(program: Program<Idl>) {
 
       return {
         qrCode,
-        serializedTransaction,
+        paymentUrl: urlString,
         isLoading: false,
         error: null
       };
@@ -130,7 +90,7 @@ export function usePaymentQR(program: Program<Idl>) {
       console.error("Error creating payment QR:", error);
       return {
         qrCode: '',
-        serializedTransaction: null,
+        paymentUrl: '',
         isLoading: false,
         error: error as Error
       };
