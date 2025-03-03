@@ -9,6 +9,7 @@ use anchor_spl::{
 use crate::constants::*;
 use crate::errors::*;
 use crate::state::*;
+use crate::events::*;
 
 #[derive(Accounts)]
 pub struct InitGlobal<'info> {
@@ -101,8 +102,7 @@ impl<'info> CreateMerchant<'info> {
 #[instruction(amount: u64)]
 pub struct WithdrawUSDC<'info> {
     #[account(mut,
-    constraint = owner.key() == merchant.owner @ CustomError::UnauthorizedWithdrawal,
-    constraint = amount > 0 @ CustomError::InvalidAmount)]
+    constraint = owner.key() == merchant.owner && amount > 0 @ CustomError::UnauthorizedWithdrawal)]
     pub owner: Signer<'info>,
 
     #[account(seeds = [b"merchant", merchant.entity_name.as_str().as_bytes(), owner.key().as_ref()], bump = merchant.merchant_bump)]
@@ -149,16 +149,14 @@ impl<'info> WithdrawUSDC<'info> {
         let owner_amount = (amount * MERCHANT_SHARE) / 1000;
         let house_amount = amount - owner_amount;
 
-        // create an object for the owner key and reference it in the seeds
+        // Optimized seeds creation with proper lifetime handling
         let owner_key = self.owner.key();
-
-        // Create seeds once
-        let seeds: &[&[&[u8]]] = &[&[
-            b"merchant",
+        let seeds = &[
+            b"merchant".as_ref(),
             self.merchant.entity_name.as_bytes(),
             owner_key.as_ref(),
             &[self.merchant.merchant_bump],
-        ]];
+        ];
 
         // Transfer the owner's share
         anchor_spl::token_interface::transfer_checked(
@@ -170,7 +168,7 @@ impl<'info> WithdrawUSDC<'info> {
                     to: self.owner_usdc_ata.to_account_info(),
                     authority: self.merchant.to_account_info(),
                 },
-                seeds,
+                &[seeds],
             ),
             owner_amount,
             self.usdc_mint.decimals,
@@ -186,7 +184,7 @@ impl<'info> WithdrawUSDC<'info> {
                     to: self.house_usdc_ata.to_account_info(),
                     authority: self.merchant.to_account_info(),
                 },
-                seeds,
+                &[seeds],
             ),
             house_amount,
             self.usdc_mint.decimals,
@@ -197,3 +195,94 @@ impl<'info> WithdrawUSDC<'info> {
         Ok(())
     }
 }
+
+#[derive(Accounts)]
+#[instruction(amount: u64, original_tx_sig: String)]
+pub struct RefundPayment<'info> {
+    #[account(mut, 
+        constraint = owner.key() == merchant.owner @ CustomError::UnauthorizedRefund)]
+    pub owner: Signer<'info>,
+
+    #[account(mut, 
+        seeds = [b"merchant", merchant.entity_name.as_str().as_bytes(), owner.key().as_ref()], 
+        bump = merchant.merchant_bump)]
+    pub merchant: Account<'info, Merchant>,
+
+    #[account(mut,
+        associated_token::mint = usdc_mint,
+        associated_token::authority = merchant)]
+    pub merchant_usdc_ata: InterfaceAccount<'info, TokenAccount>,
+
+    #[account(mut,
+        associated_token::mint = usdc_mint,
+        associated_token::authority = recipient)]
+    pub recipient_usdc_ata: InterfaceAccount<'info, TokenAccount>,
+
+    #[account(
+        init,
+        payer = owner,
+        seeds = [b"refund", original_tx_sig.as_bytes()],
+        space = RefundRecord::LEN, bump
+    )]
+    pub refund_record: Account<'info, RefundRecord>,
+
+    #[account(constraint = usdc_mint.key() == Pubkey::from_str(USDC_DEVNET_MINT).unwrap())]
+    pub usdc_mint: InterfaceAccount<'info, Mint>,
+
+    /// CHECK: this is the public key of address you are refunding, to dervice their USDC ata
+    pub recipient: AccountInfo<'info>,
+    
+    pub token_program: Interface<'info, TokenInterface>,
+    pub system_program: Program<'info, System>,
+}
+
+impl<'info> RefundPayment<'info> {
+    pub fn refund(&mut self, original_tx_sig: String, amount: u64, bumps: &RefundPaymentBumps) -> Result<()> {
+        // Initialize refund record
+        self.refund_record.set_inner(RefundRecord {
+            amount,
+            original_tx_sig: original_tx_sig.clone(),
+            bump: bumps.refund_record
+        });
+
+        // Optimized seeds creation with proper lifetime handling
+        let owner_key = self.owner.key();
+        let seeds = &[
+            b"merchant".as_ref(),
+            self.merchant.entity_name.as_bytes(),
+            owner_key.as_ref(),
+            &[self.merchant.merchant_bump],
+        ];
+
+        // Transfer the refund amount back to the recipient
+        anchor_spl::token_interface::transfer_checked(
+            CpiContext::new_with_signer(
+                self.token_program.to_account_info(),
+                anchor_spl::token_interface::TransferChecked {
+                    from: self.merchant_usdc_ata.to_account_info(),
+                    mint: self.usdc_mint.to_account_info(),
+                    to: self.recipient_usdc_ata.to_account_info(),
+                    authority: self.merchant.to_account_info(),
+                },
+                &[seeds],
+            ),
+            amount,
+            self.usdc_mint.decimals,
+        )?;
+
+        // Update merchant state
+        self.merchant.total_refunded += amount;
+
+        // Emit event
+        emit!(RefundProcessed {
+            original_tx_sig,
+            amount,
+            recipient: self.recipient.key()
+        });
+
+        Ok(())
+    }
+}
+
+
+

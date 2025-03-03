@@ -22,3 +22,14 @@ pub struct Merchant {
 impl Merchant {
     pub const LEN: usize = 8 + 32 + 24 + 8 + 8 + 1;
 }
+
+#[account]
+pub struct RefundRecord {
+    pub amount: u64,
+    pub original_tx_sig: String,
+    pub bump: u8,
+}
+
+impl RefundRecord {
+    pub const LEN: usize = 8 + 8 + 32 + 1;
+}

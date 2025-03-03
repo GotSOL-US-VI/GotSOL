@@ -6,6 +6,7 @@ mod constants;
 mod context;
 mod errors;
 mod state;
+mod events;
 
 use crate::context::*;
 
@@ -27,6 +28,11 @@ pub mod kumbaya {
 
     pub fn withdraw_usdc(ctx: Context<WithdrawUSDC>, amount: u64) -> Result<()> {
         ctx.accounts.withdraw(amount)?;
+        Ok(())
+    }
+
+    pub fn refund(ctx: Context<RefundPayment>, original_tx_sig: String, amount: u64) -> Result<()> {
+        ctx.accounts.refund(original_tx_sig, amount, &ctx.bumps)?;
         Ok(())
     }
 }
