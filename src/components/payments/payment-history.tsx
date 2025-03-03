@@ -5,6 +5,7 @@ import { PublicKey, ParsedTransactionWithMeta, ConfirmedSignatureInfo } from '@s
 import { getAssociatedTokenAddress } from '@solana/spl-token';
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { Program, Idl } from '@coral-xyz/anchor';
+import { RefundButton } from './refund-button';
 
 interface PaymentHistoryProps {
     program: Program<Idl>;
@@ -17,9 +18,13 @@ interface Payment {
     amount: number;
     memo: string | null;
     timestamp: number;
+    recipient: PublicKey;
 }
 
 const BATCH_SIZE = 10;
+
+const USDC_MINT_DEVNET = new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU');
+const USDC_MINT_MAINNET = new PublicKey('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v');
 
 export function PaymentHistory({ program, merchantPubkey, isDevnet = true }: PaymentHistoryProps) {
     const { connection } = useConnection();
@@ -61,35 +66,76 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true }: Pay
         return transactions
             .filter((tx): tx is ParsedTransactionWithMeta => tx !== null)
             .map(tx => {
-                const preBalances = tx.meta?.preTokenBalances?.[0]?.uiTokenAmount.uiAmount || 0;
-                const postBalances = tx.meta?.postTokenBalances?.[0]?.uiTokenAmount.uiAmount || 0;
-                const amount = postBalances - preBalances;
-                
-                return {
-                    signature: tx.transaction.signatures[0],
-                    amount,
-                    memo: tx.meta?.logMessages?.find(log => log.includes('Program log: Memo'))?.split(': ')[2] || null,
-                    timestamp: tx.blockTime ? tx.blockTime * 1000 : Date.now(),
-                };
+                try {
+                    console.log('Processing transaction:', {
+                        signature: tx.transaction.signatures[0],
+                        preBalances: tx.meta?.preTokenBalances,
+                        postBalances: tx.meta?.postTokenBalances,
+                        logs: tx.meta?.logMessages
+                    });
+
+                    // Find the merchant's token balance changes
+                    const merchantPreBalance = tx.meta?.preTokenBalances?.find(b => 
+                        b.owner === merchantPubkey.toString()
+                    )?.uiTokenAmount.uiAmount || 0;
+
+                    const merchantPostBalance = tx.meta?.postTokenBalances?.find(b => 
+                        b.owner === merchantPubkey.toString()
+                    )?.uiTokenAmount.uiAmount || 0;
+
+                    const amount = merchantPostBalance - merchantPreBalance;
+
+                    // Only process if there was a positive change in merchant's balance
+                    if (amount <= 0) {
+                        console.log('Skipping transaction - no positive balance change:', amount);
+                        return null;
+                    }
+
+                    // Find the sender's public key (the account that sent the USDC)
+                    const senderAccount = tx.meta?.preTokenBalances?.find(balance => 
+                        balance.owner !== merchantPubkey.toString() && 
+                        (balance.uiTokenAmount?.uiAmount ?? 0) > 0
+                    );
+
+                    const recipient = senderAccount?.owner 
+                        ? new PublicKey(senderAccount.owner)
+                        : tx.transaction.message.accountKeys[1].pubkey;
+
+                    const payment = {
+                        signature: tx.transaction.signatures[0],
+                        amount,
+                        memo: tx.meta?.logMessages?.find(log => log.includes('Program log: Memo'))?.split(': ')[2] || null,
+                        timestamp: tx.blockTime ? tx.blockTime * 1000 : Date.now(),
+                        recipient,
+                    };
+
+                    console.log('Processed payment:', payment);
+                    return payment;
+                } catch (error) {
+                    console.error('Error processing transaction:', error);
+                    return null;
+                }
             })
-            .filter(payment => payment.amount > 0);
+            .filter((payment): payment is Payment => payment !== null);
     };
 
     // Function to fetch payments
     const fetchPayments = async (beforeSignature?: string): Promise<Payment[]> => {
         try {
             const merchantUsdcAta = await getAssociatedTokenAddress(
-                isDevnet
-                    ? new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU')
-                    : new PublicKey('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'),
+                isDevnet ? USDC_MINT_DEVNET : USDC_MINT_MAINNET,
                 merchantPubkey,
                 true
             );
+
+            console.log('Fetching payments for ATA:', merchantUsdcAta.toString());
 
             const signatures = await connection.getSignaturesForAddress(
                 merchantUsdcAta,
                 { limit: BATCH_SIZE, before: beforeSignature }
             );
+
+            console.log('Found signatures:', signatures.length);
 
             if (signatures.length === 0) {
                 setHasMore(false);
@@ -100,8 +146,14 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true }: Pay
                 signatures.map(sig => fetchTransactionWithRetry(sig.signature))
             );
 
+            console.log('Fetched transactions:', transactions.length);
+
             const newPayments = processTransactions(transactions);
-            lastSignatureRef.current = signatures[signatures.length - 1].signature;
+            console.log('Processed payments:', newPayments);
+
+            if (signatures.length > 0) {
+                lastSignatureRef.current = signatures[signatures.length - 1].signature;
+            }
 
             return newPayments;
         } catch (err) {
@@ -214,6 +266,9 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true }: Pay
                                     {payment.memo && (
                                         <div className="text-sm text-gray-500">{payment.memo}</div>
                                     )}
+                                    <div className="text-xs text-gray-400 mt-1">
+                                        To: {payment.recipient.toString().slice(0, 4)}...{payment.recipient.toString().slice(-4)}
+                                    </div>
                                 </div>
                                 <div className="text-right">
                                     <div className="text-sm text-gray-500">
@@ -230,6 +285,22 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true }: Pay
                                             minute: '2-digit',
                                             second: '2-digit'
                                         })}
+                                    </div>
+                                    <div className="mt-2">
+                                        <RefundButton
+                                            program={program}
+                                            merchantPubkey={merchantPubkey}
+                                            payment={payment}
+                                            onSuccess={() => {
+                                                // Optionally refresh the payment list after successful refund
+                                                fetchPayments().then(newPayments => {
+                                                    if (newPayments.length > 0) {
+                                                        setPayments(newPayments);
+                                                    }
+                                                });
+                                            }}
+                                            isDevnet={isDevnet}
+                                        />
                                     </div>
                                 </div>
                             </div>

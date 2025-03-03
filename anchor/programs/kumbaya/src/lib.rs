@@ -5,8 +5,8 @@ use anchor_lang::prelude::*;
 mod constants;
 mod context;
 mod errors;
-mod state;
 mod events;
+mod state;
 
 use crate::context::*;
 

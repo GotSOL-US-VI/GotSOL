@@ -221,7 +221,7 @@ pub struct RefundPayment<'info> {
     #[account(
         init,
         payer = owner,
-        seeds = [b"refund", original_tx_sig.as_bytes()],
+        seeds = [b"refund", original_tx_sig.as_bytes().get(..16).unwrap_or_default()],
         space = RefundRecord::LEN, bump
     )]
     pub refund_record: Account<'info, RefundRecord>,

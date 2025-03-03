@@ -7,12 +7,28 @@ import { PublicKey } from '@solana/web3.js'
 import { useAnchorProvider } from '../solana/solana-provider'
 import { AppHero } from '../ui/ui-layout'
 import { CreateMerchant } from '../merchant/create-merchant'
+import { BorshCoder, Idl } from '@coral-xyz/anchor'
 import idl from '../../utils/kumbaya.json'
+import bs58 from 'bs58'
+import { env } from '../../utils/env'
 
 interface MerchantAccount {
   owner: PublicKey
   entityName: string
-  merchantBump: number
+  total_withdrawn: number
+  total_refunded: number
+  merchant_bump: number
+}
+
+interface MerchantData {
+  publicKey: PublicKey
+  account: {
+    owner: PublicKey
+    entity_name: string
+    total_withdrawn: anchor.BN
+    total_refunded: anchor.BN
+    merchant_bump: number
+  }
 }
 
 interface Merchant {
@@ -41,18 +57,94 @@ export default function DashboardFeature() {
       }
 
       try {
-        const merchantAccounts = await (program.account as any).merchant.all([
+        console.log('Fetching merchants for owner:', publicKey.toBase58());
+        
+        // Get all program accounts first
+        const allAccounts = await program.provider.connection.getProgramAccounts(
+          new PublicKey(idl.address),
           {
-            memcmp: {
-              offset: 8, // Discriminator length
-              bytes: publicKey.toBase58()
-            }
+            filters: [
+              {
+                memcmp: {
+                  offset: 0,
+                  bytes: bs58.encode(Buffer.from([71, 235, 30, 40, 231, 21, 32, 64])) // Merchant discriminator
+                }
+              },
+              {
+                memcmp: {
+                  offset: 8, // After discriminator
+                  bytes: publicKey.toBase58()
+                }
+              }
+            ]
           }
-        ])
+        );
 
-        setMerchants(merchantAccounts as Merchant[])
+        console.log('Raw accounts found:', allAccounts.map(acc => ({
+          pubkey: acc.pubkey.toString(),
+          dataLength: acc.account.data.length,
+          owner: acc.account.owner.toString()
+        })));
+
+        // Decode accounts using Borsh directly
+        const merchantAccounts = await Promise.all(
+          allAccounts.map(async ({ pubkey, account }) => {
+            try {
+              // Only try to decode the new account format (81 bytes)
+              if (account.data.length !== 81) {
+                console.log('Skipping old format account:', pubkey.toString());
+                return null;
+              }
+
+              console.log('Attempting to decode account:', pubkey.toString());
+              console.log('Account data:', {
+                length: account.data.length,
+                discriminator: Array.from(account.data.slice(0, 8)),
+                data: Buffer.from(account.data).toString('hex')
+              });
+
+              // Create a new BorshCoder instance
+              const coder = new BorshCoder(idl as Idl);
+              
+              // Try to decode the account data
+              const decoded = coder.accounts.decode('Merchant', account.data);
+              
+              console.log('Successfully decoded account data:', decoded);
+              
+              return {
+                publicKey: new PublicKey(pubkey),
+                account: {
+                  owner: decoded.owner,
+                  entityName: decoded.entity_name,
+                  total_withdrawn: decoded.total_withdrawn.toNumber(),
+                  total_refunded: decoded.total_refunded.toNumber(),
+                  merchant_bump: decoded.merchant_bump
+                }
+              };
+            } catch (err) {
+              console.error('Error decoding account:', pubkey.toString(), err);
+              // Log the raw account data for debugging
+              console.log('Failed account data:', {
+                length: account.data.length,
+                data: Buffer.from(account.data).toString('hex')
+              });
+              return null;
+            }
+          })
+        );
+
+        const validMerchants = merchantAccounts.filter((m): m is Merchant => m !== null);
+        console.log('Final decoded merchant accounts:', validMerchants);
+        
+        setMerchants(validMerchants);
       } catch (error) {
         console.error('Error fetching merchants:', error)
+        if (error instanceof Error) {
+          console.error('Error details:', {
+            message: error.message,
+            stack: error.stack
+          });
+        }
       } finally {
         setLoading(false)
       }

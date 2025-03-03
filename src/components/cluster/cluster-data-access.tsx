@@ -5,6 +5,7 @@ import { atom, useAtomValue, useSetAtom } from 'jotai'
 import { atomWithStorage } from 'jotai/utils'
 import { createContext, ReactNode, useContext } from 'react'
 import toast from 'react-hot-toast'
+import { env } from '../../utils/env'
 
 export interface Cluster {
   name: string
@@ -26,7 +27,7 @@ export enum ClusterNetwork {
 export const defaultClusters: Cluster[] = [
   {
     name: 'devnet',
-    endpoint: clusterApiUrl('devnet'),
+    endpoint: env.heliusRpcUrl || clusterApiUrl('devnet'),
     network: ClusterNetwork.Devnet,
   },
   // { name: 'local', endpoint: 'http://localhost:8899' },
