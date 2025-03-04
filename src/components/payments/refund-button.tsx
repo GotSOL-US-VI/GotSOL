@@ -7,7 +7,7 @@ import { getAssociatedTokenAddress, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_I
 import toast from 'react-hot-toast';
 import bs58 from 'bs58';
 
-interface MerchantAccount {
+export interface MerchantAccount {
     owner: PublicKey;
     entityName: string;
     totalWithdrawn: BN;

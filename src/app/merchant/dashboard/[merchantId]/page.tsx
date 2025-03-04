@@ -4,12 +4,14 @@ import { useAnchorProvider } from '@/components/solana/solana-provider';
 import { PaymentQR } from '@/components/payments/payment-qr';
 import { PaymentHistory } from '@/components/payments/payment-history';
 import * as anchor from '@coral-xyz/anchor';
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { PublicKey } from '@solana/web3.js';
 import idl from '../../../../utils/kumbaya.json';
+import type { MerchantAccount } from '@/components/payments/refund-button';
 
 export default function MerchantDashboardPage({ params }: { params: { merchantId: string } }) {
   const provider = useAnchorProvider();
+  const [merchantName, setMerchantName] = useState<string>('');
 
   const program = useMemo(() => 
     provider ? new anchor.Program(idl as anchor.Idl, provider) : null
@@ -22,6 +24,21 @@ export default function MerchantDashboardPage({ params }: { params: { merchantId
       return null;
     }
   }, [params.merchantId]);
+
+  useEffect(() => {
+    const fetchMerchantName = async () => {
+      if (program && merchantPubkey) {
+        try {
+          const merchantAccount = await (program.account as any).merchant.fetch(merchantPubkey) as MerchantAccount;
+          setMerchantName(merchantAccount.entityName);
+        } catch (err) {
+          console.error('Error fetching merchant name:', err);
+        }
+      }
+    };
+
+    fetchMerchantName();
+  }, [program, merchantPubkey]);
 
   if (!program || !merchantPubkey) {
     return (
@@ -36,7 +53,10 @@ export default function MerchantDashboardPage({ params }: { params: { merchantId
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-6xl mx-auto">
         <div className="card bg-base-300 shadow-xl">
           <div className="card-body">
-            <h1 className="text-3xl font-bold text-center mb-8">Point of Sale</h1>
+            <h1 className="text-3xl font-bold text-center mb-2">Point of Sale</h1>
+            {merchantName && (
+              <h2 className="text-xl text-center text-gray-400 mb-6">{merchantName}</h2>
+            )}
             <PaymentQR 
               program={program} 
               merchantPubkey={merchantPubkey} 

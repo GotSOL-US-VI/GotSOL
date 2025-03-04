@@ -141,7 +141,7 @@ export function PaymentQR({ program, merchantPubkey, isDevnet = true }: PaymentQ
             <span className="label-text">Enter $ Amount in USDC</span>
           </label>
           <button
-            className="btn btn-sm btn-ghost"
+            className="btn btn-sm btn-ghost text-[#00b5ff]"
             onClick={() => setUseNumpad(!useNumpad)}
           >
             {useNumpad ? 'Use Keyboard' : 'Use Numpad'}
