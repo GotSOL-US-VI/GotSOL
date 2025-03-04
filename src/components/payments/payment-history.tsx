@@ -242,35 +242,35 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true }: Pay
     }, [connection, merchantPubkey, isDevnet]);
 
     return (
-        <div className="bg-base-200 rounded-lg p-4 max-h-[600px] overflow-y-auto">
+        <div className="bg-base-200 rounded-lg p-4 h-full overflow-y-auto w-full">
             <h2 className="text-xl font-bold mb-4">Payment History</h2>
             
             {!hasInitialData || isLoading ? (
-                <div className="flex justify-center">
+                <div className="flex justify-center h-full items-center">
                     <span className="loading loading-spinner loading-lg"></span>
                 </div>
             ) : payments.length === 0 ? (
-                <div className="text-center text-gray-500">
+                <div className="flex justify-center items-center h-full text-gray-500">
                     No payments received yet
                 </div>
             ) : (
-                <div className="space-y-2">
+                <div className="space-y-3 h-full">
                     {payments.map((payment) => (
                         <div
                             key={payment.signature}
-                            className="bg-base-100 p-3 rounded-lg shadow-sm"
+                            className="bg-base-100 p-4 rounded-lg shadow-sm"
                         >
-                            <div className="flex justify-between items-start">
-                                <div>
-                                    <div className="font-semibold">${payment.amount.toFixed(6)} USDC</div>
+                            <div className="flex justify-between items-start gap-2 flex-wrap">
+                                <div className="flex-1 min-w-[200px]">
+                                    <div className="font-semibold text-lg">${payment.amount.toFixed(6)} USDC</div>
                                     {payment.memo && (
-                                        <div className="text-sm text-gray-500">{payment.memo}</div>
+                                        <div className="text-base text-gray-500 mt-1 break-words">{payment.memo}</div>
                                     )}
-                                    <div className="text-xs text-gray-400 mt-1">
+                                    <div className="text-sm text-gray-400 mt-2">
                                         To: {payment.recipient.toString().slice(0, 4)}...{payment.recipient.toString().slice(-4)}
                                     </div>
                                 </div>
-                                <div className="text-right">
+                                <div className="text-right min-w-[180px]">
                                     <div className="text-sm text-gray-500">
                                         {new Date(payment.timestamp).toLocaleDateString('en-US', {
                                             weekday: 'long',
@@ -286,13 +286,12 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true }: Pay
                                             second: '2-digit'
                                         })}
                                     </div>
-                                    <div className="mt-2">
+                                    <div className="mt-3">
                                         <RefundButton
                                             program={program}
                                             merchantPubkey={merchantPubkey}
                                             payment={payment}
                                             onSuccess={() => {
-                                                // Optionally refresh the payment list after successful refund
                                                 fetchPayments().then(newPayments => {
                                                     if (newPayments.length > 0) {
                                                         setPayments(newPayments);

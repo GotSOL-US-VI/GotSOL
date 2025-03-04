@@ -197,7 +197,7 @@ impl<'info> WithdrawUSDC<'info> {
 }
 
 #[derive(Accounts)]
-#[instruction(amount: u64, original_tx_sig: String)]
+#[instruction(original_tx_sig: String, amount: u64)]
 pub struct RefundPayment<'info> {
     #[account(mut, 
         constraint = owner.key() == merchant.owner @ CustomError::UnauthorizedRefund)]
@@ -221,8 +221,9 @@ pub struct RefundPayment<'info> {
     #[account(
         init,
         payer = owner,
-        seeds = [b"refund", original_tx_sig.as_bytes().get(..16).unwrap_or_default()],
-        space = RefundRecord::LEN, bump
+        seeds = [b"refund", original_tx_sig.as_bytes()],
+        space = RefundRecord::LEN,
+        bump
     )]
     pub refund_record: Account<'info, RefundRecord>,
 

@@ -67,7 +67,7 @@ export default function DashboardFeature() {
               {
                 memcmp: {
                   offset: 0,
-                  bytes: bs58.encode(Buffer.from([71, 235, 30, 40, 231, 21, 32, 64])) // Merchant discriminator
+                  bytes: bs58.encode(Buffer.from([71, 235, 30, 40, 231, 21, 32, 64]))
                 }
               },
               {
