@@ -6,6 +6,7 @@ import { getAssociatedTokenAddress } from '@solana/spl-token';
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { Program, Idl } from '@coral-xyz/anchor';
 import { RefundButton } from './refund-button';
+import toast from 'react-hot-toast';
 
 interface PaymentHistoryProps {
     program: Program<Idl>;
@@ -35,13 +36,36 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true }: Pay
     const [hasMore, setHasMore] = useState(true);
     const lastSignatureRef = useRef<string | null>(null);
     const retryTimeoutRef = useRef<NodeJS.Timeout>();
+    const seenPaymentsRef = useRef<Set<string>>(new Set());
 
     // Helper function to add payments while preventing duplicates and maintaining order
-    const addPayments = (newPayments: Payment[]) => {
+    const addPayments = (newPayments: Payment[], shouldNotify: boolean = false) => {
         setPayments(prev => {
             const uniquePayments = newPayments.filter(
                 newPayment => !prev.some(p => p.signature === newPayment.signature)
             );
+            
+            // Show toast for new payments if shouldNotify is true
+            if (shouldNotify) {
+                uniquePayments.forEach(payment => {
+                    if (!seenPaymentsRef.current.has(payment.signature)) {
+                        toast.success(
+                            `Received ${payment.amount.toFixed(6)} USDC${payment.memo ? ` - ${payment.memo}` : ''}`,
+                            {
+                                duration: 5000,
+                                position: 'bottom-right',
+                            }
+                        );
+                        seenPaymentsRef.current.add(payment.signature);
+                    }
+                });
+            } else {
+                // Add to seen payments without notification
+                uniquePayments.forEach(payment => {
+                    seenPaymentsRef.current.add(payment.signature);
+                });
+            }
+
             const updated = [...prev, ...uniquePayments];
             return updated.sort((a, b) => b.timestamp - a.timestamp);
         });
@@ -195,7 +219,7 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true }: Pay
                 // Initial fetch
                 const initialPayments = await fetchPayments();
                 if (isSubscribed) {
-                    addPayments(initialPayments);
+                    addPayments(initialPayments, false); // Don't notify for initial load
                     setHasInitialData(true);
                     setIsLoading(false);
                 }
@@ -213,7 +237,7 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true }: Pay
 
                             const newPayments = processTransactions([recentTx]);
                             if (newPayments.length > 0 && isSubscribed) {
-                                addPayments(newPayments);
+                                addPayments(newPayments, true); // Notify for new payments
                             }
                         } catch (err) {
                             console.error('Error processing new transaction:', err);
