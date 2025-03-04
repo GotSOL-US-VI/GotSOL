@@ -290,9 +290,9 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true }: Pay
                                     {payment.memo && (
                                         <div className="text-base text-gray-500 mt-1 break-words">{payment.memo}</div>
                                     )}
-                                    <div className="text-sm text-gray-400 mt-2">
+                                    {/* <div className="text-sm text-gray-400 mt-2">
                                         To: {payment.recipient.toString().slice(0, 4)}...{payment.recipient.toString().slice(-4)}
-                                    </div>
+                                    </div> */}
                                 </div>
                                 <div className="text-right min-w-[180px]">
                                     <div className="text-sm text-gray-500">
