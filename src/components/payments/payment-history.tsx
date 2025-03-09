@@ -266,15 +266,15 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true }: Pay
     }, [connection, merchantPubkey, isDevnet]);
 
     return (
-        <div className="bg-base-200 rounded-lg p-4 h-full overflow-y-auto w-full">
+        <div className="bg-base-200 rounded-lg p-4 h-full w-full">
             <h2 className="text-xl font-bold mb-4">Payment History</h2>
             
             {!hasInitialData || isLoading ? (
-                <div className="flex justify-center h-full items-center">
+                <div className="flex justify-center items-center">
                     <span className="loading loading-spinner loading-lg"></span>
                 </div>
             ) : payments.length === 0 ? (
-                <div className="flex justify-center items-center h-full text-gray-500">
+                <div className="flex justify-center items-center text-gray-500">
                     No payments received yet
                 </div>
             ) : (

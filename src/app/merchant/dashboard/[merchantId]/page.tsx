@@ -3,6 +3,7 @@
 import { useAnchorProvider } from '@/components/solana/solana-provider';
 import { PaymentQR } from '@/components/payments/payment-qr';
 import { PaymentHistory } from '@/components/payments/payment-history';
+import { WithdrawFunds } from '@/components/payments/withdraw-funds';
 import * as anchor from '@coral-xyz/anchor';
 import { useMemo, useState, useEffect } from 'react';
 import { PublicKey } from '@solana/web3.js';
@@ -51,27 +52,51 @@ export default function MerchantDashboardPage({ params }: { params: { merchantId
   return (
     <div className="container mx-auto py-2">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-6xl mx-auto">
-        <div className="card bg-base-300 shadow-xl">
-          <div className="card-body">
-            <h1 className="text-3xl font-bold text-center mb-2">Point of Sale</h1>
-            {merchantName && (
-              <h2 className="text-xl text-center text-gray-400 mb-6">{merchantName}</h2>
-            )}
-            <PaymentQR 
-              program={program} 
-              merchantPubkey={merchantPubkey} 
-              isDevnet={true} // TODO: Make this configurable based on environment
-            />
+        {/* Left Column - Point of Sale */}
+        <div className="h-[600px]">
+          <div className="card bg-base-300 shadow-xl">
+            <div className="card-body p-4">
+              <h1 className="text-2xl font-bold text-center">Point of Sale</h1>
+              {merchantName && (
+                <h2 className="text-lg text-center text-gray-400 mt-1">{merchantName}</h2>
+              )}
+              <div className="flex-1 flex items-center justify-center">
+                <PaymentQR 
+                  program={program} 
+                  merchantPubkey={merchantPubkey} 
+                  isDevnet={true}
+                />
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="card bg-base-300 shadow-xl">
-          <div className="card-body">
-            <PaymentHistory
-              program={program}
-              merchantPubkey={merchantPubkey}
-              isDevnet={true} // TODO: Make this configurable based on environment
-            />
+        {/* Right Column - Withdraw & History */}
+        <div className="space-y-6">
+          {/* Withdraw Funds - Fixed Height */}
+          <div className="h-[320px]">
+            <div className="card bg-base-300 shadow-xl overflow-hidden">
+              <div className="card-body p-4">
+                <WithdrawFunds
+                  program={program}
+                  merchantPubkey={merchantPubkey}
+                  isDevnet={true}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Payment History - Fixed Height */}
+          <div className="h-[260px]">
+            <div className="card bg-base-300 shadow-xl">
+              <div className="card-body p-4">
+                <PaymentHistory
+                  program={program}
+                  merchantPubkey={merchantPubkey}
+                  isDevnet={true}
+                />
+              </div>
+            </div>
           </div>
         </div>
       </div>

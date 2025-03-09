@@ -1,7 +1,7 @@
 'use client'
 
 import * as anchor from '@coral-xyz/anchor'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useRef } from 'react'
 import { useWallet } from '@solana/wallet-adapter-react'
 import { PublicKey } from '@solana/web3.js'
 import { useAnchorProvider } from '../solana/solana-provider'
@@ -42,6 +42,10 @@ export default function DashboardFeature() {
   const [merchants, setMerchants] = useState<Merchant[]>([])
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const merchantCacheRef = useRef<{[key: string]: MerchantAccount}>({})
+  const lastFetchRef = useRef<number>(0)
+  const FETCH_COOLDOWN = 5000 // 5 seconds between fetches
 
   // Create program instance if provider is available
   const program = useMemo(() =>
@@ -56,10 +60,14 @@ export default function DashboardFeature() {
         return
       }
 
+      // Check if we should fetch again
+      const now = Date.now()
+      if (now - lastFetchRef.current < FETCH_COOLDOWN) {
+        return
+      }
+      lastFetchRef.current = now
+
       try {
-        console.log('Fetching merchants for owner:', publicKey.toBase58());
-        
-        // Get all program accounts first
         const allAccounts = await program.provider.connection.getProgramAccounts(
           new PublicKey(idl.address),
           {
@@ -72,7 +80,7 @@ export default function DashboardFeature() {
               },
               {
                 memcmp: {
-                  offset: 8, // After discriminator
+                  offset: 8,
                   bytes: publicKey.toBase58()
                 }
               }
@@ -80,77 +88,62 @@ export default function DashboardFeature() {
           }
         );
 
-        console.log('Raw accounts found:', allAccounts.map(acc => ({
-          pubkey: acc.pubkey.toString(),
-          dataLength: acc.account.data.length,
-          owner: acc.account.owner.toString()
-        })));
-
         // Decode accounts using Borsh directly
         const merchantAccounts = await Promise.all(
           allAccounts.map(async ({ pubkey, account }) => {
+            // Check cache first
+            const cacheKey = pubkey.toString()
+            if (merchantCacheRef.current[cacheKey]) {
+              return {
+                publicKey: new PublicKey(pubkey),
+                account: merchantCacheRef.current[cacheKey]
+              }
+            }
+
             try {
-              // Only try to decode the new account format (81 bytes)
               if (account.data.length !== 81) {
-                console.log('Skipping old format account:', pubkey.toString());
                 return null;
               }
 
-              console.log('Attempting to decode account:', pubkey.toString());
-              console.log('Account data:', {
-                length: account.data.length,
-                discriminator: Array.from(account.data.slice(0, 8)),
-                data: Buffer.from(account.data).toString('hex')
-              });
-
-              // Create a new BorshCoder instance
               const coder = new BorshCoder(idl as Idl);
-              
-              // Try to decode the account data
               const decoded = coder.accounts.decode('Merchant', account.data);
               
-              console.log('Successfully decoded account data:', decoded);
-              
+              // Cache the decoded account
+              merchantCacheRef.current[cacheKey] = {
+                owner: decoded.owner,
+                entityName: decoded.entity_name,
+                total_withdrawn: decoded.total_withdrawn.toNumber(),
+                total_refunded: decoded.total_refunded.toNumber(),
+                merchant_bump: decoded.merchant_bump
+              };
+
               return {
                 publicKey: new PublicKey(pubkey),
-                account: {
-                  owner: decoded.owner,
-                  entityName: decoded.entity_name,
-                  total_withdrawn: decoded.total_withdrawn.toNumber(),
-                  total_refunded: decoded.total_refunded.toNumber(),
-                  merchant_bump: decoded.merchant_bump
-                }
+                account: merchantCacheRef.current[cacheKey]
               };
             } catch (err) {
-              console.error('Error decoding account:', pubkey.toString(), err);
-              // Log the raw account data for debugging
-              console.log('Failed account data:', {
-                length: account.data.length,
-                data: Buffer.from(account.data).toString('hex')
-              });
               return null;
             }
           })
         );
 
         const validMerchants = merchantAccounts.filter((m): m is Merchant => m !== null);
-        console.log('Final decoded merchant accounts:', validMerchants);
-        
         setMerchants(validMerchants);
+        setError(null);
       } catch (error) {
         console.error('Error fetching merchants:', error)
-        if (error instanceof Error) {
-          console.error('Error details:', {
-            message: error.message,
-            stack: error.stack
-          });
-        }
+        setError('Failed to fetch merchants. Please try again later.')
       } finally {
         setLoading(false)
       }
     }
 
     fetchMerchants()
+    
+    // Set up an interval to refresh data periodically
+    const interval = setInterval(fetchMerchants, 30000) // Refresh every 30 seconds
+    
+    return () => clearInterval(interval)
   }, [program, publicKey])
 
   const handleMerchantCreated = (merchantPubkey: PublicKey) => {
