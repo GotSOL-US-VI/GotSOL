@@ -14,9 +14,9 @@ export default function MerchantDashboardPage({ params }: { params: { merchantId
   const provider = useAnchorProvider();
   const [merchantName, setMerchantName] = useState<string>('');
 
-  const program = useMemo(() => 
+  const program = useMemo(() =>
     provider ? new anchor.Program(idl as anchor.Idl, provider) : null
-  , [provider]);
+    , [provider]);
 
   const merchantPubkey = useMemo(() => {
     try {
@@ -61,9 +61,9 @@ export default function MerchantDashboardPage({ params }: { params: { merchantId
                 <h2 className="text-lg text-center text-gray-400 mt-1">{merchantName}</h2>
               )}
               <div className="flex-1 flex items-center justify-center">
-                <PaymentQR 
-                  program={program} 
-                  merchantPubkey={merchantPubkey} 
+                <PaymentQR
+                  program={program}
+                  merchantPubkey={merchantPubkey}
                   isDevnet={true}
                 />
               </div>

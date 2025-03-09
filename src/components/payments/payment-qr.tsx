@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Program, Idl } from '@coral-xyz/anchor';
 import { PublicKey } from '@solana/web3.js';
 import { usePaymentQR } from './use-payment-qr';
@@ -72,7 +72,11 @@ export function PaymentQR({ program, merchantPubkey, isDevnet = true }: PaymentQ
     setAmount(value);
   };
 
-  const handleGenerateQR = async () => {
+  const handleMemoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setMemo(e.target.value);
+  };
+
+  const generateQR = useCallback(async () => {
     try {
       setError('');
       const numAmount = parseFloat(amount);
@@ -99,7 +103,22 @@ export function PaymentQR({ program, merchantPubkey, isDevnet = true }: PaymentQ
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     }
-  };
+  }, [amount, memo, generatePaymentQR, merchantPubkey, isDevnet]);
+
+  // Auto-generate QR code when amount or memo changes
+  useEffect(() => {
+    // Only generate if we have a valid amount
+    if (!amount || parseFloat(amount) <= 0) {
+      return;
+    }
+
+    // Use a debounce to avoid generating QR codes too frequently
+    const debounceTimer = setTimeout(() => {
+      generateQR();
+    }, 500); // 500ms debounce
+
+    return () => clearTimeout(debounceTimer);
+  }, [amount, memo, generateQR]);
 
   const renderNumberPad = () => (
     <div className="grid grid-cols-3 gap-2 w-full mt-2">
@@ -170,17 +189,11 @@ export function PaymentQR({ program, merchantPubkey, isDevnet = true }: PaymentQ
             placeholder="e.g., Coffee and pastries"
             className="input input-bordered w-full"
             value={memo}
-            onChange={(e) => setMemo(e.target.value)}
+            onChange={handleMemoChange}
           />
         </div>
 
-        <button 
-          className="btn btn-primary mt-4 w-full"
-          onClick={handleGenerateQR}
-          disabled={!amount}
-        >
-          Generate QR Code
-        </button>
+        {/* QR code generation happens silently after debounce */}
       </div>
 
       {error && (
