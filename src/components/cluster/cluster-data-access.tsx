@@ -27,7 +27,7 @@ export enum ClusterNetwork {
 export const defaultClusters: Cluster[] = [
   {
     name: 'devnet',
-    endpoint: env.heliusRpcUrl || clusterApiUrl('devnet'),
+    endpoint: 'https://api.devnet.solana.com',
     network: ClusterNetwork.Devnet,
   },
   // { name: 'local', endpoint: 'http://localhost:8899' },
@@ -38,6 +38,32 @@ export const defaultClusters: Cluster[] = [
   // },
 ]
 
+// Ensure endpoint URL is valid
+function validateEndpoint(url: string): string {
+  try {
+    // Remove any control characters and trim whitespace
+    const sanitizedUrl = url.replace(/[\u0000-\u001F\u007F-\u009F]/g, '').trim();
+    
+    // If no protocol is specified, default to https://
+    const urlWithProtocol = !sanitizedUrl.startsWith('http://') && !sanitizedUrl.startsWith('https://')
+      ? `https://${sanitizedUrl}`
+      : sanitizedUrl;
+
+    // Validate URL format
+    new URL(urlWithProtocol);
+    return urlWithProtocol;
+  } catch (error) {
+    console.error('Invalid endpoint URL:', url, error);
+    // Fall back to default devnet endpoint if URL is invalid
+    return 'https://api.devnet.solana.com';
+  }
+}
+
+// After initialization, update with Helius URL if available
+if (typeof window !== 'undefined' && env.heliusRpcUrl) {
+  defaultClusters[0].endpoint = validateEndpoint(env.heliusRpcUrl);
+}
+
 const clusterAtom = atomWithStorage<Cluster>('solana-cluster', defaultClusters[0])
 const clustersAtom = atomWithStorage<Cluster[]>('solana-clusters', defaultClusters)
 
@@ -46,14 +72,18 @@ const activeClustersAtom = atom<Cluster[]>((get) => {
   const cluster = get(clusterAtom)
   return clusters.map((item) => ({
     ...item,
+    endpoint: validateEndpoint(item.endpoint),
     active: item.name === cluster.name,
   }))
 })
 
 const activeClusterAtom = atom<Cluster>((get) => {
   const clusters = get(activeClustersAtom)
-
-  return clusters.find((item) => item.active) || clusters[0]
+  const activeCluster = clusters.find((item) => item.active) || clusters[0]
+  return {
+    ...activeCluster,
+    endpoint: validateEndpoint(activeCluster.endpoint)
+  }
 })
 
 export interface ClusterProviderContext {
@@ -78,16 +108,36 @@ export function ClusterProvider({ children }: { children: ReactNode }) {
     clusters: clusters.sort((a, b) => (a.name > b.name ? 1 : -1)),
     addCluster: (cluster: Cluster) => {
       try {
-        new Connection(cluster.endpoint)
-        setClusters([...clusters, cluster])
+        const validatedEndpoint = validateEndpoint(cluster.endpoint);
+        // Test the connection
+        const connection = new Connection(validatedEndpoint);
+        connection.getVersion()
+          .then(() => {
+            setClusters([...clusters, { ...cluster, endpoint: validatedEndpoint }]);
+          })
+          .catch((err: Error) => {
+            console.error('Connection test failed:', err);
+            toast.error(`Failed to connect to endpoint: ${err.message}`);
+          });
       } catch (err) {
-        toast.error(`${err}`)
+        const error = err instanceof Error ? err : new Error('Unknown error occurred');
+        console.error('Cluster validation error:', error);
+        toast.error(`Invalid endpoint: ${error.message}`);
       }
     },
     deleteCluster: (cluster: Cluster) => {
       setClusters(clusters.filter((item) => item.name !== cluster.name))
     },
-    setCluster: (cluster: Cluster) => setCluster(cluster),
+    setCluster: (cluster: Cluster) => {
+      try {
+        const validatedEndpoint = validateEndpoint(cluster.endpoint);
+        setCluster({ ...cluster, endpoint: validatedEndpoint });
+      } catch (err) {
+        const error = err instanceof Error ? err : new Error('Unknown error occurred');
+        console.error('Error setting cluster:', error);
+        toast.error(`Failed to set cluster: ${error.message}`);
+      }
+    },
     getExplorerUrl: (path: string) => `https://explorer.solana.com/${path}${getClusterUrlParam(cluster)}`,
   }
   return <Context.Provider value={value}>{children}</Context.Provider>
