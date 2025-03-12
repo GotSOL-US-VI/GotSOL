@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Program, Idl } from '@coral-xyz/anchor';
 import { PublicKey } from '@solana/web3.js';
 import { usePaymentQR } from './use-payment-qr';
+import Image from 'next/image';
 
 interface PaymentQRProps {
   program: Program<Idl>;
@@ -207,7 +208,14 @@ export function PaymentQR({ program, merchantPubkey, isDevnet = true }: PaymentQ
           <div className="card-body items-center text-center">
             <h2 className="card-title">Scan to Pay ${amount} USDC</h2>
             {memo && <p className="text-gray-500 mb-2">{memo}</p>}
-            <img src={qrCode} alt="Payment QR Code" className="w-64 h-64" />
+            <Image 
+              src={qrCode} 
+              alt="Payment QR Code"
+              width={256}
+              height={256}
+              className="mx-auto"
+              priority
+            />
             {/* <p className="text-sm text-gray-500">
               Merchant receives: ${(parseFloat(amount) * 0.985).toFixed(2)} USDC
               <br />

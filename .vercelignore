@@ -1,0 +1,8 @@
+anchor
+.anchor
+node_modules
+.next
+.git
+.env
+.env.*
+Product Documentation

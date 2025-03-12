@@ -189,7 +189,7 @@ export function WithdrawFunds({ program, merchantPubkey, isDevnet = true }: With
       <div className="space-y-4">
         <div className="flex justify-between items-center bg-base-300 p-3 rounded-lg">
           <div className="flex items-center gap-2">
-            <span className="text-sm">Merchant's USDC Balance</span>
+            <span className="text-sm">Merchant&apos;s USDC Balance</span>
             <button
               onClick={toggleMerchantBalance}
               className="btn btn-ghost btn-xs"
@@ -215,7 +215,7 @@ export function WithdrawFunds({ program, merchantPubkey, isDevnet = true }: With
 
         <div className="flex justify-between items-center bg-base-300 p-3 rounded-lg">
           <div className="flex items-center gap-2">
-            <span className="text-sm">Owner's USDC Balance</span>
+            <span className="text-sm">Owner&apos;s USDC Balance</span>
             <button
               onClick={toggleOwnerBalance}
               className="btn btn-ghost btn-xs"

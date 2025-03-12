@@ -37,9 +37,11 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true }: Pay
     const lastSignatureRef = useRef<string | null>(null);
     const retryTimeoutRef = useRef<NodeJS.Timeout>();
     const seenPaymentsRef = useRef<Set<string>>(new Set());
+    const [isSubscribed, setIsSubscribed] = useState(true);
+    const subscriptionIdRef = useRef<number>();
 
     // Helper function to add payments while preventing duplicates and maintaining order
-    const addPayments = (newPayments: Payment[], shouldNotify: boolean = false) => {
+    const addPayments = useCallback((newPayments: Payment[], shouldNotify: boolean = false) => {
         setPayments(prev => {
             const uniquePayments = newPayments.filter(
                 newPayment => !prev.some(p => p.signature === newPayment.signature)
@@ -69,10 +71,10 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true }: Pay
             const updated = [...prev, ...uniquePayments];
             return updated.sort((a, b) => b.timestamp - a.timestamp);
         });
-    };
+    }, []);
 
     // Helper function to fetch transaction with retry
-    const fetchTransactionWithRetry = async (signature: string, retries = 3, delay = 1000): Promise<ParsedTransactionWithMeta | null> => {
+    const fetchTransactionWithRetry = useCallback(async (signature: string, retries = 3, delay = 1000): Promise<ParsedTransactionWithMeta | null> => {
         for (let i = 0; i < retries; i++) {
             try {
                 const tx = await connection.getParsedTransaction(signature);
@@ -83,10 +85,10 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true }: Pay
             }
         }
         return null;
-    };
+    }, [connection]);
 
     // Function to process transactions into payments
-    const processTransactions = (transactions: (ParsedTransactionWithMeta | null)[]): Payment[] => {
+    const processTransactions = useCallback((transactions: (ParsedTransactionWithMeta | null)[]): Payment[] => {
         return transactions
             .filter((tx): tx is ParsedTransactionWithMeta => tx !== null)
             .map(tx => {
@@ -141,10 +143,10 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true }: Pay
                 }
             })
             .filter((payment): payment is Payment => payment !== null);
-    };
+    }, [merchantPubkey]);
 
     // Function to fetch payments
-    const fetchPayments = async (beforeSignature?: string): Promise<Payment[]> => {
+    const fetchPayments = useCallback(async (beforeSignature?: string): Promise<Payment[]> => {
         try {
             const merchantUsdcAta = await getAssociatedTokenAddress(
                 isDevnet ? USDC_MINT_DEVNET : USDC_MINT_MAINNET,
@@ -184,7 +186,7 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true }: Pay
             console.error('Error fetching payments:', err);
             return [];
         }
-    };
+    }, [connection, isDevnet, merchantPubkey, fetchTransactionWithRetry, processTransactions]);
 
     // Function to load more payments
     const loadMore = useCallback(async () => {
@@ -200,70 +202,69 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true }: Pay
         }
         
         setIsLoadingMore(false);
-    }, [isLoadingMore, hasMore]);
+    }, [isLoadingMore, hasMore, fetchPayments, addPayments]);
+
+    const setupPaymentListener = useCallback(async () => {
+        try {
+            const merchantUsdcAta = await getAssociatedTokenAddress(
+                isDevnet
+                    ? new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU')
+                    : new PublicKey('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'),
+                merchantPubkey,
+                true
+            );
+
+            // Initial fetch
+            const initialPayments = await fetchPayments();
+            if (isSubscribed) {
+                addPayments(initialPayments, false); // Don't notify for initial load
+                setHasInitialData(true);
+                setIsLoading(false);
+            }
+
+            // Set up real-time listener
+            subscriptionIdRef.current = connection.onAccountChange(
+                merchantUsdcAta,
+                async (accountInfo) => {
+                    try {
+                        const recentSigs = await connection.getSignaturesForAddress(merchantUsdcAta, { limit: 1 });
+                        if (recentSigs.length === 0) return;
+
+                        const recentTx = await fetchTransactionWithRetry(recentSigs[0].signature);
+                        if (!recentTx || !recentTx.meta) return;
+
+                        const newPayments = processTransactions([recentTx]);
+                        if (newPayments.length > 0 && isSubscribed) {
+                            addPayments(newPayments, true); // Notify for new payments
+                        }
+                    } catch (err) {
+                        console.error('Error processing new transaction:', err);
+                    }
+                },
+                'confirmed'
+            );
+        } catch (error) {
+            console.error('Error setting up payment listener:', error);
+            if (isSubscribed) {
+                retryTimeoutRef.current = setTimeout(setupPaymentListener, 2000);
+            }
+        }
+    }, [connection, merchantPubkey, isDevnet, fetchPayments, fetchTransactionWithRetry, processTransactions, isSubscribed, addPayments]);
 
     useEffect(() => {
-        let subscriptionId: number | undefined;
-        let isSubscribed = true;
-
-        const setupPaymentListener = async () => {
-            try {
-                const merchantUsdcAta = await getAssociatedTokenAddress(
-                    isDevnet
-                        ? new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU')
-                        : new PublicKey('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'),
-                    merchantPubkey,
-                    true
-                );
-
-                // Initial fetch
-                const initialPayments = await fetchPayments();
-                if (isSubscribed) {
-                    addPayments(initialPayments, false); // Don't notify for initial load
-                    setHasInitialData(true);
-                    setIsLoading(false);
-                }
-
-                // Set up real-time listener
-                subscriptionId = connection.onAccountChange(
-                    merchantUsdcAta,
-                    async (accountInfo) => {
-                        try {
-                            const recentSigs = await connection.getSignaturesForAddress(merchantUsdcAta, { limit: 1 });
-                            if (recentSigs.length === 0) return;
-
-                            const recentTx = await fetchTransactionWithRetry(recentSigs[0].signature);
-                            if (!recentTx || !recentTx.meta) return;
-
-                            const newPayments = processTransactions([recentTx]);
-                            if (newPayments.length > 0 && isSubscribed) {
-                                addPayments(newPayments, true); // Notify for new payments
-                            }
-                        } catch (err) {
-                            console.error('Error processing new transaction:', err);
-                        }
-                    },
-                    'confirmed'
-                );
-            } catch (err) {
-                if (isSubscribed) {
-                    retryTimeoutRef.current = setTimeout(setupPaymentListener, 2000);
-                }
-            }
-        };
-
+        setIsSubscribed(true);
         setupPaymentListener();
 
         return () => {
-            isSubscribed = false;
-            if (subscriptionId) {
-                connection.removeAccountChangeListener(subscriptionId);
+            setIsSubscribed(false);
+            if (subscriptionIdRef.current) {
+                connection.removeAccountChangeListener(subscriptionIdRef.current);
             }
             if (retryTimeoutRef.current) {
                 clearTimeout(retryTimeoutRef.current);
             }
         };
-    }, [connection, merchantPubkey, isDevnet]);
+    }, [connection, merchantPubkey, isDevnet, setupPaymentListener]);
 
     return (
         <div className="bg-base-200 rounded-lg p-4 h-full w-full">
