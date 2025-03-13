@@ -5,16 +5,15 @@ import { UiLayout } from '@/components/ui/ui-layout'
 import { ReactQueryProvider } from './react-query-provider'
 
 export const metadata = {
-  title: 'Kumbaya',
-  description: 'Money -> copacetic.',
+  title: 'Got Sol - Solana Payments Made Easy',
+  description: 'Your gateway to seamless Solana payments. Accept USDC, manage transactions, and grow your business on Solana.',
 }
 
 const links: { label: string; path: string }[] = [
-  { label: 'Merchant Setup', path: '/merchant/setup' },
+  { label: 'Create Store', path: '/merchant/setup' },
+  // { label: 'My Stores', path: '/merchants' },
   { label: 'Accounts', path: '/account' },
-  { label: 'Helpful Links', path: '/links' },
-  // { label: 'Clusters', path: '/clusters' },
-  // { label: 'Basic Program', path: '/basic' },
+  { label: 'Resources', path: '/links' },
 ]
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

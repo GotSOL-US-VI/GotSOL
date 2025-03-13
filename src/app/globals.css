@@ -2,18 +2,94 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --color-white: #ffffff;
+  --color-mint: #89f8cb;
+  --color-lavender: #dac0ff;
+  --color-light-blue: #a5dae0;
+  --color-black: #000000;
+}
+
 html,
 body {
-    height: 100%;
+  height: 100%;
+  background-color: var(--color-black);
+  color: var(--color-white);
 }
 
 .wallet-adapter-button-trigger {
-    background: rgb(100, 26, 230) !important;
-    border-radius: 8px !important;
-    padding-left: 16px !important;
-    padding-right: 16px !important;
+  background: var(--color-mint) !important;
+  color: var(--color-black) !important;
+  border-radius: 8px !important;
+  padding-left: 16px !important;
+  padding-right: 16px !important;
+  transition: all 0.2s ease-in-out !important;
 }
+
+.wallet-adapter-button-trigger:hover {
+  background: var(--color-lavender) !important;
+  transform: translateY(-2px);
+}
+
 .wallet-adapter-dropdown-list,
 .wallet-adapter-button {
-    font-family: inherit !important;
+  font-family: inherit !important;
+}
+
+.btn-primary {
+  background: var(--color-mint) !important;
+  color: var(--color-black) !important;
+  border: none !important;
+}
+
+.btn-primary:hover {
+  background: var(--color-lavender) !important;
+  transform: translateY(-2px);
+}
+
+.card {
+  background: rgba(255, 255, 255, 0.05) !important;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.navbar {
+  background: rgba(0, 0, 0, 0.8) !important;
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.hero-gradient-text {
+  background: linear-gradient(45deg, var(--color-mint), var(--color-lavender), var(--color-light-blue));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: gradient 6s ease infinite;
+  background-size: 200% 200%;
+}
+
+@keyframes gradient {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* Custom slow pulse animation for the sun icon */
+.animate-pulse-slow {
+  animation: pulse-slow 5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse-slow {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
 }
