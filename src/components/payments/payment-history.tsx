@@ -130,7 +130,7 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true }: Pay
                     const payment = {
                         signature: tx.transaction.signatures[0],
                         amount,
-                        memo: tx.meta?.logMessages?.find(log => log.includes('Program log: Memo'))?.split(': ')[2] || null,
+                        memo: tx.meta?.logMessages?.find(log => log.includes('Program log: Memo'))?.split(': ')[2]?.replace(/^"|"$/g, '') || null,
                         timestamp: tx.blockTime ? tx.blockTime * 1000 : Date.now(),
                         recipient,
                     };
