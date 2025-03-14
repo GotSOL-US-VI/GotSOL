@@ -182,7 +182,7 @@ export default function DashboardFeature() {
     return (
       <div>
         <AppHero
-          title={<h1 className="text-6xl font-bold hero-gradient-text bg-clip-text">Got SOL</h1>}
+          title={<h1 className="text-6xl font-bold hero-gradient-text bg-clip-text">GotSOL</h1>}
           subtitle={<p className="text-xl font-medium mt-4">Connect your wallet to get started</p>}
         />
       </div>
@@ -194,7 +194,7 @@ export default function DashboardFeature() {
       <AppHero
         title={
           <div className="space-y-4">
-            <h1 className="text-6xl font-bold hero-gradient-text">Got SOL</h1>
+            <h1 className="text-6xl font-bold hero-gradient-text">GotSOL</h1>
             <div className="flex justify-center">
               {theme === 'light' ? (
                 <div className="w-32 h-32 relative">

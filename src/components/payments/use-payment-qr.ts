@@ -60,7 +60,7 @@ export function usePaymentQR(program: Program<Idl>) {
         amount: new BigNumber(amount), // Pass the original amount, Solana Pay will handle decimals
         splToken: isDevnet ? USDC_DEVNET_MINT : USDC_MINT,
         reference: [merchantPubkey],
-        label: "Got SOL Payment",
+        label: "GotSOL Payment",
         message: `Payment to ${merchantPubkey.toString().slice(0, 4)}...${merchantPubkey.toString().slice(-4)}`,
         ...(memo ? { memo } : { memo: `$${amount} USDC Payment for merchant ${merchantPubkey.toString()}` })
       });
