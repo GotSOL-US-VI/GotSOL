@@ -37,7 +37,7 @@ export function UiLayout({ children, links }: { children: ReactNode; links: { la
         <div className="flex-1">
           <Link href="/" className="flex items-center">
             <Image 
-              src="/logo.jpg"
+              src={theme === 'light' ? "/gotsol_light.png" : "/gotsol_dark.png"}
               alt="Got Sol Logo"
               width={150}
               height={50}

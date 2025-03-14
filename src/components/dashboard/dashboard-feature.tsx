@@ -196,36 +196,15 @@ export default function DashboardFeature() {
           <div className="space-y-4">
             <h1 className="text-6xl font-bold hero-gradient-text">GotSOL</h1>
             <div className="flex justify-center">
-              {theme === 'light' ? (
-                <div className="w-32 h-32 relative">
-                  <Image
-                    src="/logo.jpg"
-                    alt="Got Sol Logo"
-                    width={180}
-                    height={180}
-                    className="object-contain"
-                  />
-                </div>
-              ) : (
-                <div className="w-24 h-24 relative">
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-r from-mint to-lavender animate-pulse-slow"></div>
-                  </div>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    {Array.from({ length: 10 }).map((_, i) => (
-                      <div
-                        key={i}
-                        className="absolute w-3 h-3"
-                        style={{
-                          transform: `rotate(${i * 36}deg) translateY(-32px)`,
-                        }}
-                      >
-                        <div className="w-full h-full bg-gradient-to-r from-mint to-light-blue animate-pulse-slow"></div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+              <div className="w-32 h-32 relative">
+                <Image
+                  src="/logo.png"
+                  alt="Got Sol Logo"
+                  width={180}
+                  height={180}
+                  className="object-contain"
+                />
+              </div>
             </div>
           </div>
         }
