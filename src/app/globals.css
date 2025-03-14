@@ -129,7 +129,7 @@ body {
 }
 
 [data-theme="dark"] .card-body {
-  border: 1px solid rgba(137, 248, 203, 0.1);
+  border: 1px solid rgba(137, 248, 203, 0.75);
   border-radius: 0.5rem;
 }
 
