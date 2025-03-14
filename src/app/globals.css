@@ -3,23 +3,20 @@
 @tailwind utilities;
 
 :root {
-  --color-white: #ffffff;
   --color-mint: #89f8cb;
   --color-lavender: #dac0ff;
   --color-light-blue: #a5dae0;
-  --color-black: #000000;
+  --button-text: #000000;
 }
 
 html,
 body {
   height: 100%;
-  background-color: var(--color-black);
-  color: var(--color-white);
 }
 
 .wallet-adapter-button-trigger {
   background: var(--color-mint) !important;
-  color: var(--color-black) !important;
+  color: var(--button-text) !important;
   border-radius: 8px !important;
   padding-left: 16px !important;
   padding-right: 16px !important;
@@ -38,8 +35,9 @@ body {
 
 .btn-primary {
   background: var(--color-mint) !important;
-  color: var(--color-black) !important;
+  color: var(--button-text) !important;
   border: none !important;
+  font-weight: 500 !important;
 }
 
 .btn-primary:hover {
@@ -48,15 +46,41 @@ body {
 }
 
 .card {
-  background: rgba(255, 255, 255, 0.05) !important;
+  background: hsl(var(--b2)) !important;
   backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid hsl(var(--b3));
+}
+
+[data-theme="dark"] .card {
+  background: #000000 !important;
+  border: none !important;
+}
+
+[data-theme="dark"] .card:hover {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Override any hover border classes */
+[data-theme="dark"] .card.hover\:border-mint\/50:hover,
+[data-theme="dark"] .card.hover\:border,
+[data-theme="dark"] .card.hover\:border-mint,
+[data-theme="dark"] .card:hover {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 .navbar {
-  background: rgba(0, 0, 0, 0.8) !important;
+  background: hsl(var(--b1) / 0.8) !important;
   backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid hsl(var(--b3));
+}
+
+[data-theme="dark"] .navbar {
+  border-bottom-color: var(--color-mint) !important;
+  border-opacity: 0.1;
 }
 
 .hero-gradient-text {
@@ -92,4 +116,62 @@ body {
   50% {
     opacity: 0.5;
   }
+}
+
+[data-theme="dark"] .text-mint {
+  color: var(--color-mint) !important;
+}
+
+/* Point of Sale, Withdraw Funds, and Payment History Cards */
+[data-theme="dark"] .bg-base-200,
+[data-theme="dark"] .bg-base-300 {
+  background: #000000 !important;
+}
+
+[data-theme="dark"] .card-body {
+  border: 1px solid rgba(137, 248, 203, 0.1);
+  border-radius: 0.5rem;
+}
+
+/* Shimmer effect for buttons on hover */
+[data-theme="dark"] .btn-primary:hover {
+  background: linear-gradient(45deg, var(--color-mint), var(--color-lavender), var(--color-light-blue)) !important;
+  background-size: 200% 200% !important;
+  animation: shimmer 3s linear infinite !important;
+  border: none !important;
+  transform: translateY(-2px);
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* Payment history item styles */
+[data-theme="dark"] .bg-base-100 {
+  background: #000000 !important;
+}
+
+/* Input field styles */
+[data-theme="dark"] .input-bordered {
+  background: #000000 !important;
+  border-color: rgba(137, 248, 203, 0.2) !important;
+}
+
+[data-theme="dark"] .input-bordered:focus {
+  border-color: var(--color-mint) !important;
+  box-shadow: 0 0 0 2px rgba(137, 248, 203, 0.1);
+}
+
+/* Loading spinner color */
+[data-theme="dark"] .loading-spinner {
+  border-color: var(--color-mint) !important;
+  border-right-color: transparent !important;
 }

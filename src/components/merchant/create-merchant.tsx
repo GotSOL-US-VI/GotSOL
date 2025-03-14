@@ -103,7 +103,7 @@ export function CreateMerchant({ program, onSuccess }: CreateMerchantProps) {
                 </button>
 
                 {!publicKey && (
-                    <p className="text-sm text-center text-gray-500">
+                    <p className="text-sm text-center opacity-60">
                         Please connect your wallet to create a merchant account
                     </p>
                 )}

@@ -283,7 +283,8 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true }: Pay
                     {payments.map((payment) => (
                         <div
                             key={payment.signature}
-                            className="bg-base-100 p-4 rounded-lg shadow-sm"
+                            className="bg-base-100 p-4 rounded-lg"
+                            style={{ border: '1px solid rgba(137, 248, 203, 0.1)' }}
                         >
                             <div className="flex justify-between items-start gap-2 flex-wrap">
                                 <div className="flex-1 min-w-[200px]">

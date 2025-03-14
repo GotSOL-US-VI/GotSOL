@@ -12,6 +12,7 @@ import idl from '../../utils/kumbaya.json'
 import bs58 from 'bs58'
 import { env } from '../../utils/env'
 import Link from 'next/link'
+import Image from 'next/image'
 
 interface MerchantAccount {
   owner: PublicKey
@@ -44,10 +45,38 @@ export default function DashboardFeature() {
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [theme, setTheme] = useState<'light' | 'dark'>('dark')
   const merchantCacheRef = useRef<{[key: string]: MerchantAccount}>({})
   const lastFetchRef = useRef<number>(0)
   const FETCH_COOLDOWN = 5000 // 5 seconds between fetches
   const MIN_ACCOUNT_SIZE = 81; // Set this to the minimum valid size for your Merchant PDA accounts
+
+  useEffect(() => {
+    // Check for saved theme preference
+    const savedTheme = localStorage.getItem('theme') as 'light' | 'dark'
+    if (savedTheme) {
+      setTheme(savedTheme)
+    }
+  }, [])
+
+  // Listen for theme changes
+  useEffect(() => {
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.attributeName === 'data-theme') {
+          const newTheme = document.documentElement.getAttribute('data-theme') as 'light' | 'dark'
+          setTheme(newTheme)
+        }
+      })
+    })
+
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-theme']
+    })
+
+    return () => observer.disconnect()
+  }, [])
 
   // Create program instance if provider is available
   const program = useMemo(() =>
@@ -154,7 +183,7 @@ export default function DashboardFeature() {
       <div>
         <AppHero
           title={<h1 className="text-6xl font-bold hero-gradient-text bg-clip-text">Got SOL</h1>}
-          subtitle={<p className="text-xl font-medium text-gray-600 dark:text-gray-300 mt-4">Connect your wallet to get started</p>}
+          subtitle={<p className="text-xl font-medium mt-4">Connect your wallet to get started</p>}
         />
       </div>
     )
@@ -167,29 +196,41 @@ export default function DashboardFeature() {
           <div className="space-y-4">
             <h1 className="text-6xl font-bold hero-gradient-text">Got SOL</h1>
             <div className="flex justify-center">
-              <div className="w-24 h-24 relative">
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-r from-mint to-lavender animate-pulse-slow"></div>
+              {theme === 'light' ? (
+                <div className="w-32 h-32 relative">
+                  <Image
+                    src="/logo.jpg"
+                    alt="Got Sol Logo"
+                    width={180}
+                    height={180}
+                    className="object-contain"
+                  />
                 </div>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  {Array.from({ length: 10 }).map((_, i) => (
-                    <div
-                      key={i}
-                      className="absolute w-3 h-3"
-                      style={{
-                        transform: `rotate(${i * 36}deg) translateY(-32px)`,
-                      }}
-                    >
-                      <div className="w-full h-full bg-gradient-to-r from-mint to-light-blue animate-pulse-slow"></div>
-                    </div>
-                  ))}
+              ) : (
+                <div className="w-24 h-24 relative">
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-r from-mint to-lavender animate-pulse-slow"></div>
+                  </div>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    {Array.from({ length: 10 }).map((_, i) => (
+                      <div
+                        key={i}
+                        className="absolute w-3 h-3"
+                        style={{
+                          transform: `rotate(${i * 36}deg) translateY(-32px)`,
+                        }}
+                      >
+                        <div className="w-full h-full bg-gradient-to-r from-mint to-light-blue animate-pulse-slow"></div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
         }
         subtitle={
-          <p className="text-xl font-medium text-white/80">
+          <p className="text-xl font-medium opacity-80">
             Your Gateway to Seamless Solana Payments
           </p>
         }
@@ -208,7 +249,7 @@ export default function DashboardFeature() {
                   <div key={merchant.publicKey.toString()} className="card hover:border-mint/50 transition-colors">
                     <div className="card-body">
                       <h2 className="card-title text-mint">{merchant.account.entityName}</h2>
-                      <p className="text-sm text-white/60">
+                      <p className="text-sm opacity-60">
                         {merchant.publicKey.toString().slice(0, 4)}...{merchant.publicKey.toString().slice(-4)}
                       </p>
                       <div className="card-actions justify-end mt-4">
@@ -226,15 +267,15 @@ export default function DashboardFeature() {
                   </div>
                 ))}
               </div>
-            ) : (
+            ) :
               <div className="text-center py-12">
-                <h3 className="text-2xl font-semibold text-white/80 mb-4">No Merchant Accounts Found</h3>
-                <p className="text-white/60 mb-8">Get started by creating your first merchant account</p>
+                <h3 className="text-2xl font-semibold opacity-80 mb-4">No Merchant Accounts Found</h3>
+                <p className="opacity-60 mb-8">Get started by creating your first merchant account</p>
                 <Link href="/merchant/setup" className="btn btn-primary btn-lg">
                   Create Merchant Account
                 </Link>
               </div>
-            )}
+            }
           </div>
         )}
       </div>
