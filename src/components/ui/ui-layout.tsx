@@ -149,7 +149,7 @@ export function AppModal({
 export function AppHero({
   children,
   title,
-  subtitle,
+  // subtitle,
 }: {
   children?: ReactNode
   title: ReactNode
@@ -160,7 +160,7 @@ export function AppHero({
       <div className="hero-content text-center">
         <div className="max-w-2xl">
           {typeof title === 'string' ? <h1 className="text-5xl font-bold hero-gradient-text mb-1">{title}</h1> : title}
-          {typeof subtitle === 'string' ? <p className="py-2 text-white/80">{subtitle}</p> : subtitle}
+          {/* {typeof subtitle === 'string' ? <p className="py-2 text-white/80">{subtitle}</p> : subtitle} */}
           {children}
         </div>
       </div>
