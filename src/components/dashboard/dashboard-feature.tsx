@@ -187,20 +187,27 @@ export default function DashboardFeature() {
       <div>
         <div className="-mt-20">
           <AppHero
-            title={<h1 className="text-6xl font-bold hero-gradient-text bg-clip-text">GotSOL</h1>}
-            subtitle={<p className="text-xl font-medium mt-4">Connect your wallet to get started</p>}
+            title={
+              <div className="space-y-4">
+                <h1 className="text-6xl font-bold hero-gradient-text">GotSOL</h1>
+                <div className="flex justify-center">
+                  <div className="w-32 h-32 relative">
+                    <Image
+                      src="/logo.png"
+                      alt="Got Sol Logo"
+                      width={180}
+                      height={180}
+                      className="object-contain"
+                    />
+                  </div>
+                </div>
+              </div>
+            }
+            subtitle={
+              <p className="text-xl font-medium opacity-80">
+                Connect your account to start.              </p>
+            }
           />
-          <div className="flex justify-center">
-            <div className="w-32 h-32 relative">
-              <Image
-                src="/logo.png"
-                alt="Got Sol Logo"
-                width={180}
-                height={180}
-                className="object-contain"
-              />
-            </div>
-          </div>
         </div>
       </div>
     )
