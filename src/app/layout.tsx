@@ -26,6 +26,7 @@ const merchantLinks = [
   { label: 'Point of Sale', path: '/merchant/dashboard/:merchantId' },
   { label: 'Manage Accounts', path: '/account' },
   { label: 'Treasury / Yield', path: '/merchant/dashboard/:merchantId/yield' },
+  { label: 'USD Off-ramps', path: '/merchant/dashboard/:merchantId/off-ramps' },
   { label: 'Resources', path: '/links' },
 ]
 
