@@ -185,39 +185,43 @@ export default function DashboardFeature() {
   if (!publicKey) {
     return (
       <div>
+        <div className="-mt-20">
         <AppHero
           title={<h1 className="text-6xl font-bold hero-gradient-text bg-clip-text">GotSOL</h1>}
           subtitle={<p className="text-xl font-medium mt-4">Connect your wallet to get started</p>}
         />
+      </div>
       </div>
     )
   }
 
   return (
     <div>
-      <AppHero
-        title={
-          <div className="space-y-4">
-            <h1 className="text-6xl font-bold hero-gradient-text">GotSOL</h1>
-            <div className="flex justify-center">
-              <div className="w-32 h-32 relative">
-                <Image
-                  src="/logo.png"
-                  alt="Got Sol Logo"
-                  width={180}
-                  height={180}
-                  className="object-contain"
-                />
+      <div className="-mt-20">
+        <AppHero
+          title={
+            <div className="space-y-4">
+              <h1 className="text-6xl font-bold hero-gradient-text">GotSOL</h1>
+              <div className="flex justify-center">
+                <div className="w-32 h-32 relative">
+                  <Image
+                    src="/logo.png"
+                    alt="Got Sol Logo"
+                    width={180}
+                    height={180}
+                    className="object-contain"
+                  />
+                </div>
               </div>
             </div>
-          </div>
-        }
-        subtitle={
-          <p className="text-xl font-medium opacity-80">
-            Your Gateway to Seamless Solana Payments
-          </p>
-        }
-      />
+          }
+          subtitle={
+            <p className="text-xl font-medium opacity-80">
+              Your Gateway to Seamless Solana Payments
+            </p>
+          }
+        />
+      </div>
 
       <div className="max-w-6xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
         {loading ? (
