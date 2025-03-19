@@ -25,7 +25,7 @@ const defaultLinks = [
 const merchantLinks = [
   { label: 'Point of Sale', path: '/merchant/dashboard/:merchantId' },
   { label: 'Manage Accounts', path: '/account' },
-  { label: 'Yield', path: '/merchant/dashboard/:merchantId/yield' },
+  { label: 'Treasury / Yield', path: '/merchant/dashboard/:merchantId/yield' },
   { label: 'Resources', path: '/links' },
 ]
 

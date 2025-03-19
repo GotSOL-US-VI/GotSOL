@@ -29,32 +29,10 @@ export function WithdrawFunds({ program, merchantPubkey, isDevnet = true }: With
   const [withdrawAmount, setWithdrawAmount] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showMerchantBalance, setShowMerchantBalance] = useState(true);
-  const [showOwnerBalance, setShowOwnerBalance] = useState(true);
-  const [showAllBalances, setShowAllBalances] = useState(true);
+  const [showBalances, setShowBalances] = useState(true);
 
-  // Toggle functions
-  const toggleAllBalances = () => {
-    const newState = !showAllBalances;
-    setShowAllBalances(newState);
-    setShowMerchantBalance(newState);
-    setShowOwnerBalance(newState);
-  };
-
-  const toggleMerchantBalance = () => {
-    setShowMerchantBalance(!showMerchantBalance);
-    // Update master toggle if needed
-    if (showMerchantBalance && showOwnerBalance) {
-      setShowAllBalances(false);
-    }
-  };
-
-  const toggleOwnerBalance = () => {
-    setShowOwnerBalance(!showOwnerBalance);
-    // Update master toggle if needed
-    if (showMerchantBalance && showOwnerBalance) {
-      setShowAllBalances(false);
-    }
+  const toggleBalances = () => {
+    setShowBalances(!showBalances);
   };
 
   // Fetch balances
@@ -170,10 +148,10 @@ export function WithdrawFunds({ program, merchantPubkey, isDevnet = true }: With
           </button>
         </h2>
         <button
-          onClick={toggleAllBalances}
+          onClick={toggleBalances}
           className="btn btn-ghost btn-sm"
         >
-          {showAllBalances ? (
+          {showBalances ? (
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
               <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -188,52 +166,18 @@ export function WithdrawFunds({ program, merchantPubkey, isDevnet = true }: With
 
       <div className="space-y-4">
         <div className="flex justify-between items-center bg-base-300 p-3 rounded-lg">
-          <div className="flex items-center gap-2">
-            <span className="text-sm">Merchant&apos;s USDC Balance</span>
-            <button
-              onClick={toggleMerchantBalance}
-              className="btn btn-ghost btn-xs"
-            >
-              {showMerchantBalance ? (
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-              ) : (
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
-                </svg>
-              )}
-            </button>
-          </div>
+          <span className="text-sm">Merchant&apos;s USDC Balance</span>
           <span className="font-semibold">
-            {showMerchantBalance 
+            {showBalances 
               ? (merchantBalance !== null ? `${merchantBalance.toFixed(6)} USDC` : '...') 
               : '••••••••'}
           </span>
         </div>
 
         <div className="flex justify-between items-center bg-base-300 p-3 rounded-lg">
-          <div className="flex items-center gap-2">
-            <span className="text-sm">Owner&apos;s USDC Balance</span>
-            <button
-              onClick={toggleOwnerBalance}
-              className="btn btn-ghost btn-xs"
-            >
-              {showOwnerBalance ? (
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-              ) : (
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
-                </svg>
-              )}
-            </button>
-          </div>
+          <span className="text-sm">Owner&apos;s USDC Balance</span>
           <span className="font-semibold">
-            {showOwnerBalance 
+            {showBalances 
               ? (ownerBalance !== null ? `${ownerBalance.toFixed(6)} USDC` : '...') 
               : '••••••••'}
           </span>
