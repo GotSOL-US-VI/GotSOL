@@ -3,6 +3,7 @@ import { ClusterProvider } from '@/components/cluster/cluster-data-access'
 import { SolanaProvider } from '@/components/solana/solana-provider'
 import { UiLayout } from '@/components/ui/ui-layout'
 import { ReactQueryProvider } from './react-query-provider'
+import { Analytics } from "@vercel/analytics/react"
 
 export const metadata = {
   title: 'Got Sol - Solana Payments Made Easy',
@@ -41,6 +42,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </SolanaProvider>
           </ClusterProvider>
         </ReactQueryProvider>
+        <Analytics />
       </body>
     </html>
   )
