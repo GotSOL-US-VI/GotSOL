@@ -150,7 +150,11 @@ export default function DashboardFeature() {
         );
 
         const validMerchants = merchantAccounts.filter((m): m is Merchant => m !== null);
-        setMerchants(validMerchants);
+        // Sort merchants alphabetically by entity name
+        const sortedMerchants = validMerchants.sort((a, b) => 
+          a.account.entityName.localeCompare(b.account.entityName)
+        );
+        setMerchants(sortedMerchants);
         setError(null);
       } catch (error) {
         console.error('Error fetching merchants:', error)
