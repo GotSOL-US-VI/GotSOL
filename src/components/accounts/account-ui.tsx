@@ -73,13 +73,13 @@ export function AccountButtons({ address }: { address: PublicKey }) {
       <ModalReceive address={address} show={showReceiveModal} hide={() => setShowReceiveModal(false)} />
       <ModalSend address={address} show={showSendModal} hide={() => setShowSendModal(false)} />
       <div className="space-x-2">
-        <button
+        {/* <button
           disabled={cluster.network?.includes('mainnet')}
           className="btn btn-xs lg:btn-md btn-outline"
           onClick={() => setShowAirdropModal(true)}
         >
           Airdrop
-        </button>
+        </button> */}
         <button
           disabled={wallet.publicKey?.toString() !== address.toString()}
           className="btn btn-xs lg:btn-md btn-outline"

@@ -11,9 +11,18 @@ import { AccountChecker } from '../accounts/account-ui'
 import { ClusterChecker, ClusterUiSelect, ExplorerLink } from '../cluster/cluster-ui'
 import { WalletButton } from '../solana/solana-provider'
 
-export function UiLayout({ children, links }: { children: ReactNode; links: { label: string; path: string }[] }) {
+export function UiLayout({ 
+  children, 
+  defaultLinks,
+  merchantLinks,
+}: { 
+  children: ReactNode
+  defaultLinks: { label: string; path: string }[]
+  merchantLinks: { label: string; path: string }[]
+}) {
   const pathname = usePathname()
   const [theme, setTheme] = React.useState<'light' | 'dark'>('dark')
+  const [activeMerchant, setActiveMerchant] = React.useState<string | null>(null)
 
   useEffect(() => {
     // Check for saved theme preference
@@ -22,7 +31,27 @@ export function UiLayout({ children, links }: { children: ReactNode; links: { la
       setTheme(savedTheme)
       document.documentElement.setAttribute('data-theme', savedTheme)
     }
+
+    // Check for saved merchant
+    const savedMerchant = localStorage.getItem('activeMerchant')
+    if (savedMerchant) {
+      setActiveMerchant(savedMerchant)
+    }
   }, [])
+
+  // Update active merchant when entering a merchant dashboard
+  useEffect(() => {
+    const merchantMatch = pathname.match(/\/merchant\/dashboard\/([^/]+)/)
+    if (merchantMatch) {
+      const merchantId = merchantMatch[1]
+      setActiveMerchant(merchantId)
+      localStorage.setItem('activeMerchant', merchantId)
+    } else if (pathname === '/') {
+      // Clear active merchant when returning to home
+      setActiveMerchant(null)
+      localStorage.removeItem('activeMerchant')
+    }
+  }, [pathname])
 
   const toggleTheme = () => {
     const newTheme = theme === 'light' ? 'dark' : 'light'
@@ -31,11 +60,19 @@ export function UiLayout({ children, links }: { children: ReactNode; links: { la
     document.documentElement.setAttribute('data-theme', newTheme)
   }
 
+  // Handle logo click to clear merchant state
+  const handleLogoClick = () => {
+    setActiveMerchant(null)
+    localStorage.removeItem('activeMerchant')
+  }
+
+  const currentLinks = activeMerchant ? merchantLinks : defaultLinks
+
   return (
     <div className="min-h-screen flex flex-col bg-base-100">
       <div className="navbar flex-col md:flex-row space-y-2 md:space-y-0 px-4">
         <div className="flex-1">
-          <Link href="/" className="flex items-center">
+          <Link href="/" className="flex items-center" onClick={handleLogoClick}>
             <Image 
               src={theme === 'light' ? "/gotsol_light.png" : "/gotsol_dark.png"}
               alt="Got Sol Logo"
@@ -45,11 +82,11 @@ export function UiLayout({ children, links }: { children: ReactNode; links: { la
             />
           </Link>
           <ul className="menu menu-horizontal px-1 space-x-2">
-            {links.map(({ label, path }) => (
+            {currentLinks.map(({ label, path }) => (
               <li key={path}>
                 <Link 
-                  className={`hover:text-mint transition-colors ${pathname.startsWith(path) ? 'text-mint' : ''}`} 
-                  href={path}
+                  className={`hover:text-mint transition-colors ${pathname.startsWith(path.replace(':merchantId', activeMerchant || '')) ? 'text-mint' : ''}`} 
+                  href={activeMerchant ? path.replace(':merchantId', activeMerchant) : path}
                 >
                   {label}
                 </Link>
