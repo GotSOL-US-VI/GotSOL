@@ -4,6 +4,7 @@ import { SolanaProvider } from '@/components/solana/solana-provider'
 import { UiLayout } from '@/components/ui/ui-layout'
 import { ReactQueryProvider } from './react-query-provider'
 import { Analytics } from "@vercel/analytics/react"
+import { SpeedInsights } from "@vercel/speed-insights/next"
 
 export const metadata = {
   title: 'Got Sol - Solana Payments Made Easy',
