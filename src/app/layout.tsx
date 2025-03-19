@@ -44,6 +44,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </ClusterProvider>
         </ReactQueryProvider>
         <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   )
