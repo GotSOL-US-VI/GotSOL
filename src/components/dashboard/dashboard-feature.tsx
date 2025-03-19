@@ -273,13 +273,14 @@ export default function DashboardFeature() {
                 ))}
               </div>
             ) :
-              <div className="text-center py-12">
-                <h3 className="text-2xl font-semibold opacity-80 mb-4">No Merchant Accounts Found</h3>
-                <p className="opacity-60 mb-8">Get started by creating your first merchant account</p>
-                <Link href="/merchant/setup" className="btn btn-primary btn-lg">
-                  Create Merchant Account
-                </Link>
-              </div>
+              // <div className="text-center py-12">
+              //   <h3 className="text-2xl font-semibold opacity-80 mb-4">No Merchant Accounts Found</h3>
+              //   <p className="opacity-60 mb-8">Get started by creating your first merchant account</p>
+              //   <Link href="/merchant/setup" className="btn btn-primary btn-lg">
+              //     Create Merchant Account
+              //   </Link>
+              // </div>
+              <p>Reload the page if you do not see your known Merchant accounts.</p>
             }
           </div>
         )}
