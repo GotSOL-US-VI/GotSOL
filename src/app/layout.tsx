@@ -7,7 +7,7 @@ import { Analytics } from "@vercel/analytics/react"
 import { SpeedInsights } from "@vercel/speed-insights/next"
 
 export const metadata = {
-  title: 'Got Sol - Solana Payments Made Easy',
+  title: 'GotSOL - USDC Payments on Solana',
   description: 'Your gateway to seamless Solana payments. Accept USDC, manage transactions, and grow your business on Solana.',
 }
 
