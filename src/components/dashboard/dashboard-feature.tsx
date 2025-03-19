@@ -46,7 +46,7 @@ export default function DashboardFeature() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [theme, setTheme] = useState<'light' | 'dark'>('dark')
-  const merchantCacheRef = useRef<{[key: string]: MerchantAccount}>({})
+  const merchantCacheRef = useRef<{ [key: string]: MerchantAccount }>({})
   const lastFetchRef = useRef<number>(0)
   const FETCH_COOLDOWN = 5000 // 5 seconds between fetches
   const MIN_ACCOUNT_SIZE = 81; // Set this to the minimum valid size for your Merchant PDA accounts
@@ -131,7 +131,7 @@ export default function DashboardFeature() {
             try {
               const coder = new BorshCoder(idl as Idl);
               const decoded = coder.accounts.decode('Merchant', account.data);
-              
+
               return {
                 publicKey: new PublicKey(pubkey),
                 account: {
@@ -151,7 +151,7 @@ export default function DashboardFeature() {
 
         const validMerchants = merchantAccounts.filter((m): m is Merchant => m !== null);
         // Sort merchants alphabetically by entity name
-        const sortedMerchants = validMerchants.sort((a, b) => 
+        const sortedMerchants = validMerchants.sort((a, b) =>
           a.account.entityName.localeCompare(b.account.entityName)
         );
         setMerchants(sortedMerchants);
@@ -165,10 +165,10 @@ export default function DashboardFeature() {
     }
 
     fetchMerchants()
-    
+
     // Set up an interval to refresh data periodically
     const interval = setInterval(fetchMerchants, 30000) // Refresh every 30 seconds
-    
+
     return () => clearInterval(interval)
   }, [program, publicKey])
 
@@ -186,11 +186,22 @@ export default function DashboardFeature() {
     return (
       <div>
         <div className="-mt-20">
-        <AppHero
-          title={<h1 className="text-6xl font-bold hero-gradient-text bg-clip-text">GotSOL</h1>}
-          subtitle={<p className="text-xl font-medium mt-4">Connect your wallet to get started</p>}
-        />
-      </div>
+          <AppHero
+            title={<h1 className="text-6xl font-bold hero-gradient-text bg-clip-text">GotSOL</h1>}
+            subtitle={<p className="text-xl font-medium mt-4">Connect your wallet to get started</p>}
+          />
+          <div className="flex justify-center">
+            <div className="w-32 h-32 relative">
+              <Image
+                src="/logo.png"
+                alt="Got Sol Logo"
+                width={180}
+                height={180}
+                className="object-contain"
+              />
+            </div>
+          </div>
+        </div>
       </div>
     )
   }
