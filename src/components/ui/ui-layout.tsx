@@ -85,7 +85,12 @@ export function UiLayout({
             {currentLinks.map(({ label, path }) => (
               <li key={path}>
                 <Link 
-                  className={`hover:text-mint transition-colors ${pathname.startsWith(path.replace(':merchantId', activeMerchant || '')) ? 'text-mint' : ''}`} 
+                  className={`hover:text-mint transition-colors ${
+                    pathname === path.replace(':merchantId', activeMerchant || '') ||
+                    (path === '/merchant/dashboard/:merchantId' && pathname === `/merchant/dashboard/${activeMerchant}`)
+                      ? 'text-mint' 
+                      : ''
+                  }`} 
                   href={activeMerchant ? path.replace(':merchantId', activeMerchant) : path}
                 >
                   {label}
