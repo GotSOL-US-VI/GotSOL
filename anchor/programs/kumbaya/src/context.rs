@@ -285,5 +285,254 @@ impl<'info> RefundPayment<'info> {
     }
 }
 
+#[derive(Accounts)]
+#[instruction(name: String)]
+pub struct CreateEmployee<'info> {
+    #[account(mut)]
+    pub merchant_owner: Signer<'info>,
+    
+    #[account(
+        seeds = [b"merchant", merchant.entity_name.as_str().as_bytes(), merchant_owner.key().as_ref()],
+        bump = merchant.merchant_bump,
+        constraint = merchant.owner == merchant_owner.key()
+    )]
+    pub merchant: Account<'info, Merchant>,
+    
+    #[account(
+        init,
+        payer = merchant_owner,
+        space = Employee::LEN,
+        seeds = [
+            b"employee",
+            merchant.key().as_ref(),
+            employee_pubkey.key().as_ref()
+        ],
+        bump
+    )]
+    pub employee: Account<'info, Employee>,
+    
+    /// CHECK: The public key of the employee being added
+    pub employee_pubkey: AccountInfo<'info>,
+    
+    pub system_program: Program<'info, System>,
+}
+
+impl<'info> CreateEmployee<'info> {
+    pub fn init(&mut self, bumps: &CreateEmployeeBumps, name: String, role: EmployeeRole) -> Result<()> {
+        let daily_limits = match role {
+            EmployeeRole::Manager3 => DailyLimit {
+                withdraw_limit: MANAGER3_WITHDRAW_LIMIT,
+                refund_limit: MANAGER3_WITHDRAW_LIMIT,
+                withdraw_used: 0,
+                refund_used: 0,
+                last_reset: Clock::get()?.unix_timestamp,
+            },
+            EmployeeRole::Manager2 => DailyLimit {
+                withdraw_limit: MANAGER2_WITHDRAW_LIMIT,
+                refund_limit: MANAGER2_WITHDRAW_LIMIT,
+                withdraw_used: 0,
+                refund_used: 0,
+                last_reset: Clock::get()?.unix_timestamp,
+            },
+            EmployeeRole::Manager1 => DailyLimit {
+                withdraw_limit: MANAGER1_WITHDRAW_LIMIT,
+                refund_limit: MANAGER1_WITHDRAW_LIMIT,
+                withdraw_used: 0,
+                refund_used: 0,
+                last_reset: Clock::get()?.unix_timestamp,
+            },
+            EmployeeRole::Employee3 => DailyLimit {
+                withdraw_limit: EMPLOYEE3_WITHDRAW_LIMIT,
+                refund_limit: EMPLOYEE3_WITHDRAW_LIMIT,
+                withdraw_used: 0,
+                refund_used: 0,
+                last_reset: Clock::get()?.unix_timestamp,
+            },
+            EmployeeRole::Employee2 => DailyLimit {
+                withdraw_limit: 0,
+                refund_limit: EMPLOYEE2_REFUND_LIMIT,
+                withdraw_used: 0,
+                refund_used: 0,
+                last_reset: Clock::get()?.unix_timestamp,
+            },
+            EmployeeRole::Employee1 => DailyLimit {
+                withdraw_limit: 0,
+                refund_limit: EMPLOYEE1_REFUND_LIMIT,
+                withdraw_used: 0,
+                refund_used: 0,
+                last_reset: Clock::get()?.unix_timestamp,
+            },
+            _ => return Err(error!(CustomError::UnauthorizedWithdrawal)),
+        };
+
+        self.employee.set_inner(Employee {
+            merchant: self.merchant.key(),
+            employee_pubkey: self.employee_pubkey.key(),
+            role,
+            name: name.clone(),
+            daily_limits,
+            is_active: true,
+            bump: bumps.employee,
+        });
+
+        Ok(())
+    }
+}
+
+#[derive(Accounts)]
+pub struct UpdateEmployee<'info> {
+    #[account(mut)]
+    pub merchant_owner: Signer<'info>,
+    
+    #[account(
+        seeds = [b"merchant", merchant.entity_name.as_str().as_bytes(), merchant_owner.key().as_ref()],
+        bump = merchant.merchant_bump,
+        constraint = merchant.owner == merchant_owner.key()
+    )]
+    pub merchant: Account<'info, Merchant>,
+    
+    #[account(
+        mut,
+        seeds = [
+            b"employee",
+            merchant.key().as_ref(),
+            employee.employee_pubkey.as_ref()
+        ],
+        bump = employee.bump
+    )]
+    pub employee: Account<'info, Employee>,
+
+    pub system_program: Program<'info, System>,
+}
+
+impl<'info> UpdateEmployee<'info> {
+    pub fn update(&mut self, role: Option<EmployeeRole>, is_active: Option<bool>) -> Result<()> {
+        if let Some(new_role) = role {
+            self.employee.role = new_role;
+        }
+        if let Some(active) = is_active {
+            self.employee.is_active = active;
+        }
+        Ok(())
+    }
+}
+
+#[derive(Accounts)]
+#[instruction(amount: u64)]
+pub struct EmployeeWithdrawUSDC<'info> {
+    #[account(mut)]
+    pub employee_signer: Signer<'info>,
+    
+    #[account(
+        seeds = [b"merchant", merchant.entity_name.as_str().as_bytes(), merchant.owner.as_ref()],
+        bump = merchant.merchant_bump
+    )]
+    pub merchant: Account<'info, Merchant>,
+    
+    #[account(
+        seeds = [
+            b"employee",
+            merchant.key().as_ref(),
+            employee_signer.key().as_ref()
+        ],
+        bump = employee.bump,
+        constraint = employee.is_active @ CustomError::InactiveEmployee,
+        constraint = employee.can_withdraw(amount, Clock::get()?) @ CustomError::ExceedsDailyLimit
+    )]
+    pub employee: Account<'info, Employee>,
+    
+    #[account(constraint = usdc_mint.key() == Pubkey::from_str(USDC_DEVNET_MINT).unwrap())]
+    pub usdc_mint: InterfaceAccount<'info, Mint>,
+
+    #[account(mut,
+        associated_token::mint = usdc_mint,
+        associated_token::authority = merchant,
+        constraint = merchant_usdc_ata.amount >= amount @ CustomError::InsufficientFunds,
+    )]
+    pub merchant_usdc_ata: InterfaceAccount<'info, TokenAccount>,
+
+    #[account(mut,
+        associated_token::mint = usdc_mint,
+        associated_token::authority = house
+    )]
+    pub house_usdc_ata: InterfaceAccount<'info, TokenAccount>,
+
+    /// CHECK: This is the HOUSE Squads multi-sig
+    #[account(mut, constraint = house.key() == Pubkey::from_str(HOUSE).unwrap())]
+    pub house: AccountInfo<'info>,
+
+    #[account(init_if_needed, payer = employee_signer,
+        associated_token::mint = usdc_mint,
+        associated_token::authority = employee_signer
+    )]
+    pub employee_usdc_ata: InterfaceAccount<'info, TokenAccount>,
+
+    pub associated_token_program: Program<'info, AssociatedToken>,
+    pub token_program: Interface<'info, TokenInterface>,
+    pub system_program: Program<'info, System>,
+}
+
+impl<'info> EmployeeWithdrawUSDC<'info> {
+    pub fn withdraw(&mut self, amount: u64) -> Result<()> {
+        let owner_amount = (amount * MERCHANT_SHARE) / 1000;
+        let house_amount = amount - owner_amount;
+
+        // Update employee daily limits
+        if self.employee.role != EmployeeRole::Owner {
+            let now = Clock::get()?.unix_timestamp;
+            let day_seconds = 24 * 60 * 60;
+            
+            if now - self.employee.daily_limits.last_reset >= day_seconds {
+                self.employee.daily_limits.withdraw_used = amount;
+                self.employee.daily_limits.last_reset = now;
+            } else {
+                self.employee.daily_limits.withdraw_used += amount;
+            }
+        }
+
+        // Transfer tokens using merchant authority
+        let seeds = &[
+            b"merchant".as_ref(),
+            self.merchant.entity_name.as_bytes(),
+            self.merchant.owner.as_ref(),
+            &[self.merchant.merchant_bump],
+        ];
+
+        // Transfer employee's share
+        anchor_spl::token_interface::transfer_checked(
+            CpiContext::new_with_signer(
+                self.token_program.to_account_info(),
+                anchor_spl::token_interface::TransferChecked {
+                    from: self.merchant_usdc_ata.to_account_info(),
+                    mint: self.usdc_mint.to_account_info(),
+                    to: self.employee_usdc_ata.to_account_info(),
+                    authority: self.merchant.to_account_info(),
+                },
+                &[seeds],
+            ),
+            owner_amount,
+            self.usdc_mint.decimals,
+        )?;
+
+        // Transfer house's share
+        anchor_spl::token_interface::transfer_checked(
+            CpiContext::new_with_signer(
+                self.token_program.to_account_info(),
+                anchor_spl::token_interface::TransferChecked {
+                    from: self.merchant_usdc_ata.to_account_info(),
+                    mint: self.usdc_mint.to_account_info(),
+                    to: self.house_usdc_ata.to_account_info(),
+                    authority: self.merchant.to_account_info(),
+                },
+                &[seeds],
+            ),
+            house_amount,
+            self.usdc_mint.decimals,
+        )?;
+
+        Ok(())
+    }
+}
+
 
 

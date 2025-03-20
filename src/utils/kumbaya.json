@@ -8,6 +8,105 @@
   },
   "instructions": [
     {
+      "name": "create_employee",
+      "discriminator": [
+        87,
+        175,
+        18,
+        124,
+        24,
+        81,
+        207,
+        40
+      ],
+      "accounts": [
+        {
+          "name": "merchant_owner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "merchant",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  101,
+                  114,
+                  99,
+                  104,
+                  97,
+                  110,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "merchant.entity_name",
+                "account": "Merchant"
+              },
+              {
+                "kind": "account",
+                "path": "merchant_owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "employee",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  101,
+                  109,
+                  112,
+                  108,
+                  111,
+                  121,
+                  101,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "merchant"
+              },
+              {
+                "kind": "account",
+                "path": "employee_pubkey"
+              }
+            ]
+          }
+        },
+        {
+          "name": "employee_pubkey"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "role",
+          "type": {
+            "defined": {
+              "name": "EmployeeRole"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "create_merchant",
       "discriminator": [
         249,
@@ -163,6 +262,378 @@
         {
           "name": "name",
           "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "employee_withdraw",
+      "discriminator": [
+        118,
+        139,
+        145,
+        246,
+        4,
+        254,
+        208,
+        142
+      ],
+      "accounts": [
+        {
+          "name": "employee_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "merchant",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  101,
+                  114,
+                  99,
+                  104,
+                  97,
+                  110,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "merchant.entity_name",
+                "account": "Merchant"
+              },
+              {
+                "kind": "account",
+                "path": "merchant.owner",
+                "account": "Merchant"
+              }
+            ]
+          }
+        },
+        {
+          "name": "employee",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  101,
+                  109,
+                  112,
+                  108,
+                  111,
+                  121,
+                  101,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "merchant"
+              },
+              {
+                "kind": "account",
+                "path": "employee_signer"
+              }
+            ]
+          }
+        },
+        {
+          "name": "usdc_mint"
+        },
+        {
+          "name": "merchant_usdc_ata",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "merchant"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  215,
+                  101,
+                  161,
+                  147,
+                  217,
+                  203,
+                  225,
+                  70,
+                  206,
+                  235,
+                  121,
+                  172,
+                  28,
+                  180,
+                  133,
+                  237,
+                  95,
+                  91,
+                  55,
+                  145,
+                  58,
+                  140,
+                  245,
+                  133,
+                  126,
+                  255,
+                  0,
+                  169
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "usdc_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "house_usdc_ata",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "house"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  215,
+                  101,
+                  161,
+                  147,
+                  217,
+                  203,
+                  225,
+                  70,
+                  206,
+                  235,
+                  121,
+                  172,
+                  28,
+                  180,
+                  133,
+                  237,
+                  95,
+                  91,
+                  55,
+                  145,
+                  58,
+                  140,
+                  245,
+                  133,
+                  126,
+                  255,
+                  0,
+                  169
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "usdc_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "house",
+          "writable": true
+        },
+        {
+          "name": "employee_usdc_ata",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "employee_signer"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  215,
+                  101,
+                  161,
+                  147,
+                  217,
+                  203,
+                  225,
+                  70,
+                  206,
+                  235,
+                  121,
+                  172,
+                  28,
+                  180,
+                  133,
+                  237,
+                  95,
+                  91,
+                  55,
+                  145,
+                  58,
+                  140,
+                  245,
+                  133,
+                  126,
+                  255,
+                  0,
+                  169
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "usdc_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "associated_token_program",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        },
+        {
+          "name": "token_program"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
         }
       ]
     },
@@ -587,6 +1058,107 @@
       ]
     },
     {
+      "name": "update_employee",
+      "discriminator": [
+        73,
+        4,
+        138,
+        145,
+        85,
+        224,
+        29,
+        186
+      ],
+      "accounts": [
+        {
+          "name": "merchant_owner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "merchant",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  101,
+                  114,
+                  99,
+                  104,
+                  97,
+                  110,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "merchant.entity_name",
+                "account": "Merchant"
+              },
+              {
+                "kind": "account",
+                "path": "merchant_owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "employee",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  101,
+                  109,
+                  112,
+                  108,
+                  111,
+                  121,
+                  101,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "merchant"
+              },
+              {
+                "kind": "account",
+                "path": "employee.employee_pubkey",
+                "account": "Employee"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "role",
+          "type": {
+            "option": {
+              "defined": {
+                "name": "EmployeeRole"
+              }
+            }
+          }
+        },
+        {
+          "name": "is_active",
+          "type": {
+            "option": "bool"
+          }
+        }
+      ]
+    },
+    {
       "name": "withdraw_usdc",
       "discriminator": [
         114,
@@ -932,6 +1504,19 @@
   ],
   "accounts": [
     {
+      "name": "Employee",
+      "discriminator": [
+        98,
+        238,
+        61,
+        252,
+        130,
+        77,
+        105,
+        67
+      ]
+    },
+    {
       "name": "Global",
       "discriminator": [
         167,
@@ -973,6 +1558,45 @@
   ],
   "events": [
     {
+      "name": "EmployeeCreated",
+      "discriminator": [
+        148,
+        207,
+        96,
+        70,
+        37,
+        68,
+        244,
+        250
+      ]
+    },
+    {
+      "name": "EmployeeUpdated",
+      "discriminator": [
+        15,
+        12,
+        101,
+        103,
+        9,
+        167,
+        130,
+        169
+      ]
+    },
+    {
+      "name": "EmployeeWithdrawal",
+      "discriminator": [
+        83,
+        108,
+        62,
+        7,
+        2,
+        57,
+        71,
+        70
+      ]
+    },
+    {
       "name": "RefundProcessed",
       "discriminator": [
         203,
@@ -1006,9 +1630,196 @@
       "code": 6003,
       "name": "UnauthorizedRefund",
       "msg": "Unauthorized refund; caller is not the Merchant's Owner, or amount is 0."
+    },
+    {
+      "code": 6004,
+      "name": "InactiveEmployee",
+      "msg": "Employee account is inactive"
+    },
+    {
+      "code": 6005,
+      "name": "ExceedsDailyLimit",
+      "msg": "Employee has exceeded their daily transaction limit"
     }
   ],
   "types": [
+    {
+      "name": "DailyLimit",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "withdraw_limit",
+            "type": "u64"
+          },
+          {
+            "name": "refund_limit",
+            "type": "u64"
+          },
+          {
+            "name": "withdraw_used",
+            "type": "u64"
+          },
+          {
+            "name": "refund_used",
+            "type": "u64"
+          },
+          {
+            "name": "last_reset",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Employee",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "merchant",
+            "type": "pubkey"
+          },
+          {
+            "name": "employee_pubkey",
+            "type": "pubkey"
+          },
+          {
+            "name": "role",
+            "type": {
+              "defined": {
+                "name": "EmployeeRole"
+              }
+            }
+          },
+          {
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "name": "daily_limits",
+            "type": {
+              "defined": {
+                "name": "DailyLimit"
+              }
+            }
+          },
+          {
+            "name": "is_active",
+            "type": "bool"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "EmployeeCreated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "merchant",
+            "type": "pubkey"
+          },
+          {
+            "name": "employee",
+            "type": "pubkey"
+          },
+          {
+            "name": "role",
+            "type": "string"
+          },
+          {
+            "name": "name",
+            "type": "string"
+          }
+        ]
+      }
+    },
+    {
+      "name": "EmployeeRole",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Owner"
+          },
+          {
+            "name": "Manager3"
+          },
+          {
+            "name": "Manager2"
+          },
+          {
+            "name": "Manager1"
+          },
+          {
+            "name": "Employee3"
+          },
+          {
+            "name": "Employee2"
+          },
+          {
+            "name": "Employee1"
+          }
+        ]
+      }
+    },
+    {
+      "name": "EmployeeUpdated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "merchant",
+            "type": "pubkey"
+          },
+          {
+            "name": "employee",
+            "type": "pubkey"
+          },
+          {
+            "name": "new_role",
+            "type": {
+              "option": "string"
+            }
+          },
+          {
+            "name": "is_active",
+            "type": {
+              "option": "bool"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "EmployeeWithdrawal",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "merchant",
+            "type": "pubkey"
+          },
+          {
+            "name": "employee",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
     {
       "name": "Global",
       "type": {

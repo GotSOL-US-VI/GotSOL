@@ -13,4 +13,10 @@ pub enum CustomError {
 
     #[msg("Unauthorized refund; caller is not the Merchant's Owner, or amount is 0.")]
     UnauthorizedRefund,
+
+    #[msg("Employee account is inactive")]
+    InactiveEmployee,
+
+    #[msg("Employee has exceeded their daily transaction limit")]
+    ExceedsDailyLimit,
 }
