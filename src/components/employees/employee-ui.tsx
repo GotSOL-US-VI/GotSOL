@@ -426,7 +426,7 @@ function ModalEditEmployee({
             
             <div className="bg-base-200 p-3 rounded-md text-sm">
               <p>
-                Changing an employee's role will modify their access permissions.
+                Changing an employee&apos;s role will modify their access permissions.
                 This change takes effect immediately.
               </p>
             </div>
