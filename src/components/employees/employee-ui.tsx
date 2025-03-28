@@ -229,7 +229,7 @@ function ModalCreateEmployee({
             className="input input-bordered w-full"
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            placeholder="Enter employee's full name"
+            placeholder="Enter employee's name"
             required
           />
         </div>
