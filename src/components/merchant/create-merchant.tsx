@@ -70,19 +70,19 @@ export function CreateMerchant({ program, onSuccess }: CreateMerchantProps) {
 
     return (
         <div className="max-w-md mx-auto p-6">
-            <h2 className="text-2xl font-bold mb-6">Create Your Merchant Account</h2>
+            <h2 className="text-2xl font-bold mb-6">Create a Merchant Account</h2>
 
             <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                     <label className="label">
-                        <span className="label-text">Business Name</span>
+                        <span className="label-text">Merchant Name</span>
                     </label>
                     <input
                         type="text"
                         className="input input-bordered w-full"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
-                        placeholder="Enter your business name"
+                        placeholder="Enter your Merchant name"
                         required
                         disabled={isLoading}
                     />

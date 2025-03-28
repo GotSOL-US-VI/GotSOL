@@ -22,7 +22,7 @@ export interface CreateEmployeeParams {
   role: string
 }
 
-export function useGetEmployees({ merchantId }: { merchantId: PublicKey }) {
+export function useGetEmployees({ merchantId, enabled = true }: { merchantId: PublicKey, enabled?: boolean }) {
   const { connection } = useConnection()
   
   return useQuery({
@@ -54,7 +54,8 @@ export function useGetEmployees({ merchantId }: { merchantId: PublicKey }) {
           }
         }
       ]
-    }
+    },
+    enabled
   })
 }
 

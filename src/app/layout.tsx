@@ -20,13 +20,13 @@ export const metadata = {
 // ]
 
 const defaultLinks = [
-  { label: 'Create Store', path: '/merchant/setup' },
+  { label: 'Create Merchant', path: '/merchant/setup' },
   { label: 'Resources', path: '/links' },
 ]
 
 const merchantLinks = [
   { label: 'Point of Sale', path: '/merchant/dashboard/:merchantId' },
-  { label: 'Manage Accounts', path: '/merchant/dashboard/:merchantId/accounts' },
+  { label: 'Manage Employees', path: '/merchant/dashboard/:merchantId/accounts' },
   { label: 'Treasury / Yield', path: '/merchant/dashboard/:merchantId/yield' },
   { label: 'USD Off-ramps', path: '/merchant/dashboard/:merchantId/off-ramps' },
   { label: 'Resources', path: '/links' },

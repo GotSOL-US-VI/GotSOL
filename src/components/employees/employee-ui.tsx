@@ -15,7 +15,8 @@ import {
 } from './employee-data-access'
 
 export function EmployeeList({ merchantId }: { merchantId: PublicKey }) {
-  const query = useGetEmployees({ merchantId })
+  const [shouldFetch, setShouldFetch] = useState(false)
+  const query = useGetEmployees({ merchantId, enabled: shouldFetch })
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null)
@@ -54,7 +55,14 @@ export function EmployeeList({ merchantId }: { merchantId: PublicKey }) {
           >
             Add Employee
           </button>
-          {query.isLoading ? (
+          {!shouldFetch ? (
+            <button
+              className="btn btn-sm btn-primary"
+              onClick={() => setShouldFetch(true)}
+            >
+              Load Employees
+            </button>
+          ) : query.isLoading ? (
             <span className="loading loading-spinner"></span>
           ) : (
             <button
@@ -87,67 +95,52 @@ export function EmployeeList({ merchantId }: { merchantId: PublicKey }) {
         </div>
       )}
       
-      {query.isSuccess && (
-        <div className="bg-base-100 rounded-lg overflow-hidden">
-          {query.data.length === 0 ? (
-            <div className="p-8 text-center">
-              <p className="text-lg mb-4">No employees found.</p>
-              <p className="text-sm text-base-content/70 mb-6">Add employees to help manage your business operations.</p>
-              <button 
-                className="btn btn-primary" 
-                onClick={() => setShowCreateModal(true)}
-              >
-                Add Your First Employee
-              </button>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="table w-full">
-                <thead className="bg-base-200">
-                  <tr>
-                    <th>Name</th>
-                    <th>Role</th>
-                    <th>Wallet</th>
-                    <th>Status</th>
-                    <th>Created</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {query.data.map((employee: Employee) => (
-                    <tr key={employee.publicKey.toString()} className="hover:bg-base-200">
-                      <td className="font-medium">{employee.account.name}</td>
-                      <td>
-                        <RoleBadge role={employee.account.role} />
-                      </td>
-                      <td className="font-mono">
-                        <ExplorerLink 
-                          label={ellipsify(employee.account.employeePubkey.toString())} 
-                          path={`account/${employee.account.employeePubkey.toString()}`} 
-                        />
-                      </td>
-                      <td>
-                        <div className={`badge ${employee.account.isActive ? 'badge-success' : 'badge-error'}`}>
-                          {employee.account.isActive ? 'Active' : 'Inactive'}
-                        </div>
-                      </td>
-                      <td className="text-sm">
-                        {new Date(employee.account.created).toLocaleDateString()}
-                      </td>
-                      <td>
-                        <button 
-                          className="btn btn-xs btn-outline" 
-                          onClick={() => handleEditClick(employee)}
-                        >
-                          Manage
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+      {shouldFetch && query.data && query.data.length > 0 && (
+        <div className="overflow-x-auto">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Role</th>
+                <th>Wallet</th>
+                <th>Status</th>
+                <th>Added</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {query.data.map((employee: Employee) => (
+                <tr key={employee.publicKey.toString()} className="hover:bg-base-200">
+                  <td className="font-medium">{employee.account.name}</td>
+                  <td>
+                    <RoleBadge role={employee.account.role} />
+                  </td>
+                  <td className="font-mono">
+                    <ExplorerLink 
+                      label={ellipsify(employee.account.employeePubkey.toString())} 
+                      path={`account/${employee.account.employeePubkey.toString()}`} 
+                    />
+                  </td>
+                  <td>
+                    <div className={`badge ${employee.account.isActive ? 'badge-success' : 'badge-error'}`}>
+                      {employee.account.isActive ? 'Active' : 'Inactive'}
+                    </div>
+                  </td>
+                  <td className="text-sm">
+                    {new Date(employee.account.created).toLocaleDateString()}
+                  </td>
+                  <td>
+                    <button 
+                      className="btn btn-xs btn-outline" 
+                      onClick={() => handleEditClick(employee)}
+                    >
+                      Manage
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
     </div>

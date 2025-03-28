@@ -21,9 +21,9 @@ export default function ManageAccountsPage({ params }: { params: { merchantId: s
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Manage Accounts</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Manage Employees</h1>
           <p className="text-gray-500">
-            Manage your merchant and employee accounts
+            Manage your employee and manager accounts
           </p>
         </div>
         <div className="bg-primary/10 p-3 rounded-full">
