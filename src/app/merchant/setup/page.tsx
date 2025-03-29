@@ -25,7 +25,7 @@ export default function MerchantSetupPage() {
   return (
     <div>
       <AppHero
-        title="Create Your Store"
+        title="Create a Merchant"
         subtitle="Set up your merchant account to start accepting payments on Solana"
       />
       
