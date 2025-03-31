@@ -1,4 +1,6 @@
 /** @type {import('next').NextConfig} */
-const nextConfig = {};
-
-export default nextConfig;
+const nextConfig = {
+    transpilePackages: ["@getpara/react-sdk", "@getpara/*"],
+  };
+  
+  export default nextConfig;

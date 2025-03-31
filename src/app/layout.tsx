@@ -1,3 +1,4 @@
+import "@getpara/react-sdk/styles.css";
 import './globals.css'
 import { ClusterProvider } from '@/components/cluster/cluster-data-access'
 import { SolanaProvider } from '@/components/solana/solana-provider'
