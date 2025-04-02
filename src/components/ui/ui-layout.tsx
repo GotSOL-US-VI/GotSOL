@@ -198,8 +198,8 @@ export function UiLayout({
                 OAuthMethod.APPLE,
                 OAuthMethod.DISCORD,
                 OAuthMethod.FACEBOOK,
-                OAuthMethod.FARCASTER,
                 OAuthMethod.TWITTER,
+                OAuthMethod.TELEGRAM,
               ]}
               externalWallets={[]}
               hideWallets
