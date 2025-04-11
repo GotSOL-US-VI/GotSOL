@@ -85,7 +85,7 @@ export default function DashboardFeature() {
 
   useEffect(() => {
     const fetchMerchants = async () => {
-      if (!program) {   // || !publicKey
+      if (!program || !publicKey) {   // 
         setMerchants([])
         setLoading(false)
         return

@@ -124,11 +124,11 @@ export function UiLayout({
           </button>
           <div className="btn btn-primary rounded-btn">
             {isConnected ? (
-              <button onClick={() => openModal}>
+              <button onClick={openModal}>
                 {email}
               </button>
             ) : (
-              <button onClick={() => openModal}>
+              <button onClick={openModal}>
                 {'Sign in with Para'}
               </button>
             )}
