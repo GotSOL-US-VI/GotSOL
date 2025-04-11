@@ -73,38 +73,7 @@ export function UiLayout({
     setActiveMerchant(null)
     localStorage.removeItem('activeMerchant')
   }
-  
-  const handleCheckIfAuthenticated = async () => {
-    setIsLoading(true);
-    setError("");
-    try {
-      const isAuthenticated = await para.isFullyLoggedIn();
-      setIsConnected(isAuthenticated);
-      if (isAuthenticated) {
-        const wallets = Object.values(await para.getWallets());
-        const email = await para.getEmail();
-        console.log("****************",email);
-        if (wallets?.length) {
-          setWallet(wallets[0].address || "unknown");
-        }
-      }
-    } catch (err: any) {
-      setError(err.message || "An error occurred during authentication");
-    }
-    setIsLoading(false);
-  };
 
-  useEffect(() => {
-    handleCheckIfAuthenticated();
-  }, []);
-
-  const handleOpenModal = () => {
-    setIsOpen(true);
-  };
-  const handleCloseModal = async () => {
-    handleCheckIfAuthenticated();
-    setIsOpen(false);
-  };
   const currentLinks = activeMerchant ? merchantLinks : defaultLinks
 
   return (
@@ -182,36 +151,6 @@ export function UiLayout({
           {children}
         </Suspense>
         <Toaster position="bottom-right" />
-        <ParaModal
-              para={para}
-              isOpen={isOpen}
-              onClose={handleCloseModal}
-              logo={""}
-              theme={{
-                foregroundColor: "#2D3648",
-                backgroundColor: "#FFFFFF",
-                accentColor: "#0066CC",
-                darkForegroundColor: "#E8EBF2",
-                darkBackgroundColor: "#1A1F2B",
-                darkAccentColor: "#4D9FFF",
-                mode: "light",
-                borderRadius: "none",
-                font: "Inter",
-              }}
-
-              authLayout={[AuthLayout.AUTH_FULL]}
-              oAuthMethods={[
-                OAuthMethod.GOOGLE,
-                OAuthMethod.APPLE,
-                OAuthMethod.DISCORD,
-                OAuthMethod.FACEBOOK,
-                OAuthMethod.TWITTER,
-                OAuthMethod.TELEGRAM,
-              ]}
-              externalWallets={[]}
-              hideWallets
-              onRampTestMode={true}
-            />
       </div>
     </div>
   )
