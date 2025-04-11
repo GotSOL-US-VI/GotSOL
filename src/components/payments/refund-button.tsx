@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { useConnection, useWallet } from '@solana/wallet-adapter-react';
+import { useConnection } from '@/lib/connection-context';
 import * as anchor from "@coral-xyz/anchor";
 import { Program, Idl, BN } from '@coral-xyz/anchor';
 import { PublicKey } from '@solana/web3.js';
+import { usePara } from '../para/para-provider';
 import { getAssociatedTokenAddress, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID, createAssociatedTokenAccountIdempotentInstruction } from '@solana/spl-token';
 import toast from 'react-hot-toast';
 import bs58 from 'bs58';
@@ -32,7 +33,8 @@ const USDC_MINT_MAINNET = new PublicKey('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwy
 
 export function RefundButton({ program, merchantPubkey, payment, onSuccess, isDevnet = true }: RefundButtonProps) {
     const { connection } = useConnection();
-    const { publicKey } = useWallet();
+    const { address } = usePara();
+    const publicKey = new PublicKey(address ?? "");
     const [isLoading, setIsLoading] = useState(false);
 
     const handleRefund = async () => {
@@ -43,13 +45,13 @@ export function RefundButton({ program, merchantPubkey, payment, onSuccess, isDe
 
         try {
             setIsLoading(true);
-            
+
             const usdcMint = isDevnet ? USDC_MINT_DEVNET : USDC_MINT_MAINNET;
 
             // Fetch merchant account data first
             console.log('Fetching merchant account from:', merchantPubkey.toString());
             const merchantAccount = await (program.account as any).merchant.fetch(merchantPubkey) as MerchantAccount;
-            
+
             if (!merchantAccount) {
                 throw new Error('Merchant account not found');
             }
@@ -166,7 +168,7 @@ export function RefundButton({ program, merchantPubkey, payment, onSuccess, isDe
 
             // Comprehensive debug logging
             console.log('=== COMPLETE REFUND TRANSACTION DEBUG ===');
-            
+
             // 1. Program and Instruction Details
             console.log('Program Details:', {
                 programId: program.programId.toString(),
@@ -189,9 +191,9 @@ export function RefundButton({ program, merchantPubkey, payment, onSuccess, isDe
                     pubkey: merchantPda.toString(),
                     derivation: {
                         seeds: [
-                            {name: 'merchant', value: Array.from(Buffer.from('merchant'))},
-                            {name: 'entityName', value: Array.from(merchantNameBytes)},
-                            {name: 'owner', value: Array.from(merchantAccount.owner.toBuffer())}
+                            { name: 'merchant', value: Array.from(Buffer.from('merchant')) },
+                            { name: 'entityName', value: Array.from(merchantNameBytes) },
+                            { name: 'owner', value: Array.from(merchantAccount.owner.toBuffer()) }
                         ],
                         bump: merchantAccount.merchantBump
                     },
@@ -216,10 +218,11 @@ export function RefundButton({ program, merchantPubkey, payment, onSuccess, isDe
                     pubkey: refundRecord.toString(),
                     derivation: {
                         seeds: [
-                            {name: 'refund', value: Array.from(Buffer.from('refund'))},
-                            {name: 'signaturePrefix', 
-                             raw: signaturePrefix,
-                             asString: signaturePrefix
+                            { name: 'refund', value: Array.from(Buffer.from('refund')) },
+                            {
+                                name: 'signaturePrefix',
+                                raw: signaturePrefix,
+                                asString: signaturePrefix
                             }
                         ],
                         bump: refundBump
@@ -268,7 +271,7 @@ export function RefundButton({ program, merchantPubkey, payment, onSuccess, isDe
 
             // Check if recipient's ATA exists
             const recipientAtaInfo = await program.provider.connection.getAccountInfo(recipientUsdcAta);
-            
+
             // If recipient's ATA doesn't exist, create it first
             if (!recipientAtaInfo) {
                 const provider = program.provider as anchor.AnchorProvider;
@@ -297,7 +300,7 @@ export function RefundButton({ program, merchantPubkey, payment, onSuccess, isDe
 
                 // Get logs from simulation response
                 const simulationLogs = simError?.simulationResponse?.logs || [];
-                
+
                 // Check if any log contains "already in use"
                 if (simulationLogs.some((log: string) => log.includes('already in use'))) {
                     throw new Error('REFUND_ALREADY_PROCESSED');
@@ -309,14 +312,14 @@ export function RefundButton({ program, merchantPubkey, payment, onSuccess, isDe
 
             // If simulation succeeds, send the transaction
             const txid = await tx.rpc();
-            
+
             console.log('Refund successful:', txid);
             toast.success('Refund processed successfully!');
             onSuccess?.();
 
         } catch (error) {
             console.error('Refund error:', error);
-            
+
             if (error instanceof Error && error.message === 'REFUND_ALREADY_PROCESSED') {
                 toast.error('This refund has already been processed');
             } else {

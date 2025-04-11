@@ -3,10 +3,10 @@
 import * as anchor from "@coral-xyz/anchor";
 import { useState } from 'react';
 import { Program, Idl } from '@coral-xyz/anchor';
-import { useWallet } from '@solana/wallet-adapter-react';
+import { useWalletAdapterCompat } from '@/hooks/useWalletAdapterCompat';
 import { PublicKey } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
-
+import { usePara } from "../para/para-provider";
 
 interface CreateMerchantProps {
     program: Program<Idl>;
@@ -14,11 +14,13 @@ interface CreateMerchantProps {
 }
 
 export function CreateMerchant({ program, onSuccess }: CreateMerchantProps) {
-    const { publicKey } = useWallet();
     const [name, setName] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string>('');
-
+    const {address} = usePara();
+    if (!address)
+        return null;
+    const publicKey = new PublicKey(address);
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!publicKey) {
@@ -45,7 +47,7 @@ export function CreateMerchant({ program, onSuccess }: CreateMerchantProps) {
 
             // main net USDC address
             const USDC_MINT = new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
-
+            
             // Create the merchant
             const tx = await program.methods
                 .createMerchant(name)

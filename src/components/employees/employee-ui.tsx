@@ -1,6 +1,6 @@
 'use client'
 
-import { useWallet } from '@solana/wallet-adapter-react'
+import { useWalletAdapterCompat } from '@/hooks/useWalletAdapterCompat'
 import { PublicKey } from '@solana/web3.js'
 import { IconRefresh } from '@tabler/icons-react'
 import { useState } from 'react'

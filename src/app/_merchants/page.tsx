@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
-import { useAnchorProvider } from '@/components/solana/solana-provider';
+import { useAnchorProvider } from '@/components/para/para-provider';
 import * as anchor from '@coral-xyz/anchor';
 import { PublicKey } from '@solana/web3.js';
 import idl from '@/utils/kumbaya.json';

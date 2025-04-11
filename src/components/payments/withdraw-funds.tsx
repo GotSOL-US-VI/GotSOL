@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { Program, Idl, BN } from '@coral-xyz/anchor';
 import { PublicKey } from '@solana/web3.js';
-import { useConnection, useWallet } from '@solana/wallet-adapter-react';
+import { usePara } from '../para/para-provider';
+import { useConnection } from '@/lib/connection-context';
 import { getAssociatedTokenAddress } from '@solana/spl-token';
 import toast from 'react-hot-toast';
 import * as anchor from '@coral-xyz/anchor';
@@ -23,7 +24,10 @@ interface WithdrawFundsProps {
 
 export function WithdrawFunds({ program, merchantPubkey, isDevnet = true }: WithdrawFundsProps) {
   const { connection } = useConnection();
-  const { publicKey } = useWallet();
+  const { address } = usePara();
+
+  const publicKey = new PublicKey(address ?? "");
+
   const [merchantBalance, setMerchantBalance] = useState<number | null>(null);
   const [ownerBalance, setOwnerBalance] = useState<number | null>(null);
   const [withdrawAmount, setWithdrawAmount] = useState<string>('');
@@ -82,7 +86,7 @@ export function WithdrawFunds({ program, merchantPubkey, isDevnet = true }: With
     try {
       // Convert to USDC base units (6 decimals)
       const amount = new BN(Math.floor(parseFloat(withdrawAmount) * 1e6));
-      
+
       // Calculate owner's share for display purposes
       const ownerShare = (parseFloat(withdrawAmount) * MERCHANT_SHARE) / 1000;
 
@@ -108,9 +112,9 @@ export function WithdrawFunds({ program, merchantPubkey, isDevnet = true }: With
           <p className="text-sm">You will receive: {ownerShare.toFixed(6)} USDC</p>
           <p className="text-sm">Platform fee: {(parseFloat(withdrawAmount) - ownerShare).toFixed(6)} USDC</p>
           <p className="text-xs mt-1">
-            <a 
-              href={`https://${isDevnet ? 'explorer.solana.com/?cluster=devnet' : 'solscan.io'}/tx/${tx}`} 
-              target="_blank" 
+            <a
+              href={`https://${isDevnet ? 'explorer.solana.com/?cluster=devnet' : 'solscan.io'}/tx/${tx}`}
+              target="_blank"
               rel="noopener noreferrer"
               className="underline"
             >
@@ -118,14 +122,14 @@ export function WithdrawFunds({ program, merchantPubkey, isDevnet = true }: With
             </a>
           </p>
         </div>,
-          {
-            duration: 8000, 
-          }
+        {
+          duration: 8000,
+        }
       );
 
       // Reset form and refresh balances
       setWithdrawAmount('');
-      
+
     } catch (err) {
       console.error('Error withdrawing funds:', err);
       setError(err instanceof Error ? err.message : 'Failed to withdraw funds');
@@ -140,8 +144,8 @@ export function WithdrawFunds({ program, merchantPubkey, isDevnet = true }: With
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-bold flex items-center gap-2">
           Withdraw Funds
-          <button 
-            className="btn btn-ghost btn-xs tooltip tooltip-right" 
+          <button
+            className="btn btn-ghost btn-xs tooltip tooltip-right"
             data-tip="1.5% platform fee applies to withdrawals"
           >
             ⓘ
@@ -168,8 +172,8 @@ export function WithdrawFunds({ program, merchantPubkey, isDevnet = true }: With
         <div className="flex justify-between items-center bg-base-300 p-3 rounded-lg">
           <span className="text-sm">Merchant&apos;s USDC Balance</span>
           <span className="font-semibold">
-            {showBalances 
-              ? (merchantBalance !== null ? `${merchantBalance.toFixed(6)} USDC` : '...') 
+            {showBalances
+              ? (merchantBalance !== null ? `${merchantBalance.toFixed(6)} USDC` : '...')
               : '••••••••'}
           </span>
         </div>
@@ -177,8 +181,8 @@ export function WithdrawFunds({ program, merchantPubkey, isDevnet = true }: With
         <div className="flex justify-between items-center bg-base-300 p-3 rounded-lg">
           <span className="text-sm">Owner&apos;s USDC Balance</span>
           <span className="font-semibold">
-            {showBalances 
-              ? (ownerBalance !== null ? `${ownerBalance.toFixed(6)} USDC` : '...') 
+            {showBalances
+              ? (ownerBalance !== null ? `${ownerBalance.toFixed(6)} USDC` : '...')
               : '••••••••'}
           </span>
         </div>
@@ -199,7 +203,7 @@ export function WithdrawFunds({ program, merchantPubkey, isDevnet = true }: With
               disabled={isLoading}
             />
             <div className="grid grid-cols-2 gap-2 w-full">
-              <button 
+              <button
                 className="btn btn-sm w-full"
                 onClick={() => merchantBalance && setWithdrawAmount(merchantBalance.toString())}
                 disabled={isLoading || merchantBalance === null}
@@ -210,9 +214,9 @@ export function WithdrawFunds({ program, merchantPubkey, isDevnet = true }: With
                 className={`btn btn-sm btn-primary w-full ${isLoading ? 'loading' : ''}`}
                 onClick={handleWithdraw}
                 disabled={
-                  isLoading || 
-                  !withdrawAmount || 
-                  parseFloat(withdrawAmount) <= 0 || 
+                  isLoading ||
+                  !withdrawAmount ||
+                  parseFloat(withdrawAmount) <= 0 ||
                   (merchantBalance !== null && parseFloat(withdrawAmount) > merchantBalance)
                 }
               >

@@ -9,10 +9,9 @@ import Image from 'next/image'
 
 import { AccountChecker } from '../accounts/account-ui'
 import { ClusterChecker, ClusterUiSelect, ExplorerLink } from '../cluster/cluster-ui'
-import { WalletButton } from '../solana/solana-provider'
-
-import { AuthLayout, ParaModal, OAuthMethod } from "@getpara/react-sdk";
-import para from "../../utils/para";
+import { usePara } from "@/components/para/para-provider";
+// import { WalletButton } from '../para/para-provider'
+import { para } from "@/utils/para";
 
 
 export function UiLayout({
@@ -25,13 +24,13 @@ export function UiLayout({
   merchantLinks: { label: string; path: string }[]
 }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [isConnected, setIsConnected] = useState(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [wallet, setWallet] = useState<string>("");
   const [error, setError] = useState<string>("");
   const pathname = usePathname()
   const [theme, setTheme] = React.useState<'light' | 'dark'>('dark')
   const [activeMerchant, setActiveMerchant] = React.useState<string | null>(null)
+  const { isConnected, openModal, email } = usePara();
 
   useEffect(() => {
     // Check for saved theme preference
@@ -74,38 +73,7 @@ export function UiLayout({
     setActiveMerchant(null)
     localStorage.removeItem('activeMerchant')
   }
-  
-  const handleCheckIfAuthenticated = async () => {
-    setIsLoading(true);
-    setError("");
-    try {
-      const isAuthenticated = await para.isFullyLoggedIn();
-      setIsConnected(isAuthenticated);
-      if (isAuthenticated) {
-        const wallets = Object.values(await para.getWallets());
-        const email = await para.getEmail();
-        console.log("****************",email);
-        if (wallets?.length) {
-          setWallet(wallets[0].address || "unknown");
-        }
-      }
-    } catch (err: any) {
-      setError(err.message || "An error occurred during authentication");
-    }
-    setIsLoading(false);
-  };
 
-  useEffect(() => {
-    handleCheckIfAuthenticated();
-  }, []);
-
-  const handleOpenModal = () => {
-    setIsOpen(true);
-  };
-  const handleCloseModal = async () => {
-    handleCheckIfAuthenticated();
-    setIsOpen(false);
-  };
   const currentLinks = activeMerchant ? merchantLinks : defaultLinks
 
   return (
@@ -126,9 +94,9 @@ export function UiLayout({
               <li key={path}>
                 <Link
                   className={`hover:text-mint transition-colors ${pathname === path.replace(':merchantId', activeMerchant || '') ||
-                      (path === '/merchant/dashboard/:merchantId' && pathname === `/merchant/dashboard/${activeMerchant}`)
-                      ? 'text-mint'
-                      : ''
+                    (path === '/merchant/dashboard/:merchantId' && pathname === `/merchant/dashboard/${activeMerchant}`)
+                    ? 'text-mint'
+                    : ''
                     }`}
                   href={activeMerchant ? path.replace(':merchantId', activeMerchant) : path}
                 >
@@ -154,11 +122,19 @@ export function UiLayout({
               </svg>
             )}
           </button>
-          <div>
-            <button onClick={() => setIsOpen(true)}>Sign in with Para</button>
+          <div className="btn btn-primary rounded-btn">
+            {isConnected ? (
+              <button onClick={() => openModal}>
+                {email}
+              </button>
+            ) : (
+              <button onClick={() => openModal}>
+                {'Sign in with Para'}
+              </button>
+            )}
           </div>
           {/* <WalletButton /> */}
-          <ClusterUiSelect />
+          {/* <ClusterUiSelect /> */}
         </div>
       </div>
       <ClusterChecker>
@@ -175,36 +151,6 @@ export function UiLayout({
           {children}
         </Suspense>
         <Toaster position="bottom-right" />
-        <ParaModal
-              para={para}
-              isOpen={isOpen}
-              onClose={handleCloseModal}
-              logo={""}
-              theme={{
-                foregroundColor: "#2D3648",
-                backgroundColor: "#FFFFFF",
-                accentColor: "#0066CC",
-                darkForegroundColor: "#E8EBF2",
-                darkBackgroundColor: "#1A1F2B",
-                darkAccentColor: "#4D9FFF",
-                mode: "light",
-                borderRadius: "none",
-                font: "Inter",
-              }}
-
-              authLayout={[AuthLayout.AUTH_FULL]}
-              oAuthMethods={[
-                OAuthMethod.GOOGLE,
-                OAuthMethod.APPLE,
-                OAuthMethod.DISCORD,
-                OAuthMethod.FACEBOOK,
-                OAuthMethod.FARCASTER,
-                OAuthMethod.TWITTER,
-              ]}
-              externalWallets={[]}
-              hideWallets
-              onRampTestMode={true}
-            />
       </div>
     </div>
   )

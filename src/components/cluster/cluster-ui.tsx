@@ -1,6 +1,6 @@
 'use client'
 
-import { useConnection } from '@solana/wallet-adapter-react'
+import { useConnection } from '@/lib/connection-context'
 import { IconTrash } from '@tabler/icons-react'
 import { useQuery } from '@tanstack/react-query'
 import { ReactNode, useState } from 'react'
@@ -25,7 +25,7 @@ export function ExplorerLink({ path, label, className }: { path: string; label: 
 export function ClusterChecker({ children }: { children: ReactNode }) {
   const { cluster } = useCluster()
   const { connection } = useConnection()
-
+  
   const query = useQuery({
     queryKey: ['version', { cluster, endpoint: connection.rpcEndpoint }],
     queryFn: () => connection.getVersion(),

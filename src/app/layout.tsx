@@ -1,11 +1,12 @@
 import "@getpara/react-sdk/styles.css";
 import './globals.css'
 import { ClusterProvider } from '@/components/cluster/cluster-data-access'
-import { SolanaProvider } from '@/components/solana/solana-provider'
+import { ParaProvider } from "@/components/para/para-provider";
 import { UiLayout } from '@/components/ui/ui-layout'
 import { ReactQueryProvider } from './react-query-provider'
 import { Analytics } from "@vercel/analytics/react"
 import { SpeedInsights } from "@vercel/speed-insights/next"
+import { ConnectionProvider } from "@/lib/connection-provider";
 
 export const metadata = {
   title: 'GotSOL - USDC Payments on Solana',
@@ -39,9 +40,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <ReactQueryProvider>
           <ClusterProvider>
-            <SolanaProvider>
-              <UiLayout defaultLinks={defaultLinks} merchantLinks={merchantLinks}>{children}</UiLayout>
-            </SolanaProvider>
+            <ConnectionProvider>
+              <ParaProvider>
+                <UiLayout defaultLinks={defaultLinks} merchantLinks={merchantLinks}>{children}</UiLayout>
+              </ParaProvider>
+            </ConnectionProvider>
           </ClusterProvider>
         </ReactQueryProvider>
         <Analytics />

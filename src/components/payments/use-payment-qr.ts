@@ -1,8 +1,8 @@
-import { useConnection } from '@solana/wallet-adapter-react';
+import { useConnection } from '@/lib/connection-context';
 import { PublicKey } from '@solana/web3.js';
 import { getAssociatedTokenAddress } from '@solana/spl-token';
 import { useCallback } from 'react';
-import { useAnchorProvider } from '../solana/solana-provider';
+import { useAnchorProvider } from '../para/para-provider';
 import { Program, Idl } from '@coral-xyz/anchor';
 import { createTransferCheckedInstruction } from '@solana/spl-token';
 import { encodeURL, createTransfer } from '@solana/pay';

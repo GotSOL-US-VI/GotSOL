@@ -1,6 +1,6 @@
 'use client';
 
-import { useAnchorProvider } from '@/components/solana/solana-provider';
+import { useAnchorProvider } from '@/components/para/para-provider';
 import * as anchor from '@coral-xyz/anchor';
 import { useRouter } from 'next/navigation';
 import { useMemo } from 'react';

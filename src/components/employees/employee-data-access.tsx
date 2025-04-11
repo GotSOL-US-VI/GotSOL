@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { PublicKey } from '@solana/web3.js'
-import { useConnection, useWallet } from '@solana/wallet-adapter-react'
+import { usePara } from '../para/para-provider'
+import { useConnection } from '@/lib/connection-context'
 import { useState } from 'react'
 
 export interface Employee {
@@ -24,7 +25,7 @@ export interface CreateEmployeeParams {
 
 export function useGetEmployees({ merchantId, enabled = true }: { merchantId: PublicKey, enabled?: boolean }) {
   const { connection } = useConnection()
-  
+
   return useQuery({
     queryKey: ['employees', merchantId.toString()],
     queryFn: async (): Promise<Employee[]> => {
@@ -62,18 +63,19 @@ export function useGetEmployees({ merchantId, enabled = true }: { merchantId: Pu
 export function useCreateEmployee() {
   const queryClient = useQueryClient()
   const { connection } = useConnection()
-  const { publicKey, sendTransaction } = useWallet()
-  
+  const { address } = usePara();
+  const publicKey = new PublicKey(address ?? "");
+
   return useMutation({
     mutationFn: async (params: CreateEmployeeParams) => {
       const { merchantId, employeeWallet, name, role } = params
-      
+
       // This would be replaced with actual blockchain transaction
       console.log('Creating employee:', { merchantId, employeeWallet, name, role })
-      
+
       // Simulate a delay for API call
       await new Promise(resolve => setTimeout(resolve, 1000))
-      
+
       return true
     },
     onSuccess: (_, variables) => {
@@ -86,23 +88,23 @@ export function useCreateEmployee() {
 export function useUpdateEmployeeStatus() {
   const queryClient = useQueryClient()
   const { connection } = useConnection()
-  
+
   return useMutation({
-    mutationFn: async ({ 
-      merchantId, 
-      employeeId, 
-      isActive 
-    }: { 
+    mutationFn: async ({
+      merchantId,
+      employeeId,
+      isActive
+    }: {
       merchantId: PublicKey
       employeeId: PublicKey
       isActive: boolean
     }) => {
       // This would be replaced with actual blockchain transaction
       console.log('Updating employee status:', { merchantId, employeeId, isActive })
-      
+
       // Simulate a delay for API call
       await new Promise(resolve => setTimeout(resolve, 1000))
-      
+
       return true
     },
     onSuccess: (_, variables) => {
@@ -114,23 +116,23 @@ export function useUpdateEmployeeStatus() {
 export function useUpdateEmployeeRole() {
   const queryClient = useQueryClient()
   const { connection } = useConnection()
-  
+
   return useMutation({
-    mutationFn: async ({ 
-      merchantId, 
-      employeeId, 
-      role 
-    }: { 
+    mutationFn: async ({
+      merchantId,
+      employeeId,
+      role
+    }: {
       merchantId: PublicKey
       employeeId: PublicKey
       role: string
     }) => {
       // This would be replaced with actual blockchain transaction
       console.log('Updating employee role:', { merchantId, employeeId, role })
-      
+
       // Simulate a delay for API call
       await new Promise(resolve => setTimeout(resolve, 1000))
-      
+
       return true
     },
     onSuccess: (_, variables) => {

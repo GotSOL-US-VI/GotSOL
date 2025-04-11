@@ -1,6 +1,6 @@
 'use client';
 
-import { useAnchorProvider } from '@/components/solana/solana-provider';
+import { useAnchorProvider } from '@/components/para/para-provider';
 import { PaymentQR } from '@/components/payments/payment-qr';
 import { PaymentHistory } from '@/components/payments/payment-history';
 import { WithdrawFunds } from '@/components/payments/withdraw-funds';

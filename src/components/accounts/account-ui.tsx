@@ -1,6 +1,6 @@
 'use client'
 
-import { useWallet } from '@solana/wallet-adapter-react'
+import { useWalletAdapterCompat } from '@/hooks/useWalletAdapterCompat'
 import { LAMPORTS_PER_SOL, PublicKey } from '@solana/web3.js'
 import { IconRefresh } from '@tabler/icons-react'
 import { useQueryClient } from '@tanstack/react-query'
@@ -28,7 +28,7 @@ export function AccountBalance({ address }: { address: PublicKey }) {
   )
 }
 export function AccountChecker() {
-  const { publicKey } = useWallet()
+  const { publicKey } = useWalletAdapterCompat()
   if (!publicKey) {
     return null
   }
@@ -61,7 +61,7 @@ export function AccountBalanceCheck({ address }: { address: PublicKey }) {
 }
 
 export function AccountButtons({ address }: { address: PublicKey }) {
-  const wallet = useWallet()
+  const wallet = useWalletAdapterCompat()
   const { cluster } = useCluster()
   const [showAirdropModal, setShowAirdropModal] = useState(false)
   const [showReceiveModal, setShowReceiveModal] = useState(false)
@@ -304,7 +304,7 @@ function ModalAirdrop({ hide, show, address }: { hide: () => void; show: boolean
 }
 
 function ModalSend({ hide, show, address }: { hide: () => void; show: boolean; address: PublicKey }) {
-  const wallet = useWallet()
+  const wallet = useWalletAdapterCompat()
   const mutation = useTransferSol({ address })
   const [destination, setDestination] = useState('')
   const [amount, setAmount] = useState('1')

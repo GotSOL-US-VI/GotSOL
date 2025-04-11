@@ -1,6 +1,6 @@
 'use client';
 
-import { useConnection } from '@solana/wallet-adapter-react';
+import { useConnection } from '@/lib/connection-context';
 import { PublicKey, ParsedTransactionWithMeta, ConfirmedSignatureInfo } from '@solana/web3.js';
 import { getAssociatedTokenAddress } from '@solana/spl-token';
 import { useEffect, useState, useCallback, useRef } from 'react';

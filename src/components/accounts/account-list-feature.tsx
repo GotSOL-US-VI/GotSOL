@@ -1,22 +1,28 @@
 'use client'
 
-import { useWallet } from '@solana/wallet-adapter-react'
-import { WalletButton } from '../solana/solana-provider'
-
+import { PublicKey } from '@solana/web3.js'
+import { usePara } from '../para/para-provider'
 import { redirect } from 'next/navigation'
 
 export default function AccountListFeature() {
-  const { publicKey } = useWallet()
+  const { isConnected, openModal, email, address } = usePara();
+  const publicKey = new PublicKey(address ?? "");
 
   if (publicKey) {
     return redirect(`/account/${publicKey.toString()}`)
   }
 
   return (
-    <div className="hero py-[64px]">
-      <div className="hero-content text-center">
-        <WalletButton />
-      </div>
+    <div className="btn btn-primary rounded-btn">
+      {isConnected ? (
+        <button onClick={() => openModal}>
+          {email}
+        </button>
+      ) : (
+        <button onClick={() => openModal}>
+          {'Sign in with Para'}
+        </button>
+      )}
     </div>
   )
 }

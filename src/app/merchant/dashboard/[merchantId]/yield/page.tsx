@@ -1,8 +1,10 @@
 'use client'
 
 import { AppHero } from '@/components/ui/ui-layout'
-import { useWallet } from '@solana/wallet-adapter-react'
+import { useWalletAdapterCompat } from '@/hooks/useWalletAdapterCompat'
 import { useState, useMemo } from 'react'
+import { PublicKey } from '@solana/web3.js'
+import { usePara } from '@/components/para/para-provider'
 
 interface YieldPosition {
   name: string
@@ -58,7 +60,8 @@ export default function YieldPage({ params }: { params: { merchantId: string } }
     return stablecoinTotal + lendingTotal;
   }, [positions, opportunities]);
 
-  const { publicKey } = useWallet()
+  const { address } = usePara();
+  const publicKey = new PublicKey(address ?? "");
 
   if (!publicKey) {
     return (
@@ -100,7 +103,7 @@ export default function YieldPage({ params }: { params: { merchantId: string } }
           </div>
         </div>
       </div>
-      
+
       <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {/* Left Column - Stablecoin Positions */}

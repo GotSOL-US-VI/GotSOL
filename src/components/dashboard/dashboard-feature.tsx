@@ -2,9 +2,9 @@
 
 import * as anchor from '@coral-xyz/anchor'
 import { useEffect, useMemo, useState, useRef } from 'react'
-import { useWallet } from '@solana/wallet-adapter-react'
+import { useWalletAdapterCompat } from '@/hooks/useWalletAdapterCompat'
 import { PublicKey } from '@solana/web3.js'
-import { useAnchorProvider } from '../solana/solana-provider'
+import { useAnchorProvider } from '../para/para-provider'
 import { AppHero } from '../ui/ui-layout'
 import { CreateMerchant } from '../merchant/create-merchant'
 import { BorshCoder, Idl } from '@coral-xyz/anchor'
@@ -39,7 +39,7 @@ interface Merchant {
 }
 
 export default function DashboardFeature() {
-  const { publicKey } = useWallet()
+  const { publicKey } = useWalletAdapterCompat()
   const provider = useAnchorProvider()
   const [merchants, setMerchants] = useState<Merchant[]>([])
   const [showCreateForm, setShowCreateForm] = useState(false)
@@ -85,7 +85,7 @@ export default function DashboardFeature() {
 
   useEffect(() => {
     const fetchMerchants = async () => {
-      if (!program || !publicKey) {
+      if (!program) {   // || !publicKey
         setMerchants([])
         setLoading(false)
         return
@@ -112,7 +112,7 @@ export default function DashboardFeature() {
               {
                 memcmp: {
                   offset: 8,
-                  bytes: publicKey.toBase58()
+                  bytes: publicKey!.toBase58()
                 }
               }
             ]
