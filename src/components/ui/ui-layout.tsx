@@ -23,15 +23,10 @@ export function UiLayout({
   defaultLinks: { label: string; path: string }[]
   merchantLinks: { label: string; path: string }[]
 }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [wallet, setWallet] = useState<string>("");
-  const [error, setError] = useState<string>("");
   const pathname = usePathname()
   const [theme, setTheme] = React.useState<'light' | 'dark'>('dark')
   const [activeMerchant, setActiveMerchant] = React.useState<string | null>(null)
   const { isConnected, openModal, email } = usePara();
-
   useEffect(() => {
     // Check for saved theme preference
     const savedTheme = localStorage.getItem('theme') as 'light' | 'dark'

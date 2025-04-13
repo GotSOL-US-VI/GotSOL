@@ -6,7 +6,10 @@ import { redirect } from 'next/navigation'
 
 export default function AccountListFeature() {
   const { isConnected, openModal, email, address } = usePara();
-  const publicKey = new PublicKey(address ?? "");
+  if (!address)
+    return null;
+  const publicKey = new PublicKey(address);
+
 
   if (publicKey) {
     return redirect(`/account/${publicKey.toString()}`)

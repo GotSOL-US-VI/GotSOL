@@ -7,7 +7,9 @@ import { PublicKey } from '@solana/web3.js';
 
 export default function OffRampsPage({ params }: { params: { merchantId: string } }) {
   const { address } = usePara();
-  const publicKey = new PublicKey(address ?? "");
+  if (!address)
+    return null;
+  const publicKey = new PublicKey(address);
 
   if (!publicKey) {
     return (

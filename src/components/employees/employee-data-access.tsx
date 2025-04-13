@@ -64,7 +64,10 @@ export function useCreateEmployee() {
   const queryClient = useQueryClient()
   const { connection } = useConnection()
   const { address } = usePara();
-  const publicKey = new PublicKey(address ?? "");
+  if (!address)
+    return null;
+  const publicKey = new PublicKey(address);
+
 
   return useMutation({
     mutationFn: async (params: CreateEmployeeParams) => {

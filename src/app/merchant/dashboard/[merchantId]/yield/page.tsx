@@ -61,7 +61,10 @@ export default function YieldPage({ params }: { params: { merchantId: string } }
   }, [positions, opportunities]);
 
   const { address } = usePara();
-  const publicKey = new PublicKey(address ?? "");
+  if (!address)
+    return null;
+  const publicKey = new PublicKey(address);
+
 
   if (!publicKey) {
     return (

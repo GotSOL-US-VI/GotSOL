@@ -24,9 +24,12 @@ interface WithdrawFundsProps {
 
 export function WithdrawFunds({ program, merchantPubkey, isDevnet = true }: WithdrawFundsProps) {
   const { connection } = useConnection();
-  const { address } = usePara();
+  const { email, address } = usePara();
 
-  const publicKey = new PublicKey(address ?? "");
+  if (!address)
+    return null;
+  const publicKey = new PublicKey(address);
+
 
   const [merchantBalance, setMerchantBalance] = useState<number | null>(null);
   const [ownerBalance, setOwnerBalance] = useState<number | null>(null);
