@@ -44,15 +44,17 @@ export function AccountBalanceCheck({ address }: { address: PublicKey }) {
   }
   if (query.isError || !query.data) {
     return (
-      <div className="alert alert-warning text-warning-content/80 rounded-none flex justify-center">
+      <div className="alert alert-warning text-warning-content/80 rounded-none flex justify-center bold">
         <span>
-          You are connected to <strong>{cluster.name}</strong> but your account is not found on this cluster.
-        </span>
+          You have 0 SOL in this account. Give us your public key and we will seed your account so you can demo the application.     
+          <br></br>
+          Click the login bubble in the top right, then copy the publick key at the top or click Recieve and copy it there, then send it to Ryan.
+             </span>
         <button
-          className="btn btn-xs btn-neutral"
+          className="btn btn-xs btn-yellow"
+          style={{ opacity: 0 }}
           onClick={() => mutation.mutateAsync(1).catch((err) => console.log(err))}
         >
-          Request Airdrop
         </button>
       </div>
     )
