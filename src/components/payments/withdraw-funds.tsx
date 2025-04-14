@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Program, Idl, BN } from '@coral-xyz/anchor';
 import { PublicKey } from '@solana/web3.js';
 import { usePara } from '../para/para-provider';
@@ -24,18 +24,20 @@ interface WithdrawFundsProps {
 
 export function WithdrawFunds({ program, merchantPubkey, isDevnet = true }: WithdrawFundsProps) {
   const { connection } = useConnection();
-  const { email, address } = usePara();
+  const { address, signer } = usePara();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [amount, setAmount] = useState<string>('');
+  const [recipient, setRecipient] = useState<string>('');
+  const [showModal, setShowModal] = useState(false);
+  const [transactionStatus, setTransactionStatus] = useState<string>('');
+  const [transactionHash, setTransactionHash] = useState<string>('');
 
-  if (!address)
-    return null;
-  const publicKey = new PublicKey(address);
-
+  const publicKey = useMemo(() => address ? new PublicKey(address) : null, [address]);
 
   const [merchantBalance, setMerchantBalance] = useState<number | null>(null);
   const [ownerBalance, setOwnerBalance] = useState<number | null>(null);
   const [withdrawAmount, setWithdrawAmount] = useState<string>('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [showBalances, setShowBalances] = useState(true);
 
   const toggleBalances = () => {
@@ -79,6 +81,14 @@ export function WithdrawFunds({ program, merchantPubkey, isDevnet = true }: With
     const interval = setInterval(fetchBalances, 10000);
     return () => clearInterval(interval);
   }, [connection, merchantPubkey, publicKey]);
+
+  useEffect(() => {
+    if (!publicKey) {
+      setError('Please connect your wallet');
+      return;
+    }
+    // ... rest of the effect
+  }, [publicKey, connection, program, merchantPubkey]);
 
   const handleWithdraw = async () => {
     if (!publicKey || !program || !withdrawAmount) return;

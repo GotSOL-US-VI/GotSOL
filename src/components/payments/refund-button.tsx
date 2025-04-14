@@ -33,12 +33,9 @@ const USDC_MINT_MAINNET = new PublicKey('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwy
 
 export function RefundButton({ program, merchantPubkey, payment, onSuccess, isDevnet = true }: RefundButtonProps) {
     const { connection } = useConnection();
-    const { address } = usePara();
-    if (!address)
-        return null;
-      const publicKey = new PublicKey(address);
-    
+    const { address, signer } = usePara();
     const [isLoading, setIsLoading] = useState(false);
+    const publicKey = address ? new PublicKey(address) : null;
 
     const handleRefund = async () => {
         if (!publicKey) {

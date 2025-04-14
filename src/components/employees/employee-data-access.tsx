@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { PublicKey } from '@solana/web3.js'
 import { usePara } from '../para/para-provider'
 import { useConnection } from '@/lib/connection-context'
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 
 export interface Employee {
   publicKey: PublicKey
@@ -60,17 +60,36 @@ export function useGetEmployees({ merchantId, enabled = true }: { merchantId: Pu
   })
 }
 
+export function useEmployeeDataAccess() {
+    const { connection } = useConnection();
+    const { address } = usePara();
+    const publicKey = useMemo(() => address ? new PublicKey(address) : null, [address]);
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const mutation = useMutation({
+        mutationFn: async (data: any) => {
+            if (!publicKey) {
+                throw new Error('Wallet not connected');
+            }
+            // ... rest of mutation logic
+        }
+    });
+
+    // ... rest of the component
+}
+
 export function useCreateEmployee() {
   const queryClient = useQueryClient()
   const { connection } = useConnection()
   const { address } = usePara();
-  if (!address)
-    return null;
-  const publicKey = new PublicKey(address);
-
+  const publicKey = useMemo(() => address ? new PublicKey(address) : null, [address]);
 
   return useMutation({
     mutationFn: async (params: CreateEmployeeParams) => {
+      if (!publicKey) {
+        throw new Error('Wallet not connected');
+      }
       const { merchantId, employeeWallet, name, role } = params
 
       // This would be replaced with actual blockchain transaction
