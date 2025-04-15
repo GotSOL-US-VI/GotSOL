@@ -54,6 +54,7 @@ export function AccountBalanceCheck({ address }: { address: PublicKey }) {
           className="btn btn-xs btn-neutral"
           onClick={() => {mutation.mutateAsync(1).catch((err) => console.log(err));}}
         >
+          Request Airdrop
         </button>
       </div>
     )
