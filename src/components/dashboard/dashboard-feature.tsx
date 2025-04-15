@@ -6,12 +6,9 @@ import { useWalletAdapterCompat } from '@/hooks/useWalletAdapterCompat'
 import { PublicKey } from '@solana/web3.js'
 import { useAnchorProvider } from '../para/para-provider'
 import { AppHero } from '../ui/ui-layout'
-import { CreateMerchant } from '../merchant/create-merchant'
 import { BorshCoder, Idl } from '@coral-xyz/anchor'
 import idl from '../../utils/kumbaya.json'
 import bs58 from 'bs58'
-import { env } from '../../utils/env'
-import Link from 'next/link'
 import Image from 'next/image'
 
 interface MerchantAccount {

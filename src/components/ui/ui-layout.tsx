@@ -11,7 +11,6 @@ import { AccountChecker } from '../accounts/account-ui'
 import { ClusterChecker, ClusterUiSelect, ExplorerLink } from '../cluster/cluster-ui'
 import { usePara } from "@/components/para/para-provider";
 // import { WalletButton } from '../para/para-provider'
-import { para } from "@/utils/para";
 
 
 export function UiLayout({
@@ -26,7 +25,9 @@ export function UiLayout({
   const pathname = usePathname()
   const [theme, setTheme] = React.useState<'light' | 'dark'>('dark')
   const [activeMerchant, setActiveMerchant] = React.useState<string | null>(null)
-  const { isConnected, openModal, email } = usePara();
+  const { isConnected, openModal, email, address } = usePara();
+
+  console.log("wallet:", address);
   useEffect(() => {
     // Check for saved theme preference
     const savedTheme = localStorage.getItem('theme') as 'light' | 'dark'
@@ -72,7 +73,7 @@ export function UiLayout({
   const currentLinks = activeMerchant ? merchantLinks : defaultLinks
 
   return (
-    <div className="min-h-screen flex flex-col bg-base-100">
+    <div className="min-h-screen flex-col bg-base-100">
       <div className="navbar flex-col md:flex-row space-y-2 md:space-y-0 px-4">
         <div className="flex-1">
           <Link href="/" className="flex items-center" onClick={handleLogoClick}>
