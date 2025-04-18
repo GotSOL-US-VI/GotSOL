@@ -28,9 +28,11 @@ const defaultLinks = [
 
 const merchantLinks = [
   { label: 'Point of Sale', path: '/merchant/dashboard/:merchantId' },
-  { label: 'Manage Employees', path: '/merchant/dashboard/:merchantId/accounts' },
+  { label: 'Inventory Management', path: '/merchant/dashboard/:merchantId/inventory_management' },
+  { label: 'Tax Compliance', path: '/merchant/dashboard/:merchantId/tax_compliance' },
+  // { label: 'Manage Employees', path: '/merchant/dashboard/:merchantId/accounts' },
   { label: 'Treasury / Yield', path: '/merchant/dashboard/:merchantId/yield' },
-  { label: 'USD Off-ramps', path: '/merchant/dashboard/:merchantId/off-ramps' },
+  { label: 'USD On & Off-ramps', path: '/merchant/dashboard/:merchantId/off-ramps' },
   { label: 'Resources', path: '/links' },
 ]
 
