@@ -27,7 +27,7 @@ export function UiLayout({
   const [activeMerchant, setActiveMerchant] = React.useState<string | null>(null)
   const { isConnected, openModal, email, address } = usePara();
 
-  console.log("wallet:", address);
+  // console.log("wallet:", address);
   useEffect(() => {
     // Check for saved theme preference
     const savedTheme = localStorage.getItem('theme') as 'light' | 'dark'

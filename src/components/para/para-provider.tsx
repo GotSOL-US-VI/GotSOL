@@ -102,7 +102,7 @@ export function ParaProvider({ children }: { children: React.ReactNode }) {
         try {
             // Debug API key being used
             const apiKey = process.env.NEXT_PUBLIC_PARA_API_KEY;
-            console.log("Para API Key during authentication:", apiKey ? `${apiKey.substring(0, 4)}...${apiKey.substring(apiKey.length - 4)}` : "Not set");
+            // console.log("Para API Key during authentication:", apiKey ? `${apiKey.substring(0, 4)}...${apiKey.substring(apiKey.length - 4)}` : "Not set");
             
             const isAuthenticated = await para.isFullyLoggedIn();
             setIsConnected(isAuthenticated);
