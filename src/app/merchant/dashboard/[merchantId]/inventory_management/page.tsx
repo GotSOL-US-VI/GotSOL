@@ -21,13 +21,13 @@ export default function ManageAccountsPage({ params }: { params: { merchantId: s
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Manage Your Inventory and Gain Insights Into Your Business's Sales</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Manage Your Inventory and Gain Insights Into Your Business&apos;s Sales</h1>
           <br></br>
           <p className="text-gray-500">
             This Product Offering will be built in Phase 2, after the main Point of Sale is feature-complete.
           </p> <br></br>
           <ul className="list-disc pl-5 space-y-2 text-gray-500">
-            <li>View your store's complete inventory in real-time</li>
+            <li>View your store&apos;s complete inventory in real-time</li>
             <li>Use advanced search and filtering tools to quickly locate products</li>
             <li>Access detailed product information including SKU details, and sales history</li>
             <li>Set up automated alerts for low stock levels</li>
@@ -36,7 +36,7 @@ export default function ManageAccountsPage({ params }: { params: { merchantId: s
             <li>Identify top-performing products and manage slow-moving inventory</li>
             <li>Generate inventory forecasts to optimize stock levels</li>
             <li>Track inventory trends and make data-driven business decisions</li>
-            <li>And other essential inventory management features you've come to expect or require</li>
+            <li>And other essential inventory management features you&apos;ve come to expect or require</li>
           </ul>
         </div>
       </div>
