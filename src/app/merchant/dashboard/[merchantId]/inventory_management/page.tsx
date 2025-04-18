@@ -23,7 +23,7 @@ export default function ManageAccountsPage({ params }: { params: { merchantId: s
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Manage Your Inventory and Gain Insights Into Your Business&apos;s Sales</h1>
           <br></br>
-          <p className="text-gray-500">
+          <p>
             This Product Offering will be built in Phase 2, after the main Point of Sale is feature-complete.
           </p> <br></br>
           <ul className="list-disc pl-5 space-y-2 text-gray-500">

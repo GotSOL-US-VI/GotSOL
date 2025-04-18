@@ -23,7 +23,7 @@ export default function ManageAccountsPage({ params }: { params: { merchantId: s
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Automate Tax Payments and Compliance for your Business</h1>
           <br></br>
-          <p className="text-gray-500">
+          <p>
           This Product Offering will be built in Phase 3, after Inventory Management is feature-complete, and we have more specifics on exactly what features and customization are required here.
           </p>
           <br></br>
