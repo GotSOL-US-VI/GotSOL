@@ -81,7 +81,7 @@ export default function YieldPage({ params }: { params: { merchantId: string } }
         subtitle={<p className="text-xl font-medium mt-4">Manage your yield positions and explore opportunities</p>}
       />
 <p className='flex items-center justify-center'>This Product Offering will be built in Phase 4 or later, after core Point of Sale and management features are complete.</p>
-      <br></br>
+      {/* <br></br> */}
       <div className="absolute right-8 -mt-12">
         <div className="card bg-base-300 p-3">
           <div className="flex items-center justify-between gap-3">
