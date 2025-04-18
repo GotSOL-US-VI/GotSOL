@@ -118,3 +118,16 @@ impl Employee {
         }
     }
 }
+
+
+#[account]
+pub struct Compliance {
+    pub lifetime_paid: u64,
+    pub last_payment: i64,
+    pub bump: u8
+}
+
+impl Compliance {
+    pub const LEN: usize = 8 + 8 + 8 + 1;
+}
+

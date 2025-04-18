@@ -38,6 +38,11 @@ pub mod kumbaya {
         Ok(())
     }
 
+    pub fn paytheman(ctx: Context<PayTheMan>) -> Result<()> {
+        ctx.accounts.paytheman(&ctx.bumps)?;
+        Ok(())
+    }
+
     pub fn create_employee(ctx: Context<CreateEmployee>, name: String, role: EmployeeRole) -> Result<()> {
         ctx.accounts.init(&ctx.bumps, name.clone(), role)?;
 

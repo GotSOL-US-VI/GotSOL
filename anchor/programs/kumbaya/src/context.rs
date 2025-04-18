@@ -106,7 +106,7 @@ pub struct WithdrawUSDC<'info> {
     pub owner: Signer<'info>,
 
     #[account(seeds = [b"merchant", merchant.entity_name.as_str().as_bytes(), owner.key().as_ref()], bump = merchant.merchant_bump)]
-    pub merchant: Account<'info, Merchant>,
+    pub merchant: Box<Account<'info, Merchant>>,
 
     // main net USDC mint account
     // #[account(constraint = usdc_mint.key() == Pubkey::from_str(USDC_MAINNET_MINT).unwrap())]
@@ -114,14 +114,23 @@ pub struct WithdrawUSDC<'info> {
 
     // devnet USDC mint account
     #[account(constraint = usdc_mint.key() == Pubkey::from_str(USDC_DEVNET_MINT).unwrap())]
-    pub usdc_mint: InterfaceAccount<'info, Mint>,
+    pub usdc_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(mut,
         associated_token::mint = usdc_mint,
         associated_token::authority = merchant,
         constraint = merchant_usdc_ata.amount >= amount @ CustomError::InsufficientFunds,
     )]
-    pub merchant_usdc_ata: InterfaceAccount<'info, TokenAccount>,
+    pub merchant_usdc_ata: Box<InterfaceAccount<'info, TokenAccount>>,
+
+    // we will pay this escrow 5% of funds withdrawn, then later the owner can call PayTheMan to pay the government their monthly tax bill all at once.
+    #[account(
+        init_if_needed,
+        payer = owner,
+        associated_token::mint = usdc_mint,
+        associated_token::authority = merchant
+    )]
+    pub compliance_escrow: Box<InterfaceAccount<'info, TokenAccount>>,
 
     /// CHECK: This is the HOUSE Squads multi-sig
     #[account(mut, constraint = house.key() == Pubkey::from_str(HOUSE).unwrap())]
@@ -131,13 +140,13 @@ pub struct WithdrawUSDC<'info> {
         associated_token::mint = usdc_mint,
         associated_token::authority = house
     )]
-    pub house_usdc_ata: InterfaceAccount<'info, TokenAccount>,
+    pub house_usdc_ata: Box<InterfaceAccount<'info, TokenAccount>>,
 
     #[account(init_if_needed, payer = owner,
         associated_token::mint = usdc_mint,
         associated_token::authority = owner
     )]
-    pub owner_usdc_ata: InterfaceAccount<'info, TokenAccount>,
+    pub owner_usdc_ata: Box<InterfaceAccount<'info, TokenAccount>>,
 
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub token_program: Interface<'info, TokenInterface>,
@@ -147,7 +156,8 @@ pub struct WithdrawUSDC<'info> {
 impl<'info> WithdrawUSDC<'info> {
     pub fn withdraw(&mut self, amount: u64) -> Result<()> {
         let owner_amount = (amount * MERCHANT_SHARE) / 1000;
-        let house_amount = amount - owner_amount;
+        let the_man_amount = (amount * THE_MAN_SHARE) / 1000;
+        let house_amount = (amount * HOUSE_SHARE) / 1000;
 
         // Optimized seeds creation with proper lifetime handling
         let owner_key = self.owner.key();
@@ -158,7 +168,7 @@ impl<'info> WithdrawUSDC<'info> {
             &[self.merchant.merchant_bump],
         ];
 
-        // Transfer the owner's share
+        // Transfer the owner's share to the owner
         anchor_spl::token_interface::transfer_checked(
             CpiContext::new_with_signer(
                 self.token_program.to_account_info(),
@@ -174,7 +184,23 @@ impl<'info> WithdrawUSDC<'info> {
             self.usdc_mint.decimals,
         )?;
 
-        // Transfer the house's share
+        // Transfer 5% of the withdrawn amount to the merchant's compliance_escrow awaiting payment to THE_MAN
+        anchor_spl::token_interface::transfer_checked(
+            CpiContext::new_with_signer(
+                self.token_program.to_account_info(),
+                anchor_spl::token_interface::TransferChecked {
+                    from: self.merchant_usdc_ata.to_account_info(),
+                    mint: self.usdc_mint.to_account_info(),
+                    to: self.compliance_escrow.to_account_info(),
+                    authority: self.merchant.to_account_info(),
+                },
+                &[seeds],
+            ),
+            the_man_amount,
+            self.usdc_mint.decimals,
+        )?;
+
+        // Transfer the house's share to the house
         anchor_spl::token_interface::transfer_checked(
             CpiContext::new_with_signer(
                 self.token_program.to_account_info(),
@@ -230,7 +256,7 @@ pub struct RefundPayment<'info> {
     #[account(constraint = usdc_mint.key() == Pubkey::from_str(USDC_DEVNET_MINT).unwrap())]
     pub usdc_mint: InterfaceAccount<'info, Mint>,
 
-    /// CHECK: this is the public key of address you are refunding, to dervice their USDC ata
+    /// CHECK: this is the public key of address you are refunding, to derive their USDC ata
     pub recipient: AccountInfo<'info>,
     
     pub token_program: Interface<'info, TokenInterface>,
@@ -284,6 +310,95 @@ impl<'info> RefundPayment<'info> {
         Ok(())
     }
 }
+
+#[derive(Accounts)]
+pub struct PayTheMan<'info> {
+    #[account(mut)]
+    pub owner: Signer<'info>,
+
+    #[account(seeds = [b"merchant", merchant.entity_name.as_str().as_bytes(), owner.key().as_ref()], bump = merchant.merchant_bump)]
+    pub merchant: Account<'info, Merchant>,
+
+    #[account(
+        associated_token::mint = usdc_mint,
+        associated_token::authority = merchant
+    )]
+    pub compliance_escrow: InterfaceAccount<'info, TokenAccount>,
+
+    #[account(init_if_needed, payer = owner, seeds = [b"compliance", merchant.entity_name.as_str().as_bytes(), owner.key().as_ref()], space = Compliance::LEN, bump)]
+    pub compliance: Account<'info, Compliance>,
+
+    // main net USDC mint account
+    // #[account(constraint = usdc_mint.key() == Pubkey::from_str(USDC_MAINNET_MINT).unwrap())]
+    // pub usdc_mint: InterfaceAccount<'info, Mint>,
+
+    // devnet USDC mint account
+    #[account(constraint = usdc_mint.key() == Pubkey::from_str(USDC_DEVNET_MINT).unwrap())]
+    pub usdc_mint: InterfaceAccount<'info, Mint>,
+
+    /// CHECK: This is THE_MAN's pubkey
+    #[account(mut, constraint = the_man.key() == Pubkey::from_str(THE_MAN).unwrap())]
+    pub the_man: AccountInfo<'info>,
+
+    #[account(init_if_needed, payer = owner,
+        associated_token::mint = usdc_mint,
+        associated_token::authority = the_man
+    )]
+    pub the_man_usdc_ata: InterfaceAccount<'info, TokenAccount>, 
+
+    pub associated_token_program: Program<'info, AssociatedToken>,
+    pub token_program: Interface<'info, TokenInterface>,
+    pub system_program: Program<'info, System>,
+}
+
+impl<'info> PayTheMan<'info> {
+    pub fn paytheman(&mut self, bumps: &PayTheManBumps) -> Result<()> {
+
+    // Check if the compliance account exists by checking if the bump value is the default value (0)
+    if self.compliance.bump == 0 {
+        // Initialize merchant's compliance account if it doesn't exist yet
+        self.compliance.set_inner(Compliance {
+            lifetime_paid: 0,
+            last_payment: 0,
+            bump: bumps.compliance
+        });
+    }
+
+    let amount = self.compliance_escrow.amount;
+
+    // Optimized seeds creation with proper lifetime handling
+    let owner_key = self.owner.key();
+    let seeds = &[
+        b"merchant".as_ref(),
+        self.merchant.entity_name.as_bytes(),
+        owner_key.as_ref(),
+        &[self.merchant.merchant_bump],
+    ];
+
+    // Transfer the merchant's compliance_escrow balance to THE_MAN's usdc ata
+    anchor_spl::token_interface::transfer_checked(
+        CpiContext::new_with_signer(
+            self.token_program.to_account_info(),
+            anchor_spl::token_interface::TransferChecked {
+                from: self.compliance_escrow.to_account_info(),
+                mint: self.usdc_mint.to_account_info(),
+                to: self.the_man_usdc_ata.to_account_info(),
+                authority: self.merchant.to_account_info(),
+            },
+            &[seeds],
+        ),
+        amount,
+        self.usdc_mint.decimals,
+    )?;
+
+    // Update the merchant's compliance account's last_payment and lifetime_paid state
+    self.compliance.lifetime_paid += amount;
+    self.compliance.last_payment = Clock::get()?.unix_timestamp;
+
+    Ok(())
+}
+}
+
 
 #[derive(Accounts)]
 #[instruction(name: String)]
