@@ -117,13 +117,32 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true }: Pay
                         return null;
                     }
 
+                    // Check if this is an internal transfer (like compliance escrow)
+                    // by looking at the logs for specific program calls
+                    const isInternalTransfer = tx.meta?.logMessages?.some(log => 
+                        log.includes('Program log: Instruction: WithdrawUsdc') || // Merchant withdrawal
+                        log.includes('Program log: Instruction: RefundPayment') || // Refund
+                        log.includes('Program log: Instruction: PayTheMan') // Tax payment
+                    );
+
+                    if (isInternalTransfer) {
+                        console.log('Skipping internal transfer transaction');
+                        return null;
+                    }
+
                     // Find the sender's public key (the account that sent the USDC)
                     const senderAccount = tx.meta?.preTokenBalances?.find(balance => 
                         balance.owner !== merchantPubkey.toString() && 
                         (balance.uiTokenAmount?.uiAmount ?? 0) > 0
                     );
 
-                    const recipient = senderAccount?.owner 
+                    // Skip if we can't identify a valid external sender
+                    if (!senderAccount) {
+                        console.log('Skipping transaction - no valid external sender found');
+                        return null;
+                    }
+
+                    const recipient = senderAccount.owner 
                         ? new PublicKey(senderAccount.owner)
                         : tx.transaction.message.accountKeys[1].pubkey;
 
@@ -318,11 +337,13 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true }: Pay
                                             merchantPubkey={merchantPubkey}
                                             payment={payment}
                                             onSuccess={() => {
-                                                fetchPayments().then(newPayments => {
-                                                    if (newPayments.length > 0) {
-                                                        setPayments(newPayments);
-                                                    }
-                                                });
+                                                setTimeout(() => {
+                                                    fetchPayments().then(newPayments => {
+                                                        if (newPayments.length > 0) {
+                                                            setPayments(newPayments);
+                                                        }
+                                                    });
+                                                }, 0);
                                             }}
                                             isDevnet={isDevnet}
                                         />

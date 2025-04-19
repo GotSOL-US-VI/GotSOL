@@ -10,7 +10,6 @@ import toast from 'react-hot-toast';
 import * as anchor from '@coral-xyz/anchor';
 
 const USDC_DEVNET_MINT = new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU');
-const HOUSE_PUBKEY = new PublicKey('Hth4EBxLWJSoRWj7raCKoniuzcvXt8MUFgGKty3B66ih');
 const MERCHANT_SHARE = 935; // 93.5%
 const GOV_SHARE = 50; // 5%
 const HOUSE_SHARE = 15; // 1.5%
@@ -117,24 +116,16 @@ export function WithdrawFunds({ program, merchantPubkey, isDevnet = true }: With
       // Find the compliance escrow PDA
       const [complianceEscrowPda] = PublicKey.findProgramAddressSync(
         [
-          merchantPubkey.toBuffer(),
-          Buffer.from([6, 221, 246, 225, 215, 101, 161, 147, 217, 203, 225, 70, 206, 235, 121, 172, 28, 180, 133, 237, 95, 91, 55, 145, 58, 140, 245, 133, 126, 255, 0, 169]),
-          USDC_DEVNET_MINT.toBuffer(),
+          Buffer.from("compliance_escrow"),
+          merchantPubkey.toBuffer()
         ],
-        anchor.utils.token.ASSOCIATED_PROGRAM_ID
+        program.programId
       );
 
       // Find the owner's USDC ATA
       const ownerUsdcAta = await getAssociatedTokenAddress(
         USDC_DEVNET_MINT,
         publicKey,
-        true
-      );
-
-      // Find the house's USDC ATA
-      const houseUsdcAta = await getAssociatedTokenAddress(
-        USDC_DEVNET_MINT,
-        HOUSE_PUBKEY,
         true
       );
 
@@ -153,8 +144,6 @@ export function WithdrawFunds({ program, merchantPubkey, isDevnet = true }: With
           usdcMint: USDC_DEVNET_MINT,
           merchantUsdcAta: merchantUsdcAta,
           complianceEscrow: complianceEscrowPda,
-          house: HOUSE_PUBKEY,
-          houseUsdcAta: houseUsdcAta,
           ownerUsdcAta: ownerUsdcAta,
           associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
           tokenProgram: TOKEN_PROGRAM_ID,
@@ -167,12 +156,12 @@ export function WithdrawFunds({ program, merchantPubkey, isDevnet = true }: With
       toast.success(
         <div>
           <p>Successfully withdrew {withdrawAmount} USDC</p>
-          <p className="text-sm">You will receive: {ownerShare.toFixed(6)} USDC (93.5%)</p>
+          <p className="text-sm">You will receive: {ownerShare.toFixed(6)} USDC (93.5% in the future, currently you receive 95% though)</p>
           <p className="text-sm">Revenue payments split: {((parseFloat(withdrawAmount) * GOV_SHARE) / 1000).toFixed(6)} USDC (5%)</p>
-          <p className="text-sm">Platform fee: {((parseFloat(withdrawAmount) * HOUSE_SHARE) / 1000).toFixed(6)} USDC (1.5%)</p>
+          <p className="text-sm">Future Platform fee: {((parseFloat(withdrawAmount) * HOUSE_SHARE) / 1000).toFixed(6)} USDC (1.5%, not currently imposed)</p>
           <p className="text-xs mt-1">
             <a
-              href={`https://${isDevnet ? 'explorer.solana.com/?cluster=devnet' : 'solscan.io'}/tx/${tx}`}
+              href={`https://solscan.io/tx/${tx}?cluster=devnet`}
               target="_blank"
               rel="noopener noreferrer"
               className="underline"
@@ -205,7 +194,7 @@ export function WithdrawFunds({ program, merchantPubkey, isDevnet = true }: With
           Withdraw Funds
           <button
             className="btn btn-ghost btn-xs tooltip tooltip-right"
-            data-tip="1.5% platform fee applies to withdrawals"
+            data-tip="1.5% platform fee applies to withdrawals (for future mainnet)"
           >
             ⓘ
           </button>
