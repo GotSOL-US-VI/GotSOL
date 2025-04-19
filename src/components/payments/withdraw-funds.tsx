@@ -11,7 +11,9 @@ import * as anchor from '@coral-xyz/anchor';
 
 const USDC_DEVNET_MINT = new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU');
 const HOUSE_PUBKEY = new PublicKey('Hth4EBxLWJSoRWj7raCKoniuzcvXt8MUFgGKty3B66ih');
-const MERCHANT_SHARE = 985; // 98.5%
+const MERCHANT_SHARE = 935; // 93.5%
+const GOV_SHARE = 50; // 5%
+const HOUSE_SHARE = 15; // 1.5%
 const ASSOCIATED_TOKEN_PROGRAM_ID = new PublicKey('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL');
 const TOKEN_PROGRAM_ID = new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
 const SYSTEM_PROGRAM_ID = new PublicKey('11111111111111111111111111111111');
@@ -105,15 +107,58 @@ export function WithdrawFunds({ program, merchantPubkey, isDevnet = true }: With
 
       console.log('Withdrawing amount:', amount.toString());
 
+      // Get the merchant account to verify ownership
+      const merchantAccount = await (program.account as any).merchant.fetch(merchantPubkey);
+      
+      if (!merchantAccount || merchantAccount.owner.toString() !== publicKey.toString()) {
+        throw new Error('You are not the owner of this merchant account');
+      }
+
+      // Find the compliance escrow PDA
+      const [complianceEscrowPda] = PublicKey.findProgramAddressSync(
+        [
+          merchantPubkey.toBuffer(),
+          Buffer.from([6, 221, 246, 225, 215, 101, 161, 147, 217, 203, 225, 70, 206, 235, 121, 172, 28, 180, 133, 237, 95, 91, 55, 145, 58, 140, 245, 133, 126, 255, 0, 169]),
+          USDC_DEVNET_MINT.toBuffer(),
+        ],
+        anchor.utils.token.ASSOCIATED_PROGRAM_ID
+      );
+
+      // Find the owner's USDC ATA
+      const ownerUsdcAta = await getAssociatedTokenAddress(
+        USDC_DEVNET_MINT,
+        publicKey,
+        true
+      );
+
+      // Find the house's USDC ATA
+      const houseUsdcAta = await getAssociatedTokenAddress(
+        USDC_DEVNET_MINT,
+        HOUSE_PUBKEY,
+        true
+      );
+
+      // Find the merchant's USDC ATA
+      const merchantUsdcAta = await getAssociatedTokenAddress(
+        USDC_DEVNET_MINT,
+        merchantPubkey,
+        true
+      );
+
       const tx = await program.methods
         .withdrawUsdc(amount)
         .accountsPartial({
           owner: publicKey,
           merchant: merchantPubkey,
           usdcMint: USDC_DEVNET_MINT,
+          merchantUsdcAta: merchantUsdcAta,
+          complianceEscrow: complianceEscrowPda,
           house: HOUSE_PUBKEY,
-          tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
-          associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
+          houseUsdcAta: houseUsdcAta,
+          ownerUsdcAta: ownerUsdcAta,
+          associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          systemProgram: SYSTEM_PROGRAM_ID,
         })
         .rpc();
 
@@ -122,8 +167,9 @@ export function WithdrawFunds({ program, merchantPubkey, isDevnet = true }: With
       toast.success(
         <div>
           <p>Successfully withdrew {withdrawAmount} USDC</p>
-          <p className="text-sm">You will receive: {ownerShare.toFixed(6)} USDC</p>
-          <p className="text-sm">Platform fee: {(parseFloat(withdrawAmount) - ownerShare).toFixed(6)} USDC</p>
+          <p className="text-sm">You will receive: {ownerShare.toFixed(6)} USDC (93.5%)</p>
+          <p className="text-sm">Revenue payments split: {((parseFloat(withdrawAmount) * GOV_SHARE) / 1000).toFixed(6)} USDC (5%)</p>
+          <p className="text-sm">Platform fee: {((parseFloat(withdrawAmount) * HOUSE_SHARE) / 1000).toFixed(6)} USDC (1.5%)</p>
           <p className="text-xs mt-1">
             <a
               href={`https://${isDevnet ? 'explorer.solana.com/?cluster=devnet' : 'solscan.io'}/tx/${tx}`}
@@ -254,4 +300,4 @@ export function WithdrawFunds({ program, merchantPubkey, isDevnet = true }: With
       </div>
     </div>
   );
-} 
+}

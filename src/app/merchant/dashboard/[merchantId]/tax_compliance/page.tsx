@@ -2,18 +2,31 @@
 
 import { PublicKey } from '@solana/web3.js'
 import { useEffect, useState } from 'react'
-import { EmployeeList } from '@/components/employees/employee-ui'
-import { IconReceipt } from '@tabler/icons-react'
+import { useAnchorProvider } from '@/components/para/para-provider'
+import { Program, Idl } from '@coral-xyz/anchor'
+import * as kumbayaIdl from '@/utils/kumbaya.json'
+import { PayTheManButton } from '@/components/merchant/pay-the-man-button'
 
-export default function ManageAccountsPage({ params }: { params: { merchantId: string } }) {
+export default function TaxCompliancePage({ params }: { params: { merchantId: string } }) {
   const [mounted, setMounted] = useState(false)
+  const [merchantName, setMerchantName] = useState<string>('')
+  const [program, setProgram] = useState<Program<Idl> | null>(null)
+  const provider = useAnchorProvider()
+
+  // Initialize program
+  useEffect(() => {
+    if (provider) {
+      const programInstance = new Program(kumbayaIdl as Idl, provider)
+      setProgram(programInstance)
+    }
+  }, [provider])
 
   // Client-side only to avoid hydration issues
   useEffect(() => {
     setMounted(true)
   }, [])
 
-  if (!mounted) return null
+  if (!mounted || !program) return null
 
   const merchantId = new PublicKey(params.merchantId)
 
@@ -42,18 +55,23 @@ export default function ManageAccountsPage({ params }: { params: { merchantId: s
             </li>
             <li>The 5% diverted to the Merchant&apos;s compliance escrow continues to accrue USDC each time the Merchant&apos;s Owner withdraws from the Merchant&apos;s USDC account.</li>
             <li>
-              Once the time comes to pay their monthly tax bill, the Owner can click the &quot;Pay The Man&quot; button and 100% of the Merchant&apos;s compliance escrow will be paid to THE MAN&apos;s USDC account.
+              Once the time comes to pay their monthly tax bill, the Owner can click the &quot;Make Revenue Payment&quot; button and 100% of the Merchant&apos;s compliance escrow will be paid to THE MAN&apos;s USDC account.
             </li>
             <li>This achieves a preliminary level of automation regarding the disbersion and allocation of revenues, while ensuring all 3 interested parties are either paid, or earmarked funds simultaneously (The Merchant&apos;s Owner, the House, and THE MAN); all during the withdrawal of USDC from the Merchant&apos;s account.</li>
           </ul>
           <br></br>
           <p>We have decided to build and showcase this feature as an example of WHAT COULD BE possible, or a direction that we&apos;d like to begin a conversation around and work towards; both on the Merchant&apos;s end, and the Government/Tax Authority&apos;s end. This assumes that the Government and relevant departments have been onboarded with their own accounts, and are willing to accept tax payments in this manner.</p>
         </div>
-
       </div>
 
-      <div className="card bg-base-300 shadow-xl">
-
+      <div className="card bg-base-300 shadow-xl p-6">
+        <h2 className="text-2xl font-bold mb-4">Make Revenue Payment</h2>
+        <p className="mb-4">Use this button to pay your tax obligations from your compliance escrow&apos;s funds. Payments go directly to the relevant government entity&apos;s account, making compliance simple and transparent.</p>
+        <PayTheManButton 
+          program={program} 
+          merchantPubkey={merchantId} 
+          merchantName={merchantName || "Merchant"} 
+        />
       </div>
     </div>
   )
