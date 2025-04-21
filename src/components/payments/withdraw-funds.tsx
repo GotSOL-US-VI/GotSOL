@@ -159,9 +159,9 @@ export function WithdrawFunds({ program, merchantPubkey, isDevnet = true }: With
       toast.success(
         <div>
           <p>Successfully withdrew {withdrawAmount} USDC</p>
-          <p className="text-sm">You will receive: {ownerShare.toFixed(6)} USDC (93.5% in the future, currently you receive 95% though)</p>
-          <p className="text-sm">Revenue payments split: {((parseFloat(withdrawAmount) * GOV_SHARE) / 1000).toFixed(6)} USDC (5%)</p>
-          <p className="text-sm">Future Platform fee: {((parseFloat(withdrawAmount) * HOUSE_SHARE) / 1000).toFixed(6)} USDC (1.5%, not currently imposed)</p>
+          <p className="text-sm">You receive: {ownerShare.toFixed(6)} USDC (93.5% in the future, currently 95%)</p>
+          <p className="text-sm">Tax payments: {((parseFloat(withdrawAmount) * GOV_SHARE) / 1000).toFixed(6)} USDC (5%)</p>
+          <p className="text-sm">Platform fee: {((parseFloat(withdrawAmount) * HOUSE_SHARE) / 1000).toFixed(6)} USDC (1.5%, not currently imposed)</p>
           <p className="text-xs mt-1">
             <a
               href={`https://solscan.io/tx/${tx}?cluster=devnet`}
