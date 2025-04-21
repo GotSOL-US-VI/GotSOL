@@ -1,15 +1,18 @@
 "use client";
 
-import { usePara } from '@/components/para/para-provider';
+import { usePathname } from 'next/navigation';
 
 export function ExplorerLink() {
-  const { address } = usePara();
+  const pathname = usePathname();
   
-  if (!address) {
+  // Extract merchant ID from the URL
+  const merchantMatch = pathname.match(/\/merchant\/dashboard\/([^/]+)/);
+  if (!merchantMatch) {
     return null;
   }
 
-  const solscanUrl = `https://solscan.io/account/${address}?cluster=devnet`;
+  const merchantId = merchantMatch[1];
+  const solscanUrl = `https://solscan.io/account/${merchantId}?cluster=devnet`;
 
   return (
     <a 
@@ -18,7 +21,7 @@ export function ExplorerLink() {
       rel="noopener noreferrer"
       className="hover:text-mint transition-colors"
     >
-      Owner Transaction History
+      Merchant Transaction History
     </a>
   );
 } 
