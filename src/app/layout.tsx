@@ -8,6 +8,8 @@ import { Analytics } from "@vercel/analytics/react"
 import { SpeedInsights } from "@vercel/speed-insights/next"
 import { ConnectionProvider } from "@/lib/connection-provider";
 import { ClientLayout } from '@/components/ui/client-layout';
+import { ExplorerLink } from '@/components/explorer-link';
+import { ReactNode } from 'react';
 
 export const metadata = {
   title: 'GotSOL - USDC Payments on Solana',
@@ -27,7 +29,12 @@ const defaultLinks = [
   { label: 'Resources', path: '/links' },
 ]
 
-const merchantLinks = [
+interface MerchantLink {
+  label: string | ReactNode;
+  path: string;
+}
+
+const merchantLinks: MerchantLink[] = [
   { label: 'Point of Sale', path: '/merchant/dashboard/:merchantId' },
   { label: 'Inventory Management', path: '/merchant/dashboard/:merchantId/inventory_management' },
   { label: 'Revenue Payments', path: '/merchant/dashboard/:merchantId/tax_compliance' },
@@ -35,6 +42,7 @@ const merchantLinks = [
   { label: 'Treasury / Yield', path: '/merchant/dashboard/:merchantId/yield' },
   { label: 'USD On & Off-ramps', path: '/merchant/dashboard/:merchantId/off-ramps' },
   { label: 'Resources', path: '/links' },
+  { label: <ExplorerLink />, path: '#' }
 ]
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

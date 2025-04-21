@@ -12,16 +12,22 @@ import { ClusterChecker, ClusterUiSelect, ExplorerLink } from '../cluster/cluste
 import { usePara } from "@/components/para/para-provider";
 // import { WalletButton } from '../para/para-provider'
 
+interface Link {
+  label: string | ReactNode;
+  path: string;
+}
+
+interface UiLayoutProps {
+  children: ReactNode;
+  defaultLinks: Link[];
+  merchantLinks: Link[];
+}
 
 export function UiLayout({
   children,
   defaultLinks,
   merchantLinks,
-}: {
-  children: ReactNode
-  defaultLinks: { label: string; path: string }[]
-  merchantLinks: { label: string; path: string }[]
-}) {
+}: UiLayoutProps) {
   const pathname = usePathname()
   const [theme, setTheme] = React.useState<'light' | 'dark'>('dark')
   const [activeMerchant, setActiveMerchant] = React.useState<string | null>(null)
@@ -94,16 +100,20 @@ export function UiLayout({
               <ul className="menu menu-horizontal px-1 space-x-2">
                 {currentLinks.map(({ label, path }) => (
                   <li key={path}>
-                    <Link
-                      href={activeMerchant ? path.replace(':merchantId', activeMerchant) : path}
-                      className={`hover:text-mint transition-colors ${pathname === path.replace(':merchantId', activeMerchant || '') ||
-                        (path === '/merchant/dashboard/:merchantId' && pathname === `/merchant/dashboard/${activeMerchant}`)
-                        ? 'text-mint'
-                        : ''
-                        }`}
-                    >
-                      {label}
-                    </Link>
+                    {typeof label === 'string' ? (
+                      <Link
+                        href={activeMerchant ? path.replace(':merchantId', activeMerchant) : path}
+                        className={`hover:text-mint transition-colors ${pathname === path.replace(':merchantId', activeMerchant || '') ||
+                          (path === '/merchant/dashboard/:merchantId' && pathname === `/merchant/dashboard/${activeMerchant}`)
+                          ? 'text-mint'
+                          : ''
+                          }`}
+                      >
+                        {label}
+                      </Link>
+                    ) : (
+                      label
+                    )}
                   </li>
                 ))}
               </ul>
