@@ -89,7 +89,7 @@ export default function TaxCompliancePage({ params }: { params: { merchantId: st
       </div>
 
       <div className="card bg-base-300 shadow-xl p-6">
-        <h2 className="text-2xl font-bold mb-4">Make Revenue Payment (in development, coming soon)</h2>
+        <h2 className="text-2xl font-bold mb-4">Make Revenue Payment</h2>
         <p className="mb-4">Use this button to pay your tax obligations from your compliance escrow&apos;s funds. Payments go directly to the relevant government entity&apos;s account, making compliance simple and transparent.</p>
         <PayTheManButton 
           program={program} 
