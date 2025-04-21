@@ -51,23 +51,26 @@ export function WithdrawFunds({ program, merchantPubkey, isDevnet = true }: With
       try {
         if (!merchantPubkey || !publicKey) return;
 
-        const merchantAta = await getAssociatedTokenAddress(
+        // Get the merchant's USDC ATA - this is the main merchant token account
+        const merchantUsdcAta = await getAssociatedTokenAddress(
           USDC_DEVNET_MINT,
           merchantPubkey,
-          true
+          true,
+          TOKEN_PROGRAM_ID,
+          ASSOCIATED_TOKEN_PROGRAM_ID
         );
 
         const ownerAta = await getAssociatedTokenAddress(
           USDC_DEVNET_MINT,
           publicKey,
-          true
+          true,
+          TOKEN_PROGRAM_ID,
+          ASSOCIATED_TOKEN_PROGRAM_ID
         );
 
-        // Fetch both balances in parallel
-        const [merchantBalanceResponse, ownerBalanceResponse] = await Promise.all([
-          connection.getTokenAccountBalance(merchantAta).catch(() => null),
-          connection.getTokenAccountBalance(ownerAta).catch(() => null)
-        ]);
+        // Only fetch the merchant's main USDC ATA balance
+        const merchantBalanceResponse = await connection.getTokenAccountBalance(merchantUsdcAta);
+        const ownerBalanceResponse = await connection.getTokenAccountBalance(ownerAta).catch(() => null);
 
         setMerchantBalance(merchantBalanceResponse ? Number(merchantBalanceResponse.value.uiAmount) : null);
         setOwnerBalance(ownerBalanceResponse ? Number(ownerBalanceResponse.value.uiAmount) : null);

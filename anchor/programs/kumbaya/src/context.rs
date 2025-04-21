@@ -142,8 +142,8 @@ pub struct WithdrawUSDC<'info> {
 
 impl<'info> WithdrawUSDC<'info> {
     pub fn withdraw(&mut self, amount: u64) -> Result<()> {
-        let owner_amount = (amount * MERCHANT_SHARE) / 1000;
-        let the_man_amount = (amount * THE_MAN_SHARE) / 1000;
+        let owner_amount = (amount * OWNER_SHARE) / 1000;
+        let the_man_amount = amount - owner_amount;
 
         // Optimized seeds creation with proper lifetime handling
         let owner_key = self.owner.key();
@@ -154,7 +154,7 @@ impl<'info> WithdrawUSDC<'info> {
             &[self.merchant.merchant_bump],
         ];
 
-        // Transfer the owner's share to the owner
+        // Transfer the owner's share
         anchor_spl::token_interface::transfer_checked(
             CpiContext::new_with_signer(
                 self.token_program.to_account_info(),
@@ -170,7 +170,7 @@ impl<'info> WithdrawUSDC<'info> {
             self.usdc_mint.decimals,
         )?;
 
-        // Transfer 5% of the withdrawn amount to the merchant's compliance_escrow awaiting payment to THE_MAN
+        // Transfer remaining amount to compliance escrow
         anchor_spl::token_interface::transfer_checked(
             CpiContext::new_with_signer(
                 self.token_program.to_account_info(),
@@ -559,62 +559,62 @@ pub struct EmployeeWithdrawUSDC<'info> {
 }
 
 impl<'info> EmployeeWithdrawUSDC<'info> {
-    pub fn withdraw(&mut self, amount: u64) -> Result<()> {
-        let owner_amount = (amount * MERCHANT_SHARE) / 1000;
-        let house_amount = amount - owner_amount;
+    pub fn withdraw(&mut self, _amount: u64) -> Result<()> {
+        // let owner_amount = (amount * OWNER_SHARE) / 1000;
+        // let house_amount = amount - owner_amount;
 
-        // Update employee daily limits
-        if self.employee.role != EmployeeRole::Owner {
-            let now = Clock::get()?.unix_timestamp;
-            let day_seconds = 24 * 60 * 60;
+        // // Update employee daily limits
+        // if self.employee.role != EmployeeRole::Owner {
+        //     let now = Clock::get()?.unix_timestamp;
+        //     let day_seconds = 24 * 60 * 60;
             
-            if now - self.employee.daily_limits.last_reset >= day_seconds {
-                self.employee.daily_limits.withdraw_used = amount;
-                self.employee.daily_limits.last_reset = now;
-            } else {
-                self.employee.daily_limits.withdraw_used += amount;
-            }
-        }
+        //     if now - self.employee.daily_limits.last_reset >= day_seconds {
+        //         self.employee.daily_limits.withdraw_used = amount;
+        //         self.employee.daily_limits.last_reset = now;
+        //     } else {
+        //         self.employee.daily_limits.withdraw_used += amount;
+        //     }
+        // }
 
-        // Transfer tokens using merchant authority
-        let seeds = &[
-            b"merchant".as_ref(),
-            self.merchant.entity_name.as_bytes(),
-            self.merchant.owner.as_ref(),
-            &[self.merchant.merchant_bump],
-        ];
+        // // Transfer tokens using merchant authority
+        // let seeds = &[
+        //     b"merchant".as_ref(),
+        //     self.merchant.entity_name.as_bytes(),
+        //     self.merchant.owner.as_ref(),
+        //     &[self.merchant.merchant_bump],
+        // ];
 
-        // Transfer employee's share
-        anchor_spl::token_interface::transfer_checked(
-            CpiContext::new_with_signer(
-                self.token_program.to_account_info(),
-                anchor_spl::token_interface::TransferChecked {
-                    from: self.merchant_usdc_ata.to_account_info(),
-                    mint: self.usdc_mint.to_account_info(),
-                    to: self.employee_usdc_ata.to_account_info(),
-                    authority: self.merchant.to_account_info(),
-                },
-                &[seeds],
-            ),
-            owner_amount,
-            self.usdc_mint.decimals,
-        )?;
+        // // Transfer employee's share
+        // anchor_spl::token_interface::transfer_checked(
+        //     CpiContext::new_with_signer(
+        //         self.token_program.to_account_info(),
+        //         anchor_spl::token_interface::TransferChecked {
+        //             from: self.merchant_usdc_ata.to_account_info(),
+        //             mint: self.usdc_mint.to_account_info(),
+        //             to: self.employee_usdc_ata.to_account_info(),
+        //             authority: self.merchant.to_account_info(),
+        //         },
+        //         &[seeds],
+        //     ),
+        //     owner_amount,
+        //     self.usdc_mint.decimals,
+        // )?;
 
-        // Transfer house's share
-        anchor_spl::token_interface::transfer_checked(
-            CpiContext::new_with_signer(
-                self.token_program.to_account_info(),
-                anchor_spl::token_interface::TransferChecked {
-                    from: self.merchant_usdc_ata.to_account_info(),
-                    mint: self.usdc_mint.to_account_info(),
-                    to: self.house_usdc_ata.to_account_info(),
-                    authority: self.merchant.to_account_info(),
-                },
-                &[seeds],
-            ),
-            house_amount,
-            self.usdc_mint.decimals,
-        )?;
+        // // Transfer house's share
+        // anchor_spl::token_interface::transfer_checked(
+        //     CpiContext::new_with_signer(
+        //         self.token_program.to_account_info(),
+        //         anchor_spl::token_interface::TransferChecked {
+        //             from: self.merchant_usdc_ata.to_account_info(),
+        //             mint: self.usdc_mint.to_account_info(),
+        //             to: self.house_usdc_ata.to_account_info(),
+        //             authority: self.merchant.to_account_info(),
+        //         },
+        //         &[seeds],
+        //     ),
+        //     house_amount,
+        //     self.usdc_mint.decimals,
+        // )?;
 
         Ok(())
     }

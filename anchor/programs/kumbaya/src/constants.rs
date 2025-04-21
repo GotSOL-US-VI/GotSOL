@@ -10,9 +10,9 @@ pub const USDC_MAINNET_MINT: &str = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1
 // devnet USDC address
 pub const USDC_DEVNET_MINT: &str = "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU";
 
-pub const MERCHANT_SHARE: u64 = 935; // 93.5%
-pub const THE_MAN_SHARE: u64 = 5; // 5.0%
-pub const HOUSE_SHARE: u64 = 15; // 1.5%
+pub const OWNER_SHARE: u64 = 950; // 95%
+pub const THE_MAN_SHARE: u64 = 50; // 5.0%
+// pub const HOUSE_SHARE: u64 = 15; // 1.5%
 
 pub const MANAGER3_WITHDRAW_LIMIT: u64 = 10_000 * USDC_DECIMALS; // 10,000 USDC
 pub const MANAGER2_WITHDRAW_LIMIT: u64 = 5_000 * USDC_DECIMALS;

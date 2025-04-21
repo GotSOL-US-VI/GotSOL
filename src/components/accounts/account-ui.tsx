@@ -46,9 +46,7 @@ export function AccountBalanceCheck({ address }: { address: PublicKey }) {
     return (
       <div className="alert alert-warning text-warning-content/80 rounded-none flex justify-center bold">
         <span>
-          You have 0 SOL in this account. Give us your public key and we will seed your account so you can demo the application.     
-          <br></br>
-          Click the login bubble in the top right, then copy the publick key at the top or click Recieve and copy it there, then send it to Ryan.
+          You have 0 SOL in this account. Click the button to request 1 SOL from the faucet. If it fails, ask us for SOL and we will send you some so you can demo the application. 
              </span>
         <button
           className="btn btn-xs btn-neutral"
