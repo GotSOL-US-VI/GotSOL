@@ -41,7 +41,7 @@ const merchantLinks: MerchantLink[] = [
   // { label: 'Manage Employees', path: '/merchant/dashboard/:merchantId/accounts' },
   { label: 'Treasury / Yield', path: '/merchant/dashboard/:merchantId/yield' },
   { label: 'USD On & Off-ramps', path: '/merchant/dashboard/:merchantId/off-ramps' },
-  { label: 'Resources', path: '/links' },
+  { label: 'Resources', path: '/merchant/dashboard/:merchantId/links' },
   { label: <ExplorerLink />, path: '#' }
 ]
 
