@@ -6,7 +6,10 @@ import { Program, Idl } from '@coral-xyz/anchor';
 import { PublicKey } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID, getAssociatedTokenAddressSync, getAccount } from "@solana/spl-token";
 import { usePara } from "../para/para-provider";
-import { useConnection } from "@solana/wallet-adapter-react";
+import toast from 'react-hot-toast';
+
+const USDC_DEVNET_MINT = new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU');
+const THE_MAN = new PublicKey('7WxjvbhBgAcWfTnL8yQy6iP1vF4n5fKPc7tL7fMYvSsc');
 
 interface PayTheManButtonProps {
     program: Program<Idl>;
@@ -16,6 +19,8 @@ interface PayTheManButtonProps {
 }
 
 export function PayTheManButton({ program, merchantPubkey, merchantName, onSuccess }: PayTheManButtonProps) {
+    console.log('PayTheManButton rendered with merchant:', merchantPubkey.toString());
+
     const [isLoading, setIsLoading] = useState(false);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [error, setError] = useState<string>('');
@@ -24,22 +29,27 @@ export function PayTheManButton({ program, merchantPubkey, merchantName, onSucce
     const [lastPayment, setLastPayment] = useState<number>(0);
     const [lastPaymentDate, setLastPaymentDate] = useState<string>('Never');
     const { address } = usePara();
-    const { connection } = useConnection();
-    const publicKey = useMemo(() => address ? new PublicKey(address) : null, [address]);
+    const publicKey = useMemo(() => {
+        console.log('Wallet address changed:', address);
+        return address ? new PublicKey(address) : null;
+    }, [address]);
+
+    // Use program's connection instead of wallet adapter's
+    const connection = useMemo(() => program.provider.connection, [program]);
 
     // Fetch escrow balance and compliance data
     const fetchData = useCallback(async () => {
-        if (!publicKey || !connection) return;
+        console.log('fetchData called, publicKey:', publicKey?.toString(), 'connection:', !!connection);
+        if (!publicKey) {
+            console.log('Missing publicKey, skipping fetch');
+            return;
+        }
         
         try {
             setIsRefreshing(true);
             setError('');
             
-            // Get the USDC mint (using devnet for now)
-            const usdcMint = new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU');
-            console.log('USDC Mint:', usdcMint.toString());
-            
-            // Find the compliance escrow PDA (which is already a USDC ATA)
+            // Find the compliance escrow PDA
             const [complianceEscrowPda] = PublicKey.findProgramAddressSync(
                 [
                     Buffer.from("compliance_escrow"),
@@ -47,7 +57,8 @@ export function PayTheManButton({ program, merchantPubkey, merchantName, onSucce
                 ],
                 program.programId
             );
-            console.log('Compliance Escrow (USDC ATA):', complianceEscrowPda.toString());
+            console.log('Derived Compliance Escrow PDA:', complianceEscrowPda.toString());
+            console.log('Expected Compliance Escrow:', '6tRAFHJc5T6SoWmwY5B1EjK4nkqQVgjXD4BM1v1qGjbN');
             
             // Find the compliance state account PDA
             const [compliancePda] = PublicKey.findProgramAddressSync(
@@ -57,48 +68,39 @@ export function PayTheManButton({ program, merchantPubkey, merchantName, onSucce
                 ],
                 program.programId
             );
-            console.log('Compliance State Account:', compliancePda.toString());
 
-            // Get the escrow account info (it's already a USDC ATA)
+            // Get the escrow account balance
             try {
-                console.log('Fetching escrow balance for:', complianceEscrowPda.toString());
+                console.log('Fetching token account info for compliance escrow...');
+                const tokenAccount = await getAccount(connection, complianceEscrowPda);
+                console.log('Token Account Data:', {
+                    mint: tokenAccount.mint.toString(),
+                    owner: tokenAccount.owner.toString(),
+                    amount: tokenAccount.amount.toString()
+                });
                 
-                try {
-                    const tokenAccount = await getAccount(connection, complianceEscrowPda);
-                    console.log('Token account data:', tokenAccount);
-                    
-                    const balance = Number(tokenAccount.amount) / 1_000_000; // USDC has 6 decimals
-                    console.log('Token account balance:', balance);
-                    setEscrowBalance(balance);
-                } catch (err) {
-                    console.log('Error getting token account:', err);
-                    setEscrowBalance(0);
-                }
+                const balance = Number(tokenAccount.amount) / 1_000_000; // USDC has 6 decimals
+                console.log('Calculated Balance:', balance, 'USDC');
+                setEscrowBalance(balance);
             } catch (err) {
-                console.log('Compliance escrow not found or empty:', err);
+                console.error('Error fetching compliance escrow:', err);
                 setEscrowBalance(0);
             }
 
             // Get the compliance state account info
             try {
-                console.log('Fetching compliance state for:', compliancePda.toString());
                 const complianceAccount = await (program.account as any).compliance.fetch(compliancePda);
-                console.log('Compliance state data:', complianceAccount);
-                
                 if (complianceAccount) {
                     setLifetimePaid(Number(complianceAccount.lifetimePaid) / 1_000_000);
-                    setLastPayment(complianceAccount.lastPayment);
+                    setLastPayment(complianceAccount.lastPayment.toNumber());
                     
-                    // Format the last payment date
-                    if (complianceAccount.lastPayment > 0) {
-                        const date = new Date(complianceAccount.lastPayment * 1000);
+                    if (complianceAccount.lastPayment.toNumber() > 0) {
+                        const date = new Date(complianceAccount.lastPayment.toNumber() * 1000);
                         setLastPaymentDate(date.toLocaleDateString());
                     }
-                    console.log('Lifetime paid set to:', Number(complianceAccount.lifetimePaid) / 1_000_000);
-                    console.log('Last payment set to:', complianceAccount.lastPayment);
                 }
             } catch (err) {
-                console.log('Compliance state account not found yet:', err);
+                console.log('Compliance state account not found yet');
                 setLifetimePaid(0);
                 setLastPayment(0);
                 setLastPaymentDate('Never');
@@ -113,16 +115,19 @@ export function PayTheManButton({ program, merchantPubkey, merchantName, onSucce
 
     // Initial data fetch
     useEffect(() => {
+        console.log('Initial fetchData useEffect triggered');
         fetchData();
     }, [fetchData]);
 
     // Set up polling for real-time updates
     useEffect(() => {
+        console.log('Setting up polling interval');
         const interval = setInterval(fetchData, 10000); // Refresh every 10 seconds
-        return () => clearInterval(interval);
+        return () => {
+            console.log('Cleaning up polling interval');
+            clearInterval(interval);
+        };
     }, [fetchData]);
-
-    if (!address) return null;
 
     const handlePayTheMan = async () => {
         if (!publicKey || !connection) {
@@ -134,11 +139,7 @@ export function PayTheManButton({ program, merchantPubkey, merchantName, onSucce
             setIsLoading(true);
             setError('');
 
-            // Get the USDC mint (using devnet for now)
-            const usdcMint = new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU');
-            console.log('USDC Mint:', usdcMint.toString());
-            
-            // Find the compliance escrow PDA (which is already a USDC ATA)
+            // Find the compliance escrow PDA
             const [complianceEscrowPda] = PublicKey.findProgramAddressSync(
                 [
                     Buffer.from("compliance_escrow"),
@@ -146,7 +147,6 @@ export function PayTheManButton({ program, merchantPubkey, merchantName, onSucce
                 ],
                 program.programId
             );
-            console.log('Compliance Escrow (USDC ATA):', complianceEscrowPda.toString());
 
             // Find the compliance state account PDA
             const [compliancePda] = PublicKey.findProgramAddressSync(
@@ -156,30 +156,15 @@ export function PayTheManButton({ program, merchantPubkey, merchantName, onSucce
                 ],
                 program.programId
             );
-            console.log('Compliance State Account:', compliancePda.toString());
-
-            // Get THE_MAN's pubkey
-            const theManPubkey = new PublicKey('7WxjvbhBgAcWfTnL8yQy6iP1vF4n5fKPc7tL7fMYvSsc');
-            console.log('THE_MAN pubkey:', theManPubkey.toString());
             
             // Get THE_MAN's USDC ATA
             const theManUsdcAta = getAssociatedTokenAddressSync(
-                usdcMint,
-                theManPubkey,
-                false // allowOwnerOffCurve = false since this is a normal account
+                USDC_DEVNET_MINT,
+                THE_MAN,
+                false
             );
-            console.log('THE_MAN USDC ATA:', theManUsdcAta.toString());
 
             // Call the paytheman instruction
-            console.log('Calling paytheman instruction with accounts:');
-            console.log('- owner:', publicKey.toString());
-            console.log('- merchant:', merchantPubkey.toString());
-            console.log('- complianceEscrow:', complianceEscrowPda.toString());
-            console.log('- compliance:', compliancePda.toString());
-            console.log('- usdcMint:', usdcMint.toString());
-            console.log('- theMan:', theManPubkey.toString());
-            console.log('- theManUsdcAta:', theManUsdcAta.toString());
-            
             const tx = await program.methods
                 .paytheman()
                 .accountsPartial({
@@ -187,16 +172,31 @@ export function PayTheManButton({ program, merchantPubkey, merchantName, onSucce
                     merchant: merchantPubkey,
                     complianceEscrow: complianceEscrowPda,
                     compliance: compliancePda,
-                    usdcMint,
-                    theMan: theManPubkey,
-                    theManUsdcAta,
-                    tokenProgram: TOKEN_PROGRAM_ID,
+                    usdcMint: USDC_DEVNET_MINT,
+                    theMan: THE_MAN,
+                    theManUsdcAta: theManUsdcAta,
                     associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
+                    tokenProgram: TOKEN_PROGRAM_ID,
                     systemProgram: anchor.web3.SystemProgram.programId,
                 })
                 .rpc();
 
-            console.log('Paid GOV:', tx);
+            toast.success(
+                <div>
+                    <p>Successfully paid revenue payment</p>
+                    <p className="text-xs mt-1">
+                        <a
+                            href={`https://solscan.io/tx/${tx}?cluster=devnet`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="underline"
+                        >
+                            View transaction
+                        </a>
+                    </p>
+                </div>,
+                { duration: 8000 }
+            );
             
             // Refresh the data
             await fetchData();
@@ -206,6 +206,7 @@ export function PayTheManButton({ program, merchantPubkey, merchantName, onSucce
         } catch (err) {
             console.error('Failed to make revenue payment:', err);
             setError(err instanceof Error ? err.message : 'Failed to make revenue payment');
+            toast.error('Failed to make revenue payment');
         } finally {
             setIsLoading(false);
         }
@@ -234,12 +235,12 @@ export function PayTheManButton({ program, merchantPubkey, merchantName, onSucce
                 <div className="stat">
                     <div className="stat-title">Escrow Balance</div>
                     <div className="stat-value">{escrowBalance.toFixed(6)} USDC</div>
-                    <div className="stat-desc">Available for tax payments</div>
+                    <div className="stat-desc">Available for revenue payments</div>
                 </div>
                 <div className="stat">
                     <div className="stat-title">Lifetime Paid</div>
                     <div className="stat-value">{lifetimePaid.toFixed(6)} USDC</div>
-                    <div className="stat-desc">Total taxes paid to date</div>
+                    <div className="stat-desc">Total revenue paid to date</div>
                 </div>
                 <div className="stat">
                     <div className="stat-title">Last Payment</div>
@@ -259,7 +260,7 @@ export function PayTheManButton({ program, merchantPubkey, merchantName, onSucce
                 className={`btn btn-primary w-full ${isLoading ? 'loading' : ''}`}
                 disabled={!publicKey || escrowBalance <= 0 || isLoading}
             >
-                {isLoading ? 'Processing...' : 'Make revenue payment (in development, coming soon)'}
+                {isLoading ? 'Processing...' : 'Make revenue payment'}
             </button>
 
             {!publicKey && (
@@ -270,7 +271,7 @@ export function PayTheManButton({ program, merchantPubkey, merchantName, onSucce
 
             {escrowBalance <= 0 && publicKey && (
                 <p className="text-sm text-center opacity-60 mt-2">
-                    No funds available in revenue escrow, withdraw USDC from your Merchant&apos;s USDC balance to increase your escrow&apos;s balance.
+                    No funds available in revenue escrow. Withdraw USDC from your Merchant&apos;s USDC balance to increase your escrow&apos;s balance.
                 </p>
             )}
         </div>
