@@ -75,7 +75,7 @@ export default function TaxCompliancePage({ params }: { params: { merchantId: st
               When the Owner withdraws USDC from the Merchant&apos;s account, 5% of the withdrawal amount is deposited into a separate escrow dedicated to tax/compliance payments.
             </li>
             <li>
-              The other 93.5% goes to the Merchant&apos;s Owner&apos;s USDC account, and 1.5% goes to the House&apos;s platform fee.
+              The other 93.5% goes to the Merchant&apos;s Owner&apos;s USDC account, and 1.5% goes to the House&apos;s platform fee (The House&apos;s share is not currently imposed on devnet).
             </li>
             <li>The 5% diverted to the Merchant&apos;s compliance escrow continues to accrue USDC each time the Merchant&apos;s Owner withdraws from the Merchant&apos;s USDC account.</li>
             <li>
