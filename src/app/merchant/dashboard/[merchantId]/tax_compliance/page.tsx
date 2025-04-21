@@ -84,7 +84,7 @@ export default function TaxCompliancePage({ params }: { params: { merchantId: st
             <li>This achieves a preliminary level of automation regarding the disbersion and allocation of revenues, while ensuring all 3 interested parties are either paid, or earmarked funds simultaneously (The Merchant&apos;s Owner, the House, and GOV).</li>
           </ul>
           <br></br>
-          <p>We are presenting this feature as a vision of what is possible. It is a starting point for discussions about the future of automated tax payments. This prototype demonstrates a streamlined approach that would benefit both merchants and tax authorities, assuming government departments establish accounts and embrace these methods. Our goal is to showcase the potential efficiency and transparency this system could bring to all stakeholders.</p>
+          <p>We present this feature as a vision of what is possible. It is a starting point for discussions about the future of automated tax payments. This prototype demonstrates a streamlined approach that would benefit both merchants and tax authorities, assuming government departments establish accounts and embrace these methods. Our goal is to showcase the potential efficiency and transparency this system could bring to all stakeholders.</p>
         </div>
       </div>
 
