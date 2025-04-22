@@ -21,12 +21,12 @@ export default function YieldPage({ params }: { params: { merchantId: string } }
       apy: 0
     },
     {
-      name: 'sUSDE',
+      name: 'Perena USD*',
       balance: 473.81,
-      apy: 4.0,
+      apy: 0.99,
     },
     {
-      name: 'sUSD',
+      name: 'Solayer sUSD',
       balance: 750.25,
       apy: 3.97,
     }
@@ -183,7 +183,7 @@ export default function YieldPage({ params }: { params: { merchantId: string } }
         <div className="mt-8">
           <div>
             <h3 className="font-bold">Coming Soon</h3>
-            <p className="text-sm">Live integration with MarginFi, Kamino Finance, and other DeFi protocols.</p>
+            <p className="text-sm">Live integration with <a href="https://app.perena.org/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Perena</a>.</p>
           </div>
         </div>
       </div>
