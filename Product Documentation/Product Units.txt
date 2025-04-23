@@ -12,10 +12,10 @@ Product Units:
     - Xero
 
 3. Merchants can access top DeFi USDC yield opportunities on Solana for their store's balance
-    - MarginFi USDC lending
-    - Kamino Finance USDC lending
+    - Perena USD* and other LP positions
+    - Solayer sUSD
     - The house takes a 0.001% admin fee when users withdraw funds from a position (1-time fee for any full or partial position withdrawal)
-        - If the total withdrawal amount from the marginfi USDC lending pool is $1000.00 by the merchant, then our fee is $1.00
+        - If the total withdrawal amount from the pool is $1000.00 by the merchant, then our fee is $1.00
 
 4. Payroll services (STRETCH GOAL)
     - Merchants can setup and handle automated payroll from their accounts
@@ -32,3 +32,15 @@ Product Units:
     - Onboard non-merchant customers to the wallet/payments platform and offer them services as well
         - DeFi Integrations for USDC
         - Customer loyalty programs
+
+
+---
+
+NEW:
+
+1. Merchant Point of Sale
+2. Inventory Management
+3. Merchant Tax and Revenue Compliance
+4. Treasury and yield
+5. USD On & Off-ramps
+6. Non-merchant onboarding and financial suite

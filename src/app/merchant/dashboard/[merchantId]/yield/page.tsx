@@ -23,7 +23,7 @@ export default function YieldPage({ params }: { params: { merchantId: string } }
     {
       name: 'Perena USD*',
       balance: 473.81,
-      apy: 0.99,
+      apy: 1.1,
     },
     {
       name: 'Solayer sUSD',
@@ -34,16 +34,16 @@ export default function YieldPage({ params }: { params: { merchantId: string } }
 
   const [opportunities] = useState([
     {
-      platform: 'MarginFi',
-      asset: 'USDC',
-      currentDeposit: 2500.00,
-      apy: 5.8,
+      platform: 'Solayer',
+      asset: 'sUSD',
+      currentDeposit: 0,
+      apy: 3.97,
     },
     {
-      platform: 'Kamino Finance',
-      asset: 'USDC',
-      currentDeposit: 1800.00,
-      apy: 6.2,
+      platform: 'Perena',
+      asset: 'USD*',
+      currentDeposit: 0,
+      apy: 1.1,
     }
   ])
 
@@ -141,7 +141,7 @@ export default function YieldPage({ params }: { params: { merchantId: string } }
               </div>
             </div>
 
-            <div>
+            {/* <div>
               <h2 className="text-xl font-semibold mb-4">Lending Positions</h2>
               <div className="card bg-base-300">
                 <div className="divide-y divide-base-200">
@@ -164,7 +164,7 @@ export default function YieldPage({ params }: { params: { merchantId: string } }
                   ))}
                 </div>
               </div>
-            </div>
+            </div> */}
           </div>
 
           {/* Right Column - Bitcoin Yield */}
@@ -183,7 +183,7 @@ export default function YieldPage({ params }: { params: { merchantId: string } }
         <div className="mt-8">
           <div>
             <h3 className="font-bold">Coming Soon</h3>
-            <p className="text-sm">Live integration with <a href="https://app.perena.org/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Perena</a>.</p>
+            <p className="text-sm">Live integrations with <a href="https://app.perena.org/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Perena</a> and <a href="https://solayer.org/platform/susd" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Solayer</a>.</p>
           </div>
         </div>
       </div>
