@@ -255,7 +255,7 @@ export function WithdrawFunds({ program, merchantPubkey, isDevnet = true }: With
             />
             <div className="grid grid-cols-2 gap-2 w-full">
               <button
-                className="btn btn-sm w-full"
+                className="btn btn-sm w-full text-black"
                 onClick={() => merchantBalance && setWithdrawAmount(merchantBalance.toString())}
                 disabled={isLoading || merchantBalance === null}
               >
