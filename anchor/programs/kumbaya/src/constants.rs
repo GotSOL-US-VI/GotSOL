@@ -2,6 +2,8 @@
 
 pub const USDC_DECIMALS: u64 = 1_000_000; // USDC has 6 decimals
 
+pub const SECONDS_IN_DAY: i64 = 86400; // 86,400 seconds in a day
+
 pub const HOUSE: &str = "Hth4EBxLWJSoRWj7raCKoniuzcvXt8MUFgGKty3B66ih";
 
 // main net USDC address
@@ -10,8 +12,8 @@ pub const USDC_MAINNET_MINT: &str = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1
 // devnet USDC address
 pub const USDC_DEVNET_MINT: &str = "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU";
 
-pub const OWNER_SHARE: u64 = 940; // 94.0%
-pub const GOV_SHARE: u64 = 50; // 5.0%
+pub const OWNER_SHARE: u64 = 990; // 99.0%
+// pub const GOV_SHARE: u64 = 50; // 5.0% - Commented out for now
 pub const HOUSE_SHARE: u64 = 10; // 1.0%
 
 pub const MANAGER3_WITHDRAW_LIMIT: u64 = 10_000 * USDC_DECIMALS; // 10,000 USDC

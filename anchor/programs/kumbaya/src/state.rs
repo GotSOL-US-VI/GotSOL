@@ -1,14 +1,5 @@
 use anchor_lang::prelude::*;
-
-#[account]
-pub struct Global {
-    pub house: Pubkey,
-    pub global_bump: u8,
-}
-
-impl Global {
-    pub const LEN: usize = 8 + 32 + 1;
-}
+use crate::constants::*;
 
 #[account]
 pub struct Merchant {
@@ -59,10 +50,9 @@ impl DailyLimit {
 
     pub fn check_limit(&self, amount: u64, is_withdraw: bool, clock: Clock) -> bool {
         let now = clock.unix_timestamp;
-        let day_seconds = 24 * 60 * 60;
         
         // Reset limits if it's a new day
-        if now - self.last_reset >= day_seconds {
+        if now - self.last_reset >= SECONDS_IN_DAY {
             return true;
         }
 

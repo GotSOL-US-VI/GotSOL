@@ -18,11 +18,6 @@ declare_id!("RKAxBK5mBxYta3FUfMLHafMj8xakd8PLsH3PXFa773r");
 pub mod kumbaya {
     use super::*;
 
-    pub fn init_global(ctx: Context<InitGlobal>) -> Result<()> {
-        ctx.accounts.init(&ctx.bumps)?;
-        Ok(())
-    }
-
     pub fn create_merchant(ctx: Context<CreateMerchant>, name: String) -> Result<()> {
         ctx.accounts.init(&ctx.bumps, name)?;
         Ok(())

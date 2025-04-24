@@ -11,46 +11,6 @@ use crate::errors::*;
 use crate::state::*;
 use crate::events::*;
 
-#[derive(Accounts)]
-pub struct InitGlobal<'info> {
-    // only the HOUSE can pay for this
-    #[account(mut, constraint = house.key() == Pubkey::from_str(HOUSE).unwrap())]
-    pub house: Signer<'info>,
-
-    #[account(init, payer = house, seeds = [b"global"], space = Global::LEN, bump)]
-    pub global: Box<Account<'info, Global>>,
-
-    // main net USDC mint account
-    // #[account(constraint = usdc_mint.key() == Pubkey::from_str(USDC_MAINNET_MINT).unwrap())]
-    // pub usdc_mint: InterfaceAccount<'info, Mint>,
-
-    // devnet USDC mint account
-    #[account(constraint = usdc_mint.key() == Pubkey::from_str(USDC_DEVNET_MINT).unwrap())]
-    pub usdc_mint: Box<InterfaceAccount<'info, Mint>>,
-
-    #[account(
-        init,
-        payer = house,
-        associated_token::mint = usdc_mint,
-        associated_token::authority = house
-    )]
-    pub house_usdc_ata: Box<InterfaceAccount<'info, TokenAccount>>,
-
-    pub associated_token_program: Program<'info, AssociatedToken>,
-    pub token_program: Interface<'info, TokenInterface>,
-
-    pub system_program: Program<'info, System>,
-}
-
-impl<'info> InitGlobal<'info> {
-    pub fn init(&mut self, bumps: &InitGlobalBumps) -> Result<()> {
-        self.global.set_inner(Global {
-            house: self.house.key(),
-            global_bump: bumps.global,
-        });
-        Ok(())
-    }
-}
 
 #[derive(Accounts)]
 #[instruction(name: String)]
@@ -123,15 +83,15 @@ pub struct WithdrawUSDC<'info> {
     )]
     pub merchant_usdc_ata: Box<InterfaceAccount<'info, TokenAccount>>,
 
-    #[account(
-        init_if_needed,
-        payer = owner,
-        seeds = [b"compliance_escrow", merchant.key().as_ref()],
-        bump,
-        token::mint = usdc_mint,
-        token::authority = merchant
-    )]
-    pub compliance_escrow: Box<InterfaceAccount<'info, TokenAccount>>,
+    // #[account(
+    //     init_if_needed,
+    //     payer = owner,
+    //     seeds = [b"compliance_escrow", merchant.key().as_ref()],
+    //     bump,
+    //     token::mint = usdc_mint,
+    //     token::authority = merchant
+    // )]
+    // pub compliance_escrow: Box<InterfaceAccount<'info, TokenAccount>>,
 
     #[account(init_if_needed, payer = owner,
         associated_token::mint = usdc_mint,
@@ -157,8 +117,7 @@ pub struct WithdrawUSDC<'info> {
 impl<'info> WithdrawUSDC<'info> {
     pub fn withdraw(&mut self, amount: u64) -> Result<()> {
         let owner_amount = (amount * OWNER_SHARE) / 1000;
-        let gov_amount = (amount * GOV_SHARE) / 1000;
-        let house_amount = (amount * HOUSE_SHARE) / 1000;
+        let house_amount = amount - owner_amount;
 
         // Optimized seeds creation with proper lifetime handling
         let owner_key = self.owner.key();
@@ -182,22 +141,6 @@ impl<'info> WithdrawUSDC<'info> {
                 &[seeds],
             ),
             owner_amount,
-            self.usdc_mint.decimals,
-        )?;
-
-        // Transfer gov's share to compliance escrow
-        anchor_spl::token_interface::transfer_checked(
-            CpiContext::new_with_signer(
-                self.token_program.to_account_info(),
-                anchor_spl::token_interface::TransferChecked {
-                    from: self.merchant_usdc_ata.to_account_info(),
-                    mint: self.usdc_mint.to_account_info(),
-                    to: self.compliance_escrow.to_account_info(),
-                    authority: self.merchant.to_account_info(),
-                },
-                &[seeds],
-            ),
-            gov_amount,
             self.usdc_mint.decimals,
         )?;
 
@@ -309,100 +252,6 @@ impl<'info> RefundPayment<'info> {
             amount,
             recipient: self.recipient.key()
         });
-
-        Ok(())
-    }
-}
-
-#[derive(Accounts)]
-pub struct MakeRevenuePayment<'info> {
-    #[account(mut)]
-    pub owner: Signer<'info>,
-
-    #[account(mut, 
-        seeds = [b"merchant", merchant.entity_name.as_str().as_bytes(), owner.key().as_ref()], 
-        bump = merchant.merchant_bump,
-        constraint = owner.key() == merchant.owner)]
-    pub merchant: Box<Account<'info, Merchant>>,
-
-    #[account(
-        mut,
-        seeds = [b"compliance_escrow", merchant.key().as_ref()],
-        bump,
-        token::mint = usdc_mint,
-        token::authority = merchant,
-        constraint = compliance_escrow.amount > 0 @ CustomError::InsufficientFunds
-    )]
-    pub compliance_escrow: Box<InterfaceAccount<'info, TokenAccount>>,
-
-    #[account(init_if_needed, payer = owner, seeds = [b"compliance", merchant.key().as_ref()], space = Compliance::LEN, bump)]
-    pub compliance: Box<Account<'info, Compliance>>,
-
-    // main net USDC mint account
-    // #[account(constraint = usdc_mint.key() == Pubkey::from_str(USDC_MAINNET_MINT).unwrap())]
-    // pub usdc_mint: InterfaceAccount<'info, Mint>,
-
-    // devnet USDC mint account
-    #[account(constraint = usdc_mint.key() == Pubkey::from_str(USDC_DEVNET_MINT).unwrap())]
-    pub usdc_mint: Box<InterfaceAccount<'info, Mint>>,
-
-    /// CHECK: This is GOV's pubkey
-    #[account(mut, constraint = gov_account.key() == Pubkey::from_str(GOV).unwrap())]
-    pub gov_account: AccountInfo<'info>,
-
-    #[account(init_if_needed, payer = owner,
-        associated_token::mint = usdc_mint,
-        associated_token::authority = gov_account
-    )]
-    pub gov_usdc_ata: Box<InterfaceAccount<'info, TokenAccount>>, 
-
-    pub associated_token_program: Program<'info, AssociatedToken>,
-    pub token_program: Interface<'info, TokenInterface>,
-    pub system_program: Program<'info, System>,
-}
-
-impl<'info> MakeRevenuePayment<'info> {
-    pub fn make_revenue_payment(&mut self, bumps: &MakeRevenuePaymentBumps) -> Result<()> {
-        // Check if the compliance account exists by checking if the bump value is the default value (0)
-        if self.compliance.bump == 0 {
-            // Initialize merchant's compliance account if it doesn't exist yet
-            self.compliance.set_inner(Compliance {
-                lifetime_paid: 0,
-                last_payment: 0,
-                bump: bumps.compliance
-            });
-        }
-
-        let amount = self.compliance_escrow.amount;
-
-        // Optimized seeds creation with proper lifetime handling
-        let owner_key = self.owner.key();
-        let seeds = &[
-            b"merchant".as_ref(),
-            self.merchant.entity_name.as_bytes(),
-            owner_key.as_ref(),
-            &[self.merchant.merchant_bump],
-        ];
-
-        // Transfer the merchant's compliance_escrow balance to GOV's usdc ata
-        anchor_spl::token_interface::transfer_checked(
-            CpiContext::new_with_signer(
-                self.token_program.to_account_info(),
-                anchor_spl::token_interface::TransferChecked {
-                    from: self.compliance_escrow.to_account_info(),
-                    mint: self.usdc_mint.to_account_info(),
-                    to: self.gov_usdc_ata.to_account_info(),
-                    authority: self.merchant.to_account_info(),
-                },
-                &[seeds],
-            ),
-            amount,
-            self.usdc_mint.decimals,
-        )?;
-
-        // Update the merchant's compliance account's last_payment and lifetime_paid state
-        self.compliance.lifetime_paid += amount;
-        self.compliance.last_payment = Clock::get()?.unix_timestamp;
 
         Ok(())
     }
@@ -541,15 +390,15 @@ pub struct EmployeeWithdrawUSDC<'info> {
     )]
     pub merchant_usdc_ata: Box<InterfaceAccount<'info, TokenAccount>>,
 
-    #[account(
-        init_if_needed,
-        payer = employee_signer,
-        seeds = [b"compliance_escrow", merchant.key().as_ref()],
-        bump,
-        token::mint = usdc_mint,
-        token::authority = merchant
-    )]
-    pub compliance_escrow: Box<InterfaceAccount<'info, TokenAccount>>,
+    // #[account(
+    //     init_if_needed,
+    //     payer = employee_signer,
+    //     seeds = [b"compliance_escrow", merchant.key().as_ref()],
+    //     bump,
+    //     token::mint = usdc_mint,
+    //     token::authority = merchant
+    // )]
+    // pub compliance_escrow: Box<InterfaceAccount<'info, TokenAccount>>,
 
     #[account(mut,
         associated_token::mint = usdc_mint,
@@ -561,11 +410,15 @@ pub struct EmployeeWithdrawUSDC<'info> {
     #[account(mut, constraint = house.key() == Pubkey::from_str(HOUSE).unwrap())]
     pub house: AccountInfo<'info>,
 
+    /// CHECK: This is the merchant owner
+    #[account(mut, constraint = owner.key() == merchant.owner @ CustomError::UnauthorizedWithdrawal)]
+    pub owner: AccountInfo<'info>,
+
     #[account(init_if_needed, payer = employee_signer,
         associated_token::mint = usdc_mint,
-        associated_token::authority = employee_signer
+        associated_token::authority = owner
     )]
-    pub employee_usdc_ata: Box<InterfaceAccount<'info, TokenAccount>>,
+    pub owner_usdc_ata: Box<InterfaceAccount<'info, TokenAccount>>,
 
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub token_program: Interface<'info, TokenInterface>,
@@ -575,15 +428,13 @@ pub struct EmployeeWithdrawUSDC<'info> {
 impl<'info> EmployeeWithdrawUSDC<'info> {
     pub fn withdraw(&mut self, amount: u64) -> Result<()> {
         let owner_amount = (amount * OWNER_SHARE) / 1000;
-        let gov_amount = (amount * GOV_SHARE) / 1000;
-        let house_amount = (amount * HOUSE_SHARE) / 1000;
+        let house_amount = amount - owner_amount;
 
         // Update employee daily limits
         if self.employee.role != EmployeeRole::Owner {
             let now = Clock::get()?.unix_timestamp;
-            let day_seconds = 24 * 60 * 60;
             
-            if now - self.employee.daily_limits.last_reset >= day_seconds {
+            if now - self.employee.daily_limits.last_reset >= SECONDS_IN_DAY {
                 self.employee.daily_limits.withdraw_used = amount;
                 self.employee.daily_limits.last_reset = now;
             } else {
@@ -599,14 +450,14 @@ impl<'info> EmployeeWithdrawUSDC<'info> {
             &[self.merchant.merchant_bump],
         ];
 
-        // Transfer employee's share
+        // Transfer owner's share
         anchor_spl::token_interface::transfer_checked(
             CpiContext::new_with_signer(
                 self.token_program.to_account_info(),
                 anchor_spl::token_interface::TransferChecked {
                     from: self.merchant_usdc_ata.to_account_info(),
                     mint: self.usdc_mint.to_account_info(),
-                    to: self.employee_usdc_ata.to_account_info(),
+                    to: self.owner_usdc_ata.to_account_info(),
                     authority: self.merchant.to_account_info(),
                 },
                 &[seeds],
@@ -631,25 +482,100 @@ impl<'info> EmployeeWithdrawUSDC<'info> {
             self.usdc_mint.decimals,
         )?;
 
-        // Transfer gov's share to compliance escrow
-        anchor_spl::token_interface::transfer_checked(
-            CpiContext::new_with_signer(
-                self.token_program.to_account_info(),
-                anchor_spl::token_interface::TransferChecked {
-                    from: self.merchant_usdc_ata.to_account_info(),
-                    mint: self.usdc_mint.to_account_info(),
-                    to: self.compliance_escrow.to_account_info(),
-                    authority: self.merchant.to_account_info(),
-                },
-                &[seeds],
-            ),
-            gov_amount,
-            self.usdc_mint.decimals,
-        )?;
-
         Ok(())
     }
 }
 
+#[derive(Accounts)]
+pub struct MakeRevenuePayment<'info> {
+    #[account(mut)]
+    pub owner: Signer<'info>,
 
+    #[account(mut, 
+        seeds = [b"merchant", merchant.entity_name.as_str().as_bytes(), owner.key().as_ref()], 
+        bump = merchant.merchant_bump,
+        constraint = owner.key() == merchant.owner)]
+    pub merchant: Box<Account<'info, Merchant>>,
 
+    #[account(
+        mut,
+        seeds = [b"compliance_escrow", merchant.key().as_ref()],
+        bump,
+        token::mint = usdc_mint,
+        token::authority = merchant,
+        constraint = compliance_escrow.amount > 0 @ CustomError::InsufficientFunds
+    )]
+    pub compliance_escrow: Box<InterfaceAccount<'info, TokenAccount>>,
+
+    #[account(init_if_needed, payer = owner, seeds = [b"compliance", merchant.key().as_ref()], space = Compliance::LEN, bump)]
+    pub compliance: Box<Account<'info, Compliance>>,
+
+    // main net USDC mint account
+    // #[account(constraint = usdc_mint.key() == Pubkey::from_str(USDC_MAINNET_MINT).unwrap())]
+    // pub usdc_mint: InterfaceAccount<'info, Mint>,
+
+    // devnet USDC mint account
+    #[account(constraint = usdc_mint.key() == Pubkey::from_str(USDC_DEVNET_MINT).unwrap())]
+    pub usdc_mint: Box<InterfaceAccount<'info, Mint>>,
+
+    /// CHECK: This is GOV's pubkey
+    #[account(mut, constraint = gov_account.key() == Pubkey::from_str(GOV).unwrap())]
+    pub gov_account: AccountInfo<'info>,
+
+    #[account(init_if_needed, payer = owner,
+        associated_token::mint = usdc_mint,
+        associated_token::authority = gov_account
+    )]
+    pub gov_usdc_ata: Box<InterfaceAccount<'info, TokenAccount>>, 
+
+    pub associated_token_program: Program<'info, AssociatedToken>,
+    pub token_program: Interface<'info, TokenInterface>,
+    pub system_program: Program<'info, System>,
+}
+
+impl<'info> MakeRevenuePayment<'info> {
+    pub fn make_revenue_payment(&mut self, bumps: &MakeRevenuePaymentBumps) -> Result<()> {
+        // Check if the compliance account exists by checking if the bump value is the default value (0)
+        if self.compliance.bump == 0 {
+            // Initialize merchant's compliance account if it doesn't exist yet
+            self.compliance.set_inner(Compliance {
+                lifetime_paid: 0,
+                last_payment: 0,
+                bump: bumps.compliance
+            });
+        }
+
+        let amount = self.compliance_escrow.amount;
+
+        // Optimized seeds creation with proper lifetime handling
+        let owner_key = self.owner.key();
+        let seeds = &[
+            b"merchant".as_ref(),
+            self.merchant.entity_name.as_bytes(),
+            owner_key.as_ref(),
+            &[self.merchant.merchant_bump],
+        ];
+
+        // Transfer the merchant's compliance_escrow balance to GOV's usdc ata
+        anchor_spl::token_interface::transfer_checked(
+            CpiContext::new_with_signer(
+                self.token_program.to_account_info(),
+                anchor_spl::token_interface::TransferChecked {
+                    from: self.compliance_escrow.to_account_info(),
+                    mint: self.usdc_mint.to_account_info(),
+                    to: self.gov_usdc_ata.to_account_info(),
+                    authority: self.merchant.to_account_info(),
+                },
+                &[seeds],
+            ),
+            amount,
+            self.usdc_mint.decimals,
+        )?;
+
+        // Update the merchant's compliance account's last_payment and lifetime_paid state
+        self.compliance.lifetime_paid += amount;
+        self.compliance.last_payment = Clock::get()?.unix_timestamp;
+
+        Ok(())
+    }
+}
