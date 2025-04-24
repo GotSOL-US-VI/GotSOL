@@ -12,6 +12,7 @@ interface PaymentHistoryProps {
     program: Program<Idl>;
     merchantPubkey: PublicKey;
     isDevnet?: boolean;
+    onBalanceUpdate?: (balance: number) => void;
 }
 
 interface Payment {
@@ -23,11 +24,12 @@ interface Payment {
 }
 
 const BATCH_SIZE = 10;
+const ACCOUNT_CHANGE_DEBOUNCE = 1000; // 1 second debounce for account changes
 
 const USDC_MINT_DEVNET = new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU');
 const USDC_MINT_MAINNET = new PublicKey('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v');
 
-export function PaymentHistory({ program, merchantPubkey, isDevnet = true }: PaymentHistoryProps) {
+export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBalanceUpdate }: PaymentHistoryProps) {
     const { connection } = useConnection();
     const [payments, setPayments] = useState<Payment[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -39,38 +41,41 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true }: Pay
     const seenPaymentsRef = useRef<Set<string>>(new Set());
     const [isSubscribed, setIsSubscribed] = useState(true);
     const subscriptionIdRef = useRef<number>();
+    const lastAccountUpdateRef = useRef<number>(0);
+    const accountUpdateTimeoutRef = useRef<NodeJS.Timeout>();
 
     // Helper function to add payments while preventing duplicates and maintaining order
     const addPayments = useCallback((newPayments: Payment[], shouldNotify: boolean = false) => {
+        // First, filter out payments that are already in the state
         setPayments(prev => {
             const uniquePayments = newPayments.filter(
                 newPayment => !prev.some(p => p.signature === newPayment.signature)
             );
             
-            // Show toast for new payments if shouldNotify is true
-            if (shouldNotify) {
-                uniquePayments.forEach(payment => {
-                    if (!seenPaymentsRef.current.has(payment.signature)) {
-                        toast.success(
-                            `Received ${payment.amount.toFixed(6)} USDC${payment.memo ? ` - ${payment.memo}` : ''}`,
-                            {
-                                duration: 5000,
-                                position: 'bottom-right',
-                            }
-                        );
-                        seenPaymentsRef.current.add(payment.signature);
-                    }
-                });
-            } else {
-                // Add to seen payments without notification
-                uniquePayments.forEach(payment => {
-                    seenPaymentsRef.current.add(payment.signature);
-                });
-            }
+            // Add to seen payments without notification
+            uniquePayments.forEach(payment => {
+                seenPaymentsRef.current.add(payment.signature);
+            });
 
             const updated = [...prev, ...uniquePayments];
             return updated.sort((a, b) => b.timestamp - a.timestamp);
         });
+        
+        // Show toast for new payments if shouldNotify is true - moved outside of setState
+        if (shouldNotify) {
+            newPayments.forEach(payment => {
+                if (!seenPaymentsRef.current.has(payment.signature)) {
+                    toast.success(
+                        `Received ${payment.amount.toFixed(6)} USDC${payment.memo ? ` - ${payment.memo}` : ''}`,
+                        {
+                            duration: 5000,
+                            position: 'bottom-right',
+                        }
+                    );
+                    seenPaymentsRef.current.add(payment.signature);
+                }
+            });
+        }
     }, []);
 
     // Helper function to fetch transaction with retry
@@ -223,52 +228,90 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true }: Pay
         setIsLoadingMore(false);
     }, [isLoadingMore, hasMore, fetchPayments, addPayments]);
 
+    // Helper function to fetch balance
+    const fetchBalance = useCallback(async (ata: PublicKey) => {
+        try {
+            const balance = await connection.getTokenAccountBalance(ata);
+            return balance?.value?.uiAmount ?? 0;
+        } catch (err) {
+            console.error('Error fetching balance:', err);
+            return 0;
+        }
+    }, [connection]);
+
+    // Helper function to handle account updates with debouncing
+    const handleAccountUpdate = useCallback(async (merchantUsdcAta: PublicKey) => {
+        const now = Date.now();
+        if (now - lastAccountUpdateRef.current < ACCOUNT_CHANGE_DEBOUNCE) {
+            if (accountUpdateTimeoutRef.current) {
+                clearTimeout(accountUpdateTimeoutRef.current);
+            }
+            accountUpdateTimeoutRef.current = setTimeout(() => {
+                handleAccountUpdate(merchantUsdcAta);
+            }, ACCOUNT_CHANGE_DEBOUNCE);
+            return;
+        }
+        lastAccountUpdateRef.current = now;
+
+        try {
+            // Fetch new balance
+            const balance = await fetchBalance(merchantUsdcAta);
+            if (onBalanceUpdate) {
+                onBalanceUpdate(balance);
+            }
+
+            // Fetch recent transaction
+            const recentSigs = await connection.getSignaturesForAddress(merchantUsdcAta, { limit: 1 });
+            if (recentSigs.length === 0) return;
+
+            const recentTx = await fetchTransactionWithRetry(recentSigs[0].signature);
+            if (!recentTx || !recentTx.meta) return;
+
+            const newPayments = processTransactions([recentTx]);
+            if (newPayments.length > 0 && isSubscribed) {
+                addPayments(newPayments, true);
+            }
+        } catch (err) {
+            console.error('Error handling account update:', err);
+        }
+    }, [connection, fetchBalance, onBalanceUpdate, fetchTransactionWithRetry, processTransactions, addPayments, isSubscribed]);
+
     const setupPaymentListener = useCallback(async () => {
         try {
             const merchantUsdcAta = await getAssociatedTokenAddress(
-                isDevnet
-                    ? new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU')
-                    : new PublicKey('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'),
+                isDevnet ? USDC_MINT_DEVNET : USDC_MINT_MAINNET,
                 merchantPubkey,
                 true
             );
 
-            // Initial fetch
+            // Initial fetch of balance and payments
+            const balance = await fetchBalance(merchantUsdcAta);
+            if (onBalanceUpdate) {
+                onBalanceUpdate(balance);
+            }
+
             const initialPayments = await fetchPayments();
             if (isSubscribed) {
-                addPayments(initialPayments, false); // Don't notify for initial load
+                addPayments(initialPayments, false);
                 setHasInitialData(true);
                 setIsLoading(false);
             }
 
-            // Set up real-time listener
+            // Set up real-time listener with debouncing
             subscriptionIdRef.current = connection.onAccountChange(
                 merchantUsdcAta,
-                async (accountInfo) => {
-                    try {
-                        const recentSigs = await connection.getSignaturesForAddress(merchantUsdcAta, { limit: 1 });
-                        if (recentSigs.length === 0) return;
-
-                        const recentTx = await fetchTransactionWithRetry(recentSigs[0].signature);
-                        if (!recentTx || !recentTx.meta) return;
-
-                        const newPayments = processTransactions([recentTx]);
-                        if (newPayments.length > 0 && isSubscribed) {
-                            addPayments(newPayments, true); // Notify for new payments
-                        }
-                    } catch (err) {
-                        console.error('Error processing new transaction:', err);
-                    }
+                () => {
+                    handleAccountUpdate(merchantUsdcAta);
                 },
                 'confirmed'
             );
         } catch (error) {
             console.error('Error setting up payment listener:', error);
             if (isSubscribed) {
-                retryTimeoutRef.current = setTimeout(setupPaymentListener, 2000);
+                retryTimeoutRef.current = setTimeout(setupPaymentListener, 5000); // Increased retry delay
             }
         }
-    }, [connection, merchantPubkey, isDevnet, fetchPayments, fetchTransactionWithRetry, processTransactions, isSubscribed, addPayments]);
+    }, [connection, merchantPubkey, isDevnet, fetchBalance, onBalanceUpdate, fetchPayments, addPayments, handleAccountUpdate, isSubscribed]);
 
     useEffect(() => {
         setIsSubscribed(true);
@@ -281,6 +324,9 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true }: Pay
             }
             if (retryTimeoutRef.current) {
                 clearTimeout(retryTimeoutRef.current);
+            }
+            if (accountUpdateTimeoutRef.current) {
+                clearTimeout(accountUpdateTimeoutRef.current);
             }
         };
     }, [connection, merchantPubkey, isDevnet, setupPaymentListener]);

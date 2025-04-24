@@ -5,7 +5,7 @@ import { PaymentQR } from '@/components/payments/payment-qr';
 import { PaymentHistory } from '@/components/payments/payment-history';
 import { WithdrawFunds } from '@/components/payments/withdraw-funds';
 import * as anchor from '@coral-xyz/anchor';
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import { PublicKey } from '@solana/web3.js';
 import idl from '../../../../utils/kumbaya.json';
 import type { MerchantAccount } from '@/components/payments/refund-button';
@@ -13,6 +13,8 @@ import type { MerchantAccount } from '@/components/payments/refund-button';
 export default function MerchantDashboardPage({ params }: { params: { merchantId: string } }) {
   const provider = useAnchorProvider();
   const [merchantName, setMerchantName] = useState<string>('');
+  const [merchantBalance, setMerchantBalance] = useState<number>(0);
+  const [ownerBalance, setOwnerBalance] = useState<number>(0);
 
   const program = useMemo(() =>
     provider ? new anchor.Program(idl as anchor.Idl, provider) : null
@@ -40,6 +42,14 @@ export default function MerchantDashboardPage({ params }: { params: { merchantId
 
     fetchMerchantName();
   }, [program, merchantPubkey]);
+
+  const handleBalanceUpdate = useCallback((balance: number) => {
+    setMerchantBalance(balance);
+  }, []);
+
+  const handleOwnerBalanceUpdate = useCallback((balance: number) => {
+    setOwnerBalance(balance);
+  }, []);
 
   if (!program || !merchantPubkey) {
     return (
@@ -81,6 +91,10 @@ export default function MerchantDashboardPage({ params }: { params: { merchantId
                   program={program}
                   merchantPubkey={merchantPubkey}
                   isDevnet={true}
+                  onBalanceUpdate={handleBalanceUpdate}
+                  onOwnerBalanceUpdate={handleOwnerBalanceUpdate}
+                  merchantBalance={merchantBalance}
+                  ownerBalance={ownerBalance}
                 />
               </div>
             </div>
@@ -94,6 +108,7 @@ export default function MerchantDashboardPage({ params }: { params: { merchantId
                   program={program}
                   merchantPubkey={merchantPubkey}
                   isDevnet={true}
+                  onBalanceUpdate={handleBalanceUpdate}
                 />
               </div>
             </div>

@@ -3,7 +3,6 @@
 import * as anchor from "@coral-xyz/anchor";
 import { useState } from 'react';
 import { Program, Idl } from '@coral-xyz/anchor';
-import { useWalletAdapterCompat } from '@/hooks/useWalletAdapterCompat';
 import { PublicKey } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { usePara } from "../para/para-provider";

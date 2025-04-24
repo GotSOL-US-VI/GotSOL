@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Program, Idl, BN } from '@coral-xyz/anchor';
 import { PublicKey } from '@solana/web3.js';
 import { usePara } from '../para/para-provider';
@@ -8,179 +8,188 @@ import { useConnection } from '@/lib/connection-context';
 import { getAssociatedTokenAddress } from '@solana/spl-token';
 import toast from 'react-hot-toast';
 import * as anchor from '@coral-xyz/anchor';
+import { 
+  TOKEN_PROGRAM_ID, 
+  ASSOCIATED_TOKEN_PROGRAM_ID,
+  createAssociatedTokenAccountIdempotentInstruction 
+} from '@solana/spl-token';
 
 const USDC_DEVNET_MINT = new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU');
-const MERCHANT_SHARE = 935; // 93.5%
-const GOV_SHARE = 50; // 5%
-const HOUSE_SHARE = 15; // 1.5%
-const ASSOCIATED_TOKEN_PROGRAM_ID = new PublicKey('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL');
-const TOKEN_PROGRAM_ID = new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
-const SYSTEM_PROGRAM_ID = new PublicKey('11111111111111111111111111111111');
+const USDC_MAINNET_MINT = new PublicKey('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v');
+const MERCHANT_SHARE = 990; // 99%
+// const GOV_SHARE = 50; // 5%
+const HOUSE_SHARE = 10; // 10%
+const HOUSE = new PublicKey('Hth4EBxLWJSoRWj7raCKoniuzcvXt8MUFgGKty3B66ih');
 
 interface WithdrawFundsProps {
   program: Program<Idl>;
   merchantPubkey: PublicKey;
+  onSuccess?: () => void;
   isDevnet?: boolean;
+  onBalanceUpdate?: (balance: number) => void;
+  onOwnerBalanceUpdate?: (balance: number) => void;
+  merchantBalance?: number;
+  ownerBalance?: number;
 }
 
-export function WithdrawFunds({ program, merchantPubkey, isDevnet = true }: WithdrawFundsProps) {
+export function WithdrawFunds({ 
+  program, 
+  merchantPubkey, 
+  onSuccess, 
+  isDevnet = true,
+  onBalanceUpdate,
+  onOwnerBalanceUpdate,
+  merchantBalance: propMerchantBalance,
+  ownerBalance: propOwnerBalance
+}: WithdrawFundsProps) {
   const { connection } = useConnection();
   const { address, signer } = usePara();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [amount, setAmount] = useState<string>('');
-  const [recipient, setRecipient] = useState<string>('');
-  const [showModal, setShowModal] = useState(false);
-  const [transactionStatus, setTransactionStatus] = useState<string>('');
-  const [transactionHash, setTransactionHash] = useState<string>('');
+  const [withdrawAmount, setWithdrawAmount] = useState<string>('');
+  const [showBalances, setShowBalances] = useState(true);
+  const [localMerchantBalance, setLocalMerchantBalance] = useState<number | null>(null);
+  const [localOwnerBalance, setLocalOwnerBalance] = useState<number | null>(null);
 
   const publicKey = useMemo(() => address ? new PublicKey(address) : null, [address]);
 
-  const [merchantBalance, setMerchantBalance] = useState<number | null>(null);
-  const [ownerBalance, setOwnerBalance] = useState<number | null>(null);
-  const [withdrawAmount, setWithdrawAmount] = useState<string>('');
-  const [showBalances, setShowBalances] = useState(true);
+  const fetchBalances = useCallback(async () => {
+    if (!publicKey || !program) return;
 
-  const toggleBalances = () => {
-    setShowBalances(!showBalances);
-  };
+    try {
+      // Get the merchant's USDC ATA
+      const merchantUsdcAta = await getAssociatedTokenAddress(
+        isDevnet ? USDC_DEVNET_MINT : USDC_MAINNET_MINT,
+        merchantPubkey,
+        true
+      );
 
-  // Fetch balances
-  useEffect(() => {
-    const fetchBalances = async () => {
+      // Get the owner's USDC ATA
+      const ownerUsdcAta = await getAssociatedTokenAddress(
+        isDevnet ? USDC_DEVNET_MINT : USDC_MAINNET_MINT,
+        publicKey,
+        true
+      );
+
+      // Get the house's USDC ATA
+      const houseUsdcAta = await getAssociatedTokenAddress(
+        isDevnet ? USDC_DEVNET_MINT : USDC_MAINNET_MINT,
+        HOUSE,
+        true
+      );
+
+      // Get merchant balance
       try {
-        if (!merchantPubkey || !publicKey) return;
-
-        // Get the merchant's USDC ATA - this is the main merchant token account
-        const merchantUsdcAta = await getAssociatedTokenAddress(
-          USDC_DEVNET_MINT,
-          merchantPubkey,
-          true,
-          TOKEN_PROGRAM_ID,
-          ASSOCIATED_TOKEN_PROGRAM_ID
-        );
-
-        const ownerAta = await getAssociatedTokenAddress(
-          USDC_DEVNET_MINT,
-          publicKey,
-          true,
-          TOKEN_PROGRAM_ID,
-          ASSOCIATED_TOKEN_PROGRAM_ID
-        );
-
-        // Only fetch the merchant's main USDC ATA balance
         const merchantBalanceResponse = await connection.getTokenAccountBalance(merchantUsdcAta);
-        const ownerBalanceResponse = await connection.getTokenAccountBalance(ownerAta).catch(() => null);
-
-        setMerchantBalance(merchantBalanceResponse ? Number(merchantBalanceResponse.value.uiAmount) : null);
-        setOwnerBalance(ownerBalanceResponse ? Number(ownerBalanceResponse.value.uiAmount) : null);
+        const merchantBalance = merchantBalanceResponse ? Number(merchantBalanceResponse.value.uiAmount) : 0;
+        setLocalMerchantBalance(merchantBalance);
+        if (onBalanceUpdate) {
+          onBalanceUpdate(merchantBalance);
+        }
       } catch (err) {
-        console.error('Error fetching balances:', err);
-        setMerchantBalance(null);
-        setOwnerBalance(null);
+        console.error('Error fetching merchant balance:', err);
+        setLocalMerchantBalance(null);
       }
-    };
 
-    fetchBalances();
-    const interval = setInterval(fetchBalances, 10000);
-    return () => clearInterval(interval);
-  }, [connection, merchantPubkey, publicKey]);
+      // Get owner balance
+      try {
+        const ownerBalanceResponse = await connection.getTokenAccountBalance(ownerUsdcAta);
+        const ownerBalance = ownerBalanceResponse ? Number(ownerBalanceResponse.value.uiAmount) : 0;
+        setLocalOwnerBalance(ownerBalance);
+        if (onOwnerBalanceUpdate) {
+          onOwnerBalanceUpdate(ownerBalance);
+        }
+      } catch (err) {
+        console.error('Error fetching owner balance:', err);
+        setLocalOwnerBalance(null);
+      }
+    } catch (err) {
+      console.error('Error fetching balances:', err);
+      setError('Failed to fetch balances');
+    }
+  }, [publicKey, program, connection, merchantPubkey, isDevnet, onBalanceUpdate, onOwnerBalanceUpdate]);
 
   useEffect(() => {
-    if (!publicKey) {
+    fetchBalances();
+    // Set up an interval to refresh balances
+    const intervalId = setInterval(fetchBalances, 10000); // Refresh every 10 seconds
+    return () => clearInterval(intervalId);
+  }, [fetchBalances]);
+
+  // Use prop values if available, otherwise use local state
+  const displayMerchantBalance = propMerchantBalance ?? localMerchantBalance;
+  const displayOwnerBalance = propOwnerBalance ?? localOwnerBalance;
+
+  const handleWithdraw = async () => {
+    if (!publicKey || !program || !signer) {
       setError('Please connect your wallet');
       return;
     }
-    // ... rest of the effect
-  }, [publicKey, connection, program, merchantPubkey]);
 
-  const handleWithdraw = async () => {
-    if (!publicKey || !program || !withdrawAmount) return;
+    if (!withdrawAmount || parseFloat(withdrawAmount) <= 0) {
+      setError('Please enter a valid amount');
+      return;
+    }
+
+    if (displayMerchantBalance === null || parseFloat(withdrawAmount) > displayMerchantBalance) {
+      setError('Insufficient balance');
+      return;
+    }
 
     setIsLoading(true);
     setError(null);
 
     try {
-      // Convert to USDC base units (6 decimals)
-      const amount = new BN(Math.floor(parseFloat(withdrawAmount) * 1e6));
-
-      // Calculate owner's share for display purposes
-      const ownerShare = (parseFloat(withdrawAmount) * MERCHANT_SHARE) / 1000;
-
-      console.log('Withdrawing amount:', amount.toString());
-
-      // Get the merchant account to verify ownership
-      const merchantAccount = await (program.account as any).merchant.fetch(merchantPubkey);
-      
-      if (!merchantAccount || merchantAccount.owner.toString() !== publicKey.toString()) {
-        throw new Error('You are not the owner of this merchant account');
-      }
-
-      // Find the compliance escrow PDA
-      const [complianceEscrowPda] = PublicKey.findProgramAddressSync(
-        [
-          Buffer.from("compliance_escrow"),
-          merchantPubkey.toBuffer()
-        ],
-        program.programId
-      );
-
-      // Find the owner's USDC ATA
-      const ownerUsdcAta = await getAssociatedTokenAddress(
-        USDC_DEVNET_MINT,
-        publicKey,
-        true
-      );
-
-      // Find the merchant's USDC ATA
+      // Get the merchant's USDC ATA
       const merchantUsdcAta = await getAssociatedTokenAddress(
-        USDC_DEVNET_MINT,
+        isDevnet ? USDC_DEVNET_MINT : USDC_MAINNET_MINT,
         merchantPubkey,
         true
       );
 
+      // Get the owner's USDC ATA
+      const ownerUsdcAta = await getAssociatedTokenAddress(
+        isDevnet ? USDC_DEVNET_MINT : USDC_MAINNET_MINT,
+        publicKey,
+        true
+      );
+
+      // Get the house's USDC ATA
+      const houseUsdcAta = await getAssociatedTokenAddress(
+        isDevnet ? USDC_DEVNET_MINT : USDC_MAINNET_MINT,
+        HOUSE,
+        true
+      );
+
+      // Withdraw funds using withdrawUsdc instruction
       const tx = await program.methods
-        .withdrawUsdc(amount)
+        .withdrawUsdc(new BN(Math.floor(parseFloat(withdrawAmount) * 1e6))) // Convert to USDC base units
         .accountsPartial({
           owner: publicKey,
           merchant: merchantPubkey,
-          usdcMint: USDC_DEVNET_MINT,
+          usdcMint: isDevnet ? USDC_DEVNET_MINT : USDC_MAINNET_MINT,
           merchantUsdcAta: merchantUsdcAta,
-          complianceEscrow: complianceEscrowPda,
           ownerUsdcAta: ownerUsdcAta,
+          house: HOUSE,
+          houseUsdcAta: houseUsdcAta,
           associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
           tokenProgram: TOKEN_PROGRAM_ID,
-          systemProgram: SYSTEM_PROGRAM_ID,
         })
         .rpc();
 
-      console.log('Transaction successful:', tx);
-
-      toast.success(
-        <div>
-          <p>Successfully withdrew {withdrawAmount} USDC</p>
-          <p className="text-sm">You receive: {ownerShare.toFixed(6)} USDC (93.5% in the future, currently 95%)</p>
-          <p className="text-sm">Tax payments: {((parseFloat(withdrawAmount) * GOV_SHARE) / 1000).toFixed(6)} USDC (5%)</p>
-          <p className="text-sm">Platform fee: {((parseFloat(withdrawAmount) * HOUSE_SHARE) / 1000).toFixed(6)} USDC (1.5%, not currently imposed)</p>
-          <p className="text-xs mt-1">
-            <a
-              href={`https://solscan.io/tx/${tx}?cluster=devnet`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline"
-            >
-              View transaction
-            </a>
-          </p>
-        </div>,
-        {
-          duration: 8000,
-        }
-      );
-
-      // Reset form and refresh balances
+      console.log('Withdrawal successful:', tx);
+      toast.success('Withdrawal successful!');
+      
+      // Reset withdraw amount
       setWithdrawAmount('');
-
+      
+      // Refresh balances
+      await fetchBalances();
+      
+      // Call onSuccess callback if provided
+      if (onSuccess) {
+        onSuccess();
+      }
     } catch (err) {
       console.error('Error withdrawing funds:', err);
       setError(err instanceof Error ? err.message : 'Failed to withdraw funds');
@@ -190,106 +199,101 @@ export function WithdrawFunds({ program, merchantPubkey, isDevnet = true }: With
     }
   };
 
+  const toggleBalances = () => {
+    setShowBalances(!showBalances);
+  };
+
+  const handleMaxClick = () => {
+    if (displayMerchantBalance !== null) {
+      setWithdrawAmount(displayMerchantBalance.toString());
+    }
+  };
+
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    // Allow empty string or valid decimal numbers
+    if (value === '' || /^\d*\.?\d*$/.test(value)) {
+      setWithdrawAmount(value);
+    }
+  };
+
   return (
-    <div className="bg-base-200 rounded-lg p-4 ">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-bold flex items-center gap-2">
-          Withdraw Funds
-          <button
-            className="btn btn-ghost btn-xs tooltip tooltip-right"
-            data-tip="1.5% platform fee applies to withdrawals (for future mainnet)"
-          >
-            ⓘ
-          </button>
-        </h2>
-        <button
-          onClick={toggleBalances}
-          className="btn btn-ghost btn-sm"
-        >
-          {showBalances ? (
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-          ) : (
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
-            </svg>
-          )}
-        </button>
+    <div className="space-y-6 rounded-lg border border-base-content/10 p-6 mb-6">
+      <div className="flex items-center gap-2">
+        <h2 className="text-xl">Withdraw Funds</h2>
+        <div className="opacity-60 cursor-help" title="Help text">ⓘ</div>
       </div>
 
       <div className="space-y-4">
-        <div className="flex justify-between items-center bg-base-300 p-3 rounded-lg">
-          <span className="text-sm">Merchant&apos;s USDC Balance</span>
-          <span className="font-semibold">
-            {showBalances
-              ? (merchantBalance !== null ? `${merchantBalance.toFixed(6)} USDC` : '...')
-              : '••••••••'}
+        <div className="flex justify-between items-center">
+          <span className="text-sm opacity-60">Merchant&apos;s USDC Balance</span>
+          <span>
+            {displayMerchantBalance !== null ? `${displayMerchantBalance.toFixed(6)} USDC` : '0.000000 USDC'}
           </span>
         </div>
 
-        <div className="flex justify-between items-center bg-base-300 p-3 rounded-lg">
-          <span className="text-sm">Owner&apos;s USDC Balance</span>
-          <span className="font-semibold">
-            {showBalances
-              ? (ownerBalance !== null ? `${ownerBalance.toFixed(6)} USDC` : '...')
-              : '••••••••'}
+        <div className="flex justify-between items-center">
+          <span className="text-sm opacity-60">Owner&apos;s USDC Balance</span>
+          <span>
+            {displayOwnerBalance !== null ? `${displayOwnerBalance.toFixed(6)} USDC` : '0.000000 USDC'}
           </span>
         </div>
 
-        <div className="form-control mt-6">
-          <label className="label">
-            <span className="label-text">Amount to Withdraw</span>
+        <div className="space-y-2">
+          <label className="text-sm opacity-60">
+            Amount to Withdraw
           </label>
-          <div className="flex flex-col gap-2 w-full">
-            <input
-              type="number"
-              placeholder="0.00"
-              className="input input-bordered w-full"
-              value={withdrawAmount}
-              onChange={(e) => setWithdrawAmount(e.target.value)}
-              min="0"
-              step="0.000001"
-              disabled={isLoading}
-            />
-            <div className="grid grid-cols-2 gap-2 w-full">
-              <button
-                className="btn btn-sm w-full text-black"
-                onClick={() => merchantBalance && setWithdrawAmount(merchantBalance.toString())}
-                disabled={isLoading || merchantBalance === null}
-              >
-                MAX
-              </button>
-              <button
-                className={`btn btn-sm btn-primary w-full ${isLoading ? 'loading' : ''}`}
-                onClick={handleWithdraw}
-                disabled={
-                  isLoading ||
-                  !withdrawAmount ||
-                  parseFloat(withdrawAmount) <= 0 ||
-                  (merchantBalance !== null && parseFloat(withdrawAmount) > merchantBalance)
-                }
-              >
-                {isLoading ? 'Withdrawing...' : 'Withdraw'}
-              </button>
-            </div>
-          </div>
+          <input
+            type="text"
+            placeholder="0.00"
+            className="input input-bordered w-full"
+            value={withdrawAmount}
+            onChange={handleAmountChange}
+            disabled={isLoading}
+          />
         </div>
-
-        {/* {withdrawAmount && (
-          <div className="text-sm space-y-1 text-gray-500">
-            <p>You will receive: {((parseFloat(withdrawAmount) * MERCHANT_SHARE) / 1000).toFixed(6)} USDC</p>
-            <p>Platform fee: {(parseFloat(withdrawAmount) * (1 - MERCHANT_SHARE / 1000)).toFixed(6)} USDC</p>
-          </div>
-        )} */}
-
-        {error && (
-          <div className="alert alert-error">
-            <span>{error}</span>
-          </div>
-        )}
       </div>
+
+      {error && (
+        <div className="text-error text-sm">
+          <span>{error}</span>
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 gap-3">
+        <button
+          onClick={handleMaxClick}
+          className="btn btn-outline"
+          disabled={isLoading || displayMerchantBalance === null || displayMerchantBalance <= 0}
+        >
+          MAX
+        </button>
+        <button
+          onClick={handleWithdraw}
+          className="btn btn-primary"
+          disabled={
+            !publicKey || 
+            !withdrawAmount || 
+            parseFloat(withdrawAmount) <= 0 || 
+            displayMerchantBalance === null || 
+            parseFloat(withdrawAmount) > displayMerchantBalance || 
+            isLoading
+          }
+        >
+          {isLoading ? 'Processing...' : 'Withdraw'}
+        </button>
+      </div>
+
+      {!publicKey && (
+        <p className="text-sm text-center opacity-60">
+          Please connect your wallet to withdraw funds
+        </p>
+      )}
+
+      {displayMerchantBalance !== null && displayMerchantBalance <= 0 && publicKey && (
+        <p className="text-sm text-center opacity-60">
+        </p>
+      )}
     </div>
   );
 }

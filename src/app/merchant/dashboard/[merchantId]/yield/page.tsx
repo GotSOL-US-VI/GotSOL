@@ -25,20 +25,20 @@ export default function YieldPage({ params }: { params: { merchantId: string } }
       balance: 473.81,
       apy: 1.1,
     },
-    {
-      name: 'Solayer sUSD',
-      balance: 750.25,
-      apy: 3.97,
-    }
+    // {
+    //   name: 'Solayer sUSD',
+    //   balance: 750.25,
+    //   apy: 3.97,
+    // }
   ])
 
   const [opportunities] = useState([
-    {
-      platform: 'Solayer',
-      asset: 'sUSD',
-      currentDeposit: 0,
-      apy: 3.97,
-    },
+    // {
+    //   platform: 'Solayer',
+    //   asset: 'sUSD',
+    //   currentDeposit: 0,
+    //   apy: 3.97,
+    // },
     {
       platform: 'Perena',
       asset: 'USD*',
@@ -183,7 +183,7 @@ export default function YieldPage({ params }: { params: { merchantId: string } }
         <div className="mt-8">
           <div>
             <h3 className="font-bold">Coming Soon</h3>
-            <p className="text-sm">Live integrations with <a href="https://app.perena.org/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Perena</a> and <a href="https://solayer.org/platform/susd" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Solayer</a>.</p>
+            <p className="text-sm">Live integration with <a href="https://app.perena.org/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Perena</a>. We intend to offer only Perena's USD* at the moment because it has no freeze or delegate authority and therefore can not be stolen from you by the issuer, unlike other yield-bearing stablecoin options on the market.</p>
           </div>
         </div>
       </div>

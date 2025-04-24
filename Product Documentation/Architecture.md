@@ -18,7 +18,7 @@
   - Input order amount
   - Generate QR code instantly
 - Customer scans QR with any Solana wallet
-- Payment automatically splits between merchant (98.5%) and house (1.5%)
+- Payment automatically splits between merchant (99%) and house (1%)
 - Zero gas fees for merchants (house covers these)
 
 ### Modularity
