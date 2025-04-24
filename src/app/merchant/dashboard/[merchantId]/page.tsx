@@ -82,10 +82,10 @@ export default function MerchantDashboardPage({ params }: { params: { merchantId
         </div>
 
         {/* Right Column - Withdraw & History */}
-        <div className="space-y-6">
-          {/* Withdraw Funds - Fixed Height */}
-          <div className="h-[320px]">
-            <div className="card bg-base-300 shadow-xl overflow-hidden">
+        <div className="flex flex-col gap-6">
+          {/* Withdraw Funds */}
+          <div>
+            <div className="card bg-base-300 shadow-xl">
               <div className="card-body p-4">
                 <WithdrawFunds
                   program={program}
@@ -100,8 +100,8 @@ export default function MerchantDashboardPage({ params }: { params: { merchantId
             </div>
           </div>
 
-          {/* Payment History - Fixed Height */}
-          <div className="h-[260px]">
+          {/* Payment History */}
+          <div>
             <div className="card bg-base-300 shadow-xl">
               <div className="card-body p-4">
                 <PaymentHistory

@@ -283,17 +283,6 @@ export function WithdrawFunds({
           {isLoading ? 'Processing...' : 'Withdraw'}
         </button>
       </div>
-
-      {!publicKey && (
-        <p className="text-sm text-center opacity-60">
-          Please connect your wallet to withdraw funds
-        </p>
-      )}
-
-      {displayMerchantBalance !== null && displayMerchantBalance <= 0 && publicKey && (
-        <p className="text-sm text-center opacity-60">
-        </p>
-      )}
     </div>
   );
 }
