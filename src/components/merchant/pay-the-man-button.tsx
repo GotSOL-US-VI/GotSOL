@@ -260,7 +260,7 @@ export function MakeRevenuePaymentButton({ program, merchantPubkey, merchantName
                 className={`btn btn-primary w-full ${isLoading ? 'loading' : ''}`}
                 disabled={!publicKey || escrowBalance <= 0 || isLoading}
             >
-                {isLoading ? 'Processing...' : 'Make revenue payment'}
+                {isLoading ? 'Processing...' : 'Make revenue payment (currently non-functional, in development)'}
             </button>
 
             {!publicKey && (
