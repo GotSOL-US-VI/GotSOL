@@ -376,7 +376,8 @@ pub struct EmployeeWithdrawUSDC<'info> {
     #[account(
         seeds = [b"employee", merchant.key().as_ref(), employee_signer.key().as_ref()],
         bump = employee.bump,
-        constraint = employee_signer.key() == employee.employee_pubkey @ CustomError::UnauthorizedWithdrawal
+        constraint = employee_signer.key() == employee.employee_pubkey @ CustomError::UnauthorizedWithdrawal,
+        constraint = employee.is_active @ CustomError::InactiveEmployee
     )]
     pub employee: Box<Account<'info, Employee>>,
 
@@ -481,6 +482,9 @@ impl<'info> EmployeeWithdrawUSDC<'info> {
             house_amount,
             self.usdc_mint.decimals,
         )?;
+
+        require!(self.employee.can_withdraw(amount, Clock::get()?), CustomError::InvalidEmployeeRole);
+        require!(self.employee.daily_limits.check_limit(amount, true, Clock::get()?), CustomError::ExceedsDailyLimit);
 
         Ok(())
     }
