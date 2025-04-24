@@ -27,38 +27,8 @@ export type Kumbaya = {
       ],
       "accounts": [
         {
-          "name": "owner",
-          "writable": true,
-          "signer": true
-        },
-        {
           "name": "merchant",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  109,
-                  101,
-                  114,
-                  99,
-                  104,
-                  97,
-                  110,
-                  116
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "merchant.entity_name",
-                "account": "merchant"
-              },
-              {
-                "kind": "account",
-                "path": "owner"
-              }
-            ]
-          }
+          "writable": true
         },
         {
           "name": "employee",
@@ -93,6 +63,11 @@ export type Kumbaya = {
           "name": "employeePubkey"
         },
         {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
           "name": "systemProgram",
           "address": "11111111111111111111111111111111"
         }
@@ -107,6 +82,16 @@ export type Kumbaya = {
           "type": {
             "defined": {
               "name": "employeeRole"
+            }
+          }
+        },
+        {
+          "name": "customLimits",
+          "type": {
+            "option": {
+              "defined": {
+                "name": "roleLimits"
+              }
             }
           }
         }
@@ -438,6 +423,40 @@ export type Kumbaya = {
                 89
               ]
             }
+          }
+        },
+        {
+          "name": "complianceEscrow",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  109,
+                  112,
+                  108,
+                  105,
+                  97,
+                  110,
+                  99,
+                  101,
+                  95,
+                  101,
+                  115,
+                  99,
+                  114,
+                  111,
+                  119
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "merchant"
+              }
+            ]
           }
         },
         {
@@ -788,16 +807,16 @@ export type Kumbaya = {
       "args": []
     },
     {
-      "name": "paytheman",
+      "name": "makeRevenuePayment",
       "discriminator": [
-        244,
-        208,
-        144,
-        88,
-        56,
-        45,
-        217,
-        243
+        138,
+        228,
+        241,
+        31,
+        216,
+        222,
+        66,
+        48
       ],
       "accounts": [
         {
@@ -900,17 +919,17 @@ export type Kumbaya = {
           "name": "usdcMint"
         },
         {
-          "name": "theMan",
+          "name": "govAccount",
           "writable": true
         },
         {
-          "name": "theManUsdcAta",
+          "name": "govUsdcAta",
           "writable": true,
           "pda": {
             "seeds": [
               {
                 "kind": "account",
-                "path": "theMan"
+                "path": "govAccount"
               },
               {
                 "kind": "const",
@@ -1649,6 +1668,100 @@ export type Kumbaya = {
           }
         },
         {
+          "name": "house",
+          "writable": true
+        },
+        {
+          "name": "houseUsdcAta",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "house"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  215,
+                  101,
+                  161,
+                  147,
+                  217,
+                  203,
+                  225,
+                  70,
+                  206,
+                  235,
+                  121,
+                  172,
+                  28,
+                  180,
+                  133,
+                  237,
+                  95,
+                  91,
+                  55,
+                  145,
+                  58,
+                  140,
+                  245,
+                  133,
+                  126,
+                  255,
+                  0,
+                  169
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "usdcMint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
           "name": "associatedTokenProgram",
           "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
         },
@@ -1787,6 +1900,19 @@ export type Kumbaya = {
         57,
         161
       ]
+    },
+    {
+      "name": "revenuePayment",
+      "discriminator": [
+        127,
+        54,
+        122,
+        247,
+        3,
+        138,
+        243,
+        249
+      ]
     }
   ],
   "errors": [
@@ -1819,6 +1945,31 @@ export type Kumbaya = {
       "code": 6005,
       "name": "exceedsDailyLimit",
       "msg": "Employee has exceeded their daily transaction limit"
+    },
+    {
+      "code": 6006,
+      "name": "invalidEmployeeWallet",
+      "msg": "Invalid employee wallet address format"
+    },
+    {
+      "code": 6007,
+      "name": "invalidEmployeeName",
+      "msg": "Employee name cannot be empty"
+    },
+    {
+      "code": 6008,
+      "name": "employeeAlreadyExists",
+      "msg": "Employee already exists for this merchant"
+    },
+    {
+      "code": 6009,
+      "name": "invalidEmployeeRole",
+      "msg": "Employee role is invalid for this operation"
+    },
+    {
+      "code": 6010,
+      "name": "employeeCannotBeOwner",
+      "msg": "Employee cannot be the same as the merchant owner"
     }
   ],
   "types": [
@@ -2099,6 +2250,46 @@ export type Kumbaya = {
           {
             "name": "bump",
             "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "revenuePayment",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "merchant",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          },
+          {
+            "name": "lifetimePaid",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "roleLimits",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "withdrawLimit",
+            "type": "u64"
+          },
+          {
+            "name": "refundLimit",
+            "type": "u64"
           }
         ]
       }

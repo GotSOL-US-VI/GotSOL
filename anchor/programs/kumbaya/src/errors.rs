@@ -19,4 +19,19 @@ pub enum CustomError {
 
     #[msg("Employee has exceeded their daily transaction limit")]
     ExceedsDailyLimit,
+    
+    #[msg("Invalid employee wallet address format")]
+    InvalidEmployeeWallet,
+    
+    #[msg("Employee name cannot be empty")]
+    InvalidEmployeeName,
+    
+    #[msg("Employee already exists for this merchant")]
+    EmployeeAlreadyExists,
+    
+    #[msg("Employee role is invalid for this operation")]
+    InvalidEmployeeRole,
+    
+    #[msg("Employee cannot be the same as the merchant owner")]
+    EmployeeCannotBeOwner,
 }

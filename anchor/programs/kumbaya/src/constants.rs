@@ -10,9 +10,9 @@ pub const USDC_MAINNET_MINT: &str = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1
 // devnet USDC address
 pub const USDC_DEVNET_MINT: &str = "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU";
 
-pub const OWNER_SHARE: u64 = 950; // 95%
-pub const THE_MAN_SHARE: u64 = 50; // 5.0%
-// pub const HOUSE_SHARE: u64 = 15; // 1.5%
+pub const OWNER_SHARE: u64 = 940; // 94.0%
+pub const GOV_SHARE: u64 = 50; // 5.0%
+pub const HOUSE_SHARE: u64 = 10; // 1.0%
 
 pub const MANAGER3_WITHDRAW_LIMIT: u64 = 10_000 * USDC_DECIMALS; // 10,000 USDC
 pub const MANAGER2_WITHDRAW_LIMIT: u64 = 5_000 * USDC_DECIMALS;
@@ -21,5 +21,5 @@ pub const EMPLOYEE3_WITHDRAW_LIMIT: u64 = 1_000 * USDC_DECIMALS;
 pub const EMPLOYEE2_REFUND_LIMIT: u64 = 500 * USDC_DECIMALS;
 pub const EMPLOYEE1_REFUND_LIMIT: u64 = 100 * USDC_DECIMALS;
 
-pub const THE_MAN: &str = "7WxjvbhBgAcWfTnL8yQy6iP1vF4n5fKPc7tL7fMYvSsc";
-// pub const THE_MAN_USDC_ATA: &str = "GuMXj4Jcgf8tfJKdQAmTMiEWy6WDxMeY4fqJaAL4mawh";
+pub const GOV: &str = "7WxjvbhBgAcWfTnL8yQy6iP1vF4n5fKPc7tL7fMYvSsc";
+// pub const GOV_USDC_ATA: &str = "GuMXj4Jcgf8tfJKdQAmTMiEWy6WDxMeY4fqJaAL4mawh";

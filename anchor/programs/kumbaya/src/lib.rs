@@ -9,8 +9,8 @@ mod events;
 mod state;
 
 use crate::context::*;
-use crate::state::EmployeeRole;
-use crate::events::{EmployeeCreated, EmployeeUpdated, EmployeeWithdrawal};
+use crate::state::{EmployeeRole, RoleLimits};
+use crate::events::{EmployeeCreated, EmployeeUpdated, EmployeeWithdrawal, RevenuePayment};
 
 declare_id!("RKAxBK5mBxYta3FUfMLHafMj8xakd8PLsH3PXFa773r");
 
@@ -38,13 +38,31 @@ pub mod kumbaya {
         Ok(())
     }
 
-    pub fn paytheman(ctx: Context<PayTheMan>) -> Result<()> {
-        ctx.accounts.paytheman(&ctx.bumps)?;
+    pub fn make_revenue_payment(ctx: Context<MakeRevenuePayment>) -> Result<()> {
+        // Get the amount before making the payment
+        let amount = ctx.accounts.compliance_escrow.amount;
+        
+        // Make the payment
+        ctx.accounts.make_revenue_payment(&ctx.bumps)?;
+        
+        // Emit the event after the payment is made
+        emit!(RevenuePayment {
+            merchant: ctx.accounts.merchant.key(),
+            amount,
+            timestamp: Clock::get()?.unix_timestamp,
+            lifetime_paid: ctx.accounts.compliance.lifetime_paid,
+        });
+        
         Ok(())
     }
 
-    pub fn create_employee(ctx: Context<CreateEmployee>, name: String, role: EmployeeRole) -> Result<()> {
-        ctx.accounts.init(&ctx.bumps, name.clone(), role)?;
+    pub fn create_employee(
+        ctx: Context<CreateEmployee>, 
+        name: String, 
+        role: EmployeeRole,
+        custom_limits: Option<RoleLimits>
+    ) -> Result<()> {
+        ctx.accounts.init(role, name.clone(), custom_limits)?;
 
         emit!(EmployeeCreated {
             merchant: ctx.accounts.merchant.key(),

@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
 import { useAnchorProvider } from '@/components/para/para-provider'
 import { Program, Idl } from '@coral-xyz/anchor'
 import * as kumbayaIdl from '@/utils/kumbaya.json'
-import { PayTheManButton } from '@/components/merchant/pay-the-man-button'
+import { MakeRevenuePaymentButton } from '@/components/merchant/pay-the-man-button'
 import { useConnection } from '@solana/wallet-adapter-react'
 
 export default function TaxCompliancePage({ params }: { params: { merchantId: string } }) {
@@ -91,7 +91,7 @@ export default function TaxCompliancePage({ params }: { params: { merchantId: st
       <div className="card bg-base-300 shadow-xl p-6">
         <h2 className="text-2xl font-bold mb-4">Make Revenue Payment</h2>
         <p className="mb-4">Use this button to pay your tax obligations from your compliance escrow&apos;s funds. Payments go directly to the relevant government entity&apos;s account, making compliance simple and transparent.</p>
-        <PayTheManButton 
+        <MakeRevenuePaymentButton 
           program={program} 
           merchantPubkey={merchantId} 
           merchantName={merchantName || "Merchant"} 

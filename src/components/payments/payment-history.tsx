@@ -122,7 +122,7 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true }: Pay
                     const isInternalTransfer = tx.meta?.logMessages?.some(log => 
                         log.includes('Program log: Instruction: WithdrawUsdc') || // Merchant withdrawal
                         log.includes('Program log: Instruction: RefundPayment') || // Refund
-                        log.includes('Program log: Instruction: PayTheMan') // Tax payment
+                        log.includes('Program log: Instruction: MakeRevenuePayment') // Tax payment
                     );
 
                     if (isInternalTransfer) {

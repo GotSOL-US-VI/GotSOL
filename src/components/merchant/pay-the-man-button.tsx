@@ -9,17 +9,17 @@ import { usePara } from "../para/para-provider";
 import toast from 'react-hot-toast';
 
 const USDC_DEVNET_MINT = new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU');
-const THE_MAN = new PublicKey('7WxjvbhBgAcWfTnL8yQy6iP1vF4n5fKPc7tL7fMYvSsc');
+const GOV = new PublicKey('7WxjvbhBgAcWfTnL8yQy6iP1vF4n5fKPc7tL7fMYvSsc');
 
-interface PayTheManButtonProps {
+interface MakeRevenuePaymentButtonProps {
     program: Program<Idl>;
     merchantPubkey: PublicKey;
     merchantName: string;
     onSuccess?: () => void;
 }
 
-export function PayTheManButton({ program, merchantPubkey, merchantName, onSuccess }: PayTheManButtonProps) {
-    console.log('PayTheManButton rendered with merchant:', merchantPubkey.toString());
+export function MakeRevenuePaymentButton({ program, merchantPubkey, merchantName, onSuccess }: MakeRevenuePaymentButtonProps) {
+    console.log('MakeRevenuePaymentButton rendered with merchant:', merchantPubkey.toString());
 
     const [isLoading, setIsLoading] = useState(false);
     const [isRefreshing, setIsRefreshing] = useState(false);
@@ -129,7 +129,7 @@ export function PayTheManButton({ program, merchantPubkey, merchantName, onSucce
         };
     }, [fetchData]);
 
-    const handlePayTheMan = async () => {
+    const handleMakeRevenuePayment = async () => {
         if (!publicKey || !connection) {
             setError('Please connect your wallet first');
             return;
@@ -157,23 +157,23 @@ export function PayTheManButton({ program, merchantPubkey, merchantName, onSucce
                 program.programId
             );
             
-            // Get THE_MAN's USDC ATA
+            // Get GOV's USDC ATA
             const theManUsdcAta = getAssociatedTokenAddressSync(
                 USDC_DEVNET_MINT,
-                THE_MAN,
+                GOV,
                 false
             );
 
-            // Call the paytheman instruction
+            // Call the make_revenue_payment instruction
             const tx = await program.methods
-                .paytheman()
+                .make_revenue_payment()
                 .accountsPartial({
                     owner: publicKey,
                     merchant: merchantPubkey,
                     complianceEscrow: complianceEscrowPda,
                     compliance: compliancePda,
                     usdcMint: USDC_DEVNET_MINT,
-                    theMan: THE_MAN,
+                    theMan: GOV,
                     theManUsdcAta: theManUsdcAta,
                     associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
                     tokenProgram: TOKEN_PROGRAM_ID,
@@ -256,7 +256,7 @@ export function PayTheManButton({ program, merchantPubkey, merchantName, onSucce
             )}
 
             <button
-                onClick={handlePayTheMan}
+                onClick={handleMakeRevenuePayment}
                 className={`btn btn-primary w-full ${isLoading ? 'loading' : ''}`}
                 disabled={!publicKey || escrowBalance <= 0 || isLoading}
             >
