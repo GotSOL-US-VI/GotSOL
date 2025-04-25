@@ -183,7 +183,7 @@ export default function YieldPage({ params }: { params: { merchantId: string } }
         <div className="mt-8">
           <div>
             <h3 className="font-bold">Coming Soon</h3>
-            <p className="text-sm">Live integration with <a href="https://app.perena.org/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Perena</a>. We intend to offer only Perena&apos;s USD* at the moment because it has no Freeze or Delegate Authority and therefore can not be stolen from you by the issuer, unlike other yield-bearing stablecoin options on the market.</p>
+            <p className="text-sm">Live integration with <a href="https://app.perena.org/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Perena</a>. We intend to offer only Perena&apos;s USD* at the moment because it has no Freeze Authority nor Permanent Delegate and therefore can not be frozen or removed from your account by the issuer without your permission, unlike other leading non/yield-bearing stablecoin options on the market.</p>
           </div>
         </div>
       </div>

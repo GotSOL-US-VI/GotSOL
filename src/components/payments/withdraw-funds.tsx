@@ -8,6 +8,7 @@ import { useConnection } from '@/lib/connection-context';
 import { getAssociatedTokenAddress } from '@solana/spl-token';
 import toast from 'react-hot-toast';
 import * as anchor from '@coral-xyz/anchor';
+import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 import { 
   TOKEN_PROGRAM_ID, 
   ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -50,6 +51,7 @@ export function WithdrawFunds({
   const [showBalances, setShowBalances] = useState(true);
   const [localMerchantBalance, setLocalMerchantBalance] = useState<number | null>(null);
   const [localOwnerBalance, setLocalOwnerBalance] = useState<number | null>(null);
+  const [isBalancesVisible, setIsBalancesVisible] = useState(true);
 
   const publicKey = useMemo(() => address ? new PublicKey(address) : null, [address]);
 
@@ -219,28 +221,46 @@ export function WithdrawFunds({
 
   return (
     <div className="space-y-6 rounded-lg border border-base-content/10 p-6 mb-6">
-      <div className="flex items-center gap-2">
-        <h2 className="text-xl">Withdraw Funds</h2>
-        <div className="opacity-60 cursor-help" title="1% platform fee on withdrawal amount. 99% to the Merchant&apos;s Owner.">ⓘ</div>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <h2 className="text-xl">Withdraw Funds</h2>
+          <div className="opacity-60 cursor-help" title="1% platform fee on withdrawal amount. 99% to the Merchant&apos;s Owner.">ⓘ</div>
+        </div>
+        <button
+          onClick={() => setIsBalancesVisible(!isBalancesVisible)}
+          className="btn btn-ghost btn-sm btn-circle"
+        >
+          {isBalancesVisible ? (
+            <EyeIcon className="h-5 w-5" />
+          ) : (
+            <EyeSlashIcon className="h-5 w-5" />
+          )}
+        </button>
       </div>
 
       <div className="space-y-4">
         <div className="flex justify-between items-center">
-          <span className="text-sm opacity-60">Merchant&apos;s USDC Balance</span>
+          <span className="text-sm">Merchant&apos;s USDC Balance</span>
           <span>
-            {displayMerchantBalance !== null ? `${displayMerchantBalance.toFixed(6)} USDC` : '0.000000 USDC'}
+            {isBalancesVisible 
+              ? (displayMerchantBalance !== null ? `${displayMerchantBalance.toFixed(6)} USDC` : '0.000000 USDC')
+              : '••••••• USDC'
+            }
           </span>
         </div>
 
         <div className="flex justify-between items-center">
-          <span className="text-sm opacity-60">Owner&apos;s USDC Balance</span>
+          <span className="text-sm">Owner&apos;s USDC Balance</span>
           <span>
-            {displayOwnerBalance !== null ? `${displayOwnerBalance.toFixed(6)} USDC` : '0.000000 USDC'}
+            {isBalancesVisible
+              ? (displayOwnerBalance !== null ? `${displayOwnerBalance.toFixed(6)} USDC` : '0.000000 USDC')
+              : '••••••• USDC'
+            }
           </span>
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm opacity-60">
+          <label className="text-sm opacity-80">
             Amount to Withdraw
           </label>
           <input

@@ -16,6 +16,7 @@
     "@coral-xyz/anchor": "0.30.1",
     "@getpara/react-sdk": "^1.7.1",
     "@getpara/solana-web3.js-v1-integration": "^1.10.0",
+    "@heroicons/react": "^2.2.0",
     "@solana/pay": "^0.2.5",
     "@solana/spl-token": "0.4.9",
     "@solana/wallet-adapter-base": "0.9.23",
