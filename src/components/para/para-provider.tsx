@@ -422,7 +422,7 @@ export function ParaProvider({ children }: { children: React.ReactNode }) {
                         OAuthMethod.DISCORD,
                         OAuthMethod.TELEGRAM,
                     ]}
-                    onRampTestMode={true}
+                    onRampTestMode={false}
                     theme={{
                         foregroundColor: "#2D3648",
                         backgroundColor: "#FFFFFF",

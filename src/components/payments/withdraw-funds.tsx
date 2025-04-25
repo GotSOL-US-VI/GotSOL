@@ -221,7 +221,7 @@ export function WithdrawFunds({
     <div className="space-y-6 rounded-lg border border-base-content/10 p-6 mb-6">
       <div className="flex items-center gap-2">
         <h2 className="text-xl">Withdraw Funds</h2>
-        <div className="opacity-60 cursor-help" title="Help text">ⓘ</div>
+        <div className="opacity-60 cursor-help" title="1% platform fee on withdrawal amount. 99% to the Merchant&apos;s Owner.">ⓘ</div>
       </div>
 
       <div className="space-y-4">
