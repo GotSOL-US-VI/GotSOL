@@ -416,10 +416,10 @@ export function ParaProvider({ children }: { children: React.ReactNode }) {
                     authLayout={[AuthLayout.AUTH_FULL]}
                     oAuthMethods={[
                         OAuthMethod.GOOGLE,
-                        OAuthMethod.TWITTER,
-                        OAuthMethod.APPLE,
-                        OAuthMethod.DISCORD,
                         OAuthMethod.FACEBOOK,
+                        OAuthMethod.APPLE,
+                        OAuthMethod.TWITTER,
+                        OAuthMethod.DISCORD,
                         OAuthMethod.TELEGRAM,
                     ]}
                     onRampTestMode={true}
