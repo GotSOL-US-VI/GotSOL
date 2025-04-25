@@ -30,3 +30,11 @@ pub struct EmployeeWithdrawal {
     pub amount: u64,
     pub timestamp: i64,
 }
+
+#[event]
+pub struct RevenuePayment {
+    pub merchant: Pubkey,
+    pub amount: u64,
+    pub timestamp: i64,
+    pub lifetime_paid: u64,
+}

@@ -1,0 +1,165 @@
+I'll analyze your employee and manager setup in the Kumbaya project to understand how it works and how it would function in a real-world interface.
+
+Let me first examine the relevant code to understand the current implementation.
+
+
+Read file: anchor/programs/kumbaya/src/context.rs
+
+Read file: anchor/programs/kumbaya/src/state.rs
+
+Read file: anchor/programs/kumbaya/src/state.rs
+
+Read file: anchor/programs/kumbaya/src/constants.rs
+Based on my analysis of your employee and manager setup in the Kumbaya project, here's how it works and how it would function in a real-world interface:
+
+## Current Implementation
+
+1. **PDA Structure**: 
+   - Each employee is represented by a Program Derived Address (PDA) with seeds: `["employee", merchant.key(), employee_pubkey]`
+   - This creates a unique account for each employee that's deterministically derived from the merchant's account and the employee's public key
+
+2. **Role-Based Access Control**:
+   - You have a hierarchical role system with 7 levels:
+     - Owner (implicit, full access)
+     - Manager3 (highest manager tier)
+     - Manager2 (mid manager tier)
+     - Manager1 (junior manager)
+     - Employee3 (senior employee)
+     - Employee2 (regular employee)
+     - Employee1 (junior employee)
+
+3. **Daily Limits**:
+   - Each role has specific daily limits for withdrawals and refunds
+   - Limits are tracked and reset daily
+   - Higher roles have higher limits (e.g., Manager3 can withdraw up to 10,000 USDC daily)
+
+4. **Authentication**:
+   - The system uses the employee's Solana wallet (public key) for authentication
+   - No password is stored on-chain - authentication is handled by the wallet's signature
+
+## How This Would Work in a Real-World Interface
+
+### For Merchants:
+
+1. **Employee Management Dashboard**:
+   - A merchant would have a dashboard to add, remove, and manage employees
+   - They would input the employee's name and select their role
+   - The system would generate a unique invitation link or QR code for the employee
+
+2. **Role Assignment**:
+   - Merchants can assign different roles based on the employee's responsibilities
+   - They can update roles as employees are promoted or responsibilities change
+
+3. **Limit Monitoring**:
+   - Merchants can view daily usage of limits by employees
+   - They can see transaction history and who performed what actions
+
+### For Employees:
+
+1. **Onboarding Process**:
+   - Employee receives an invitation link/QR code from the merchant
+   - They connect their Solana wallet to the platform
+   - The system verifies their wallet matches the one the merchant added
+
+2. **Authentication**:
+   - Employees authenticate using their Solana wallet (no password needed)
+   - This provides secure, cryptographic authentication without storing sensitive credentials
+
+3. **Role-Based Interface**:
+   - The UI would adapt based on the employee's role
+   - Higher roles would see more options and higher limits
+   - Lower roles would have a simplified interface with fewer options
+
+4. **Transaction Limits**:
+   - The UI would show remaining daily limits
+   - It would prevent transactions that exceed limits
+   - Limits reset daily automatically
+
+## Security Considerations
+
+1. **Wallet-Based Authentication**:
+   - The system relies on the security of the employee's Solana wallet
+   - No passwords are stored on-chain, reducing attack vectors
+   - If an employee loses access to their wallet, the merchant can deactivate their account
+
+2. **Role Separation**:
+   - The hierarchical role system ensures employees can only perform actions within their authority
+   - Critical operations might require multiple signatures or higher-level approval
+
+3. **Audit Trail**:
+   - All transactions are recorded on-chain with the employee's signature
+   - This creates an immutable audit trail for compliance
+
+## Conclusion
+
+Your current implementation is well-designed for a role-based access control system. The use of PDAs and wallet-based authentication is a secure approach that doesn't require storing passwords on-chain. The daily limits provide a good balance between flexibility and security.
+
+For a complete solution, you would need to build a frontend interface that:
+1. Allows merchants to manage employees and their roles
+2. Provides employees with a role-appropriate interface
+3. Shows transaction limits and history
+4. Handles the wallet connection and authentication flow
+
+The off-chain password management you mentioned could be implemented as an additional security layer, but it would be separate from the on-chain authentication which is handled by the wallet signatures.
+
+
+
+---
+
+
+You're right - we can make the employee and manager limits customizable without requiring on-chain storage. Let me implement a solution that allows for customizable limits while keeping the core functionality intact.
+
+Here's my approach:
+
+1. Create a struct for role-based limits that can be passed as a parameter
+2. Allow the merchant to define custom limits when creating employees
+3. Keep the default limits as fallbacks if no custom limits are provided
+
+
+
+
+Now let's update the `CreateEmployee` struct to accept custom limits:
+
+
+
+
+
+Now let's update the `lib.rs` file to pass the custom limits parameter:
+
+
+
+
+Let's fix the linter errors by importing the `RoleLimits` type:
+
+
+
+
+
+Perfect! I've implemented a solution that allows for customizable employee limits while keeping the core functionality intact. Here's a summary of the changes:
+
+1. Added a `RoleLimits` struct in `state.rs` that defines:
+   - `withdraw_limit`: The maximum amount an employee can withdraw per day
+   - `refund_limit`: The maximum amount an employee can refund per day
+
+2. Created a `get_default_limits` method that returns predefined limits based on the employee role, maintaining the original limits as defaults.
+
+3. Updated the `CreateEmployee` struct's `init` method to:
+   - Accept an optional `custom_limits` parameter
+   - Use the custom limits if provided, otherwise fall back to the default limits
+   - Initialize the employee's daily limits with the appropriate values
+
+4. Modified the `create_employee` function in `lib.rs` to:
+   - Accept the optional `custom_limits` parameter
+   - Pass it to the `init` method
+
+This approach gives merchants the flexibility to:
+1. Use the default limits for standard roles
+2. Define custom limits for specific employees
+3. Create role presets off-chain and apply them when creating employees
+
+The implementation is efficient because:
+- It doesn't require on-chain storage for role presets
+- It maintains backward compatibility with existing code
+- It allows for easy customization without changing the core functionality
+
+Merchants can now create employees with custom limits that match their specific security requirements, including setting lower limits for the owner when operating as an employee.

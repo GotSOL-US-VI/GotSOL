@@ -1,14 +1,5 @@
 use anchor_lang::prelude::*;
-
-#[account]
-pub struct Global {
-    pub house: Pubkey,
-    pub global_bump: u8,
-}
-
-impl Global {
-    pub const LEN: usize = 8 + 32 + 1;
-}
+use crate::constants::*;
 
 #[account]
 pub struct Merchant {
@@ -59,10 +50,9 @@ impl DailyLimit {
 
     pub fn check_limit(&self, amount: u64, is_withdraw: bool, clock: Clock) -> bool {
         let now = clock.unix_timestamp;
-        let day_seconds = 24 * 60 * 60;
         
         // Reset limits if it's a new day
-        if now - self.last_reset >= day_seconds {
+        if now - self.last_reset >= SECONDS_IN_DAY {
             return true;
         }
 
@@ -129,5 +119,46 @@ pub struct Compliance {
 
 impl Compliance {
     pub const LEN: usize = 8 + 8 + 8 + 1;
+}
+
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug, PartialEq, Eq)]
+pub struct RoleLimits {
+    pub withdraw_limit: u64,
+    pub refund_limit: u64,
+}
+
+impl RoleLimits {
+    pub fn get_default_limits(role: &EmployeeRole) -> Self {
+        match role {
+            EmployeeRole::Manager3 => RoleLimits {
+                withdraw_limit: 10000_000000, // 10,000 USDC
+                refund_limit: 5000_000000,   // 5,000 USDC
+            },
+            EmployeeRole::Manager2 => RoleLimits {
+                withdraw_limit: 5000_000000,  // 5,000 USDC
+                refund_limit: 2500_000000,   // 2,500 USDC
+            },
+            EmployeeRole::Manager1 => RoleLimits {
+                withdraw_limit: 2500_000000,  // 2,500 USDC
+                refund_limit: 1000_000000,   // 1,000 USDC
+            },
+            EmployeeRole::Employee3 => RoleLimits {
+                withdraw_limit: 1000_000000,  // 1,000 USDC
+                refund_limit: 500_000000,    // 500 USDC
+            },
+            EmployeeRole::Employee2 => RoleLimits {
+                withdraw_limit: 500_000000,   // 500 USDC
+                refund_limit: 250_000000,    // 250 USDC
+            },
+            EmployeeRole::Employee1 => RoleLimits {
+                withdraw_limit: 250_000000,   // 250 USDC
+                refund_limit: 100_000000,    // 100 USDC
+            },
+            EmployeeRole::Owner => RoleLimits {
+                withdraw_limit: u64::MAX,     // No limit for owner
+                refund_limit: u64::MAX,      // No limit for owner
+            },
+        }
+    }
 }
 

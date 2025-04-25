@@ -2,17 +2,12 @@ import { useConnection } from '@/lib/connection-context';
 import { PublicKey } from '@solana/web3.js';
 import { getAssociatedTokenAddress } from '@solana/spl-token';
 import { useCallback } from 'react';
-import { useAnchorProvider } from '../para/para-provider';
 import { Program, Idl } from '@coral-xyz/anchor';
-import { createTransferCheckedInstruction } from '@solana/spl-token';
-import { encodeURL, createTransfer } from '@solana/pay';
+import { encodeURL} from '@solana/pay';
 import BigNumber from 'bignumber.js';
-import idl from '../../utils/kumbaya.json';
 import QRCode from 'qrcode';
 
-// Constants for fee splits and USDC mint
-const MERCHANT_SHARE = 985; // 98.5%
-const HOUSE_SHARE = 15;    // 1.5%
+
 
 // USDC mint addresses
 const USDC_MINT = new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");

@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
 import { useAnchorProvider } from '@/components/para/para-provider'
 import { Program, Idl } from '@coral-xyz/anchor'
 import * as kumbayaIdl from '@/utils/kumbaya.json'
-import { PayTheManButton } from '@/components/merchant/pay-the-man-button'
+import { MakeRevenuePaymentButton } from '@/components/merchant/pay-the-man-button'
 import { useConnection } from '@solana/wallet-adapter-react'
 
 export default function TaxCompliancePage({ params }: { params: { merchantId: string } }) {
@@ -58,7 +58,7 @@ export default function TaxCompliancePage({ params }: { params: { merchantId: st
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Automate Tax Payments and Compliance for your Business</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Automate Tax Payments and Compliance for your Business (in development)</h1>
           <br></br>
           <p>
           This Product Offering will be built in Phase 3, after Inventory Management is feature-complete, and we have more specifics on exactly what features and customization are required here.
@@ -91,7 +91,7 @@ export default function TaxCompliancePage({ params }: { params: { merchantId: st
       <div className="card bg-base-300 shadow-xl p-6">
         <h2 className="text-2xl font-bold mb-4">Make Revenue Payment</h2>
         <p className="mb-4">Use this button to pay your tax obligations from your compliance escrow&apos;s funds. Payments go directly to the relevant government entity&apos;s account, making compliance simple and transparent.</p>
-        <PayTheManButton 
+        <MakeRevenuePaymentButton 
           program={program} 
           merchantPubkey={merchantId} 
           merchantName={merchantName || "Merchant"} 
