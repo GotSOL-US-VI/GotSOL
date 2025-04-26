@@ -38,9 +38,51 @@ Product Units:
 
 NEW:
 
-1. Merchant Point of Sale
-2. Inventory Management
-3. Merchant Tax and Revenue Compliance
-4. Treasury and yield
-5. USD On & Off-ramps
-6. Non-merchant onboarding and financial suite
+Complete 
+
+Merchant point of sale
+	- create payment qr codes
+	- withdraw from merchant to owner usdc account
+	- payment history and refunds 
+	
+Inventory management
+	- off chain solution
+	
+Revenue Payments
+	- automated tax and revenue payments by merchant
+
+Treasury / Yield
+	- Offered to Owner first, then Merchant later
+		- Swap Perena USD* for now
+			- Points farming for Owner/user and referral for us
+
+On and Off ramps
+	- coinflow or sphere straight to KYC'd bank account
+
+Resources
+	- video guides and how-to
+	
+AI Marketing campaigns
+	- in app marketing direct to customer by merchant, rapid iteration 
+
+Customer onboarding
+	- customer defi and yield opportunities in our own mobile app or wallet embedded
+		- stablecoins
+		- sol lst
+		- btc yield
+
+Automated merchant bookkeeping and reports
+	- tax compliance
+	- complete merchant analytics board
+
+Payroll
+	- pay employees and debts from your merchant account
+
+Gasless transactions within our app and program
+    - for Merchant and their Customer's transactions
+    - All merchant transactions and operations, unless overly large (may impose a small fee here depending on the numbers)
+    - Customers, or end non-merchant users that pay a merchant for goods, or use defi and other functions within our app or invoking our anchor program
+
+
+In this current set up, we, the House, take a 1% fee on USDC withdrawals from the Merchant's account, 0.01% routing fees on jupiter swaps flow, Perena's Petals points for airdrop via referral.  
+We may possibly be able to hold idle SOL for gas payments in a LST or LRT form such as JitoSOL, INF or ezSOL, and earn a little on the difference in gas-demand there.
