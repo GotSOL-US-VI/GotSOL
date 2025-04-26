@@ -121,7 +121,7 @@ export default function YieldPage({ params }: { params: { merchantId: string } }
                       <div className="flex items-center gap-4">
                         <span className="text-lg">{position.name}</span>
                         {position.apy !== undefined && position.apy > 0 && (
-                          <span className="text-sm text-mint">{position.apy}% APY</span>
+                          <span className="text-sm text-mint [text-shadow:_0.5px_0.5px_0px_rgb(0_0_0_/_100%)]">{position.apy}% APY</span>
                         )}
                       </div>
                       <div className="flex items-center gap-4">
@@ -183,7 +183,7 @@ export default function YieldPage({ params }: { params: { merchantId: string } }
         <div className="mt-8">
           <div>
             <h3 className="font-bold">Coming Soon</h3>
-            <p className="text-sm">Live integration with <a href="https://app.perena.org/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Perena</a>. We intend to offer only Perena&apos;s USD* at the moment because it has no Freeze Authority nor Permanent Delegate and therefore can not be frozen or removed from your account by the issuer without your permission, unlike other leading non/yield-bearing stablecoin options on the market.</p>
+            <p className="text-sm">Live integration with <a href="https://app.perena.org/" target="_blank" rel="noopener noreferrer" className="text-mint [text-shadow:_0.5px_0.5px_0px_rgb(0_0_0_/_80%)] hover:underline">Perena</a>. We intend to offer only Perena&apos;s USD* at the moment because it has no Freeze Authority nor Permanent Delegate and therefore can not be frozen or removed from your account by the issuer without your permission. <br></br> <br></br>If GotSOL receives any non-referral Perena points, known as petals, or eventual tokens, we intend to pass them directly to you based on your contributions to the total sum received. Swapping or depositing to USD* via our interface may benefit us directly through the use of a referral code.</p>
           </div>
         </div>
       </div>
