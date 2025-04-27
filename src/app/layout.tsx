@@ -26,7 +26,8 @@ export const metadata = {
 
 const defaultLinks = [
   { label: 'Create Merchant', path: '/merchant/setup' },
-  { label: 'Resources', path: '/links' },
+  // { label: 'Resources', path: '/links' },
+  { label: 'Project Phases', path: '/roadmap' },
 ]
 
 interface MerchantLink {
@@ -41,7 +42,8 @@ const merchantLinks: MerchantLink[] = [
   // { label: 'Manage Employees', path: '/merchant/dashboard/:merchantId/accounts' },
   { label: 'Treasury / Yield', path: '/merchant/dashboard/:merchantId/yield' },
   { label: 'USD On & Off-ramps', path: '/merchant/dashboard/:merchantId/off-ramps' },
-  { label: 'Resources', path: '/merchant/dashboard/:merchantId/links' },
+  // { label: 'Resources', path: '/merchant/dashboard/:merchantId/links' },
+  { label: 'Project Phases', path: '/merchant/dashboard/:merchantId/roadmap' },
   { label: <ExplorerLink />, path: '#' }
 ]
 
