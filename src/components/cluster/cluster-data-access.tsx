@@ -27,8 +27,8 @@ export enum ClusterNetwork {
 export const defaultClusters: Cluster[] = [
   {
     name: env.isDevnet ? 'devnet' : 'mainnet-beta',
-    endpoint: env.heliusRpcUrl,
-    network: env.isDevnet ? ClusterNetwork.Devnet : ClusterNetwork.MainnetBeta,
+    endpoint: env.devnetHeliusRpcUrl,
+    network: env.isDevnet ? ClusterNetwork.Devnet : ClusterNetwork.Mainnet,
   },
   // { name: 'local', endpoint: 'http://localhost:8899' },
   // {
@@ -60,8 +60,8 @@ function validateEndpoint(url: string): string {
 }
 
 // After initialization, update with Helius URL if available
-if (typeof window !== 'undefined' && env.heliusRpcUrl) {
-  defaultClusters[0].endpoint = validateEndpoint(env.heliusRpcUrl);
+if (typeof window !== 'undefined' && env.devnetHeliusRpcUrl) {
+  defaultClusters[0].endpoint = validateEndpoint(env.devnetHeliusRpcUrl);
 }
 
 const clusterAtom = atomWithStorage<Cluster>('solana-cluster', defaultClusters[0])

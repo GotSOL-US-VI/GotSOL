@@ -1,6 +1,6 @@
 import { useConnection } from '@/lib/connection-context';
 import { PublicKey } from '@solana/web3.js';
-import { getAssociatedTokenAddressSync } from '@solana/spl-token';
+import { TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { useCallback } from 'react';
 import { Program, Idl } from '@coral-xyz/anchor';
 import { encodeURL} from '@solana/pay';
@@ -8,7 +8,20 @@ import BigNumber from 'bignumber.js';
 import QRCode from 'qrcode';
 import { env } from '@/utils/env';
 
-
+// Helper function to get associated token address
+async function findAssociatedTokenAddress(
+  walletAddress: PublicKey,
+  tokenMintAddress: PublicKey
+): Promise<PublicKey> {
+  return (await PublicKey.findProgramAddress(
+    [
+      walletAddress.toBuffer(),
+      TOKEN_PROGRAM_ID.toBuffer(),
+      tokenMintAddress.toBuffer(),
+    ],
+    ASSOCIATED_TOKEN_PROGRAM_ID
+  ))[0];
+}
 
 // USDC mint addresses
 const USDC_MINT = new PublicKey(env.usdcMint);
@@ -35,10 +48,9 @@ export function usePaymentQR(program: Program<Idl>) {
       await (program.account as any).merchant.fetch(merchantPubkey);
 
       // Get the merchant's USDC ATA
-      const merchantUsdcAta = await getAssociatedTokenAddressSync(
-        isDevnet ? USDC_DEVNET_MINT : USDC_MINT,
+      const merchantUsdcAta = await findAssociatedTokenAddress(
         merchantPubkey,
-        true
+        isDevnet ? USDC_DEVNET_MINT : USDC_MINT
       );
 
       // Calculate the total amount in USDC base units (6 decimals for USDC)

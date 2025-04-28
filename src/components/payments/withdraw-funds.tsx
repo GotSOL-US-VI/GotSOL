@@ -5,15 +5,27 @@ import { Program, Idl, BN } from '@coral-xyz/anchor';
 import { PublicKey } from '@solana/web3.js';
 import { usePara } from '../para/para-provider';
 import { useConnection } from '@/lib/connection-context';
-import { getAssociatedTokenAddressSync } from '@solana/spl-token';
-import toast from 'react-hot-toast';
-import * as anchor from '@coral-xyz/anchor';
-import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 import { 
   TOKEN_PROGRAM_ID, 
-  ASSOCIATED_TOKEN_PROGRAM_ID,
-  createAssociatedTokenAccountIdempotentInstruction 
+  ASSOCIATED_TOKEN_PROGRAM_ID
 } from '@solana/spl-token';
+import toast from 'react-hot-toast';
+import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
+
+// Helper function to get associated token address
+async function findAssociatedTokenAddress(
+  walletAddress: PublicKey,
+  tokenMintAddress: PublicKey
+): Promise<PublicKey> {
+  return (await PublicKey.findProgramAddress(
+    [
+      walletAddress.toBuffer(),
+      TOKEN_PROGRAM_ID.toBuffer(),
+      tokenMintAddress.toBuffer(),
+    ],
+    ASSOCIATED_TOKEN_PROGRAM_ID
+  ))[0];
+}
 
 const USDC_DEVNET_MINT = new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU');
 const USDC_MAINNET_MINT = new PublicKey('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v');
@@ -60,25 +72,13 @@ export function WithdrawFunds({
 
     try {
       // Get the merchant's USDC ATA
-      const merchantUsdcAta = await getAssociatedTokenAddressSync(
-        isDevnet ? USDC_DEVNET_MINT : USDC_MAINNET_MINT,
-        merchantPubkey,
-        true
-      );
+      const merchantUsdcAta = await findAssociatedTokenAddress(merchantPubkey, isDevnet ? USDC_DEVNET_MINT : USDC_MAINNET_MINT);
 
       // Get the owner's USDC ATA
-      const ownerUsdcAta = await getAssociatedTokenAddressSync(
-        isDevnet ? USDC_DEVNET_MINT : USDC_MAINNET_MINT,
-        publicKey,
-        true
-      );
+      const ownerUsdcAta = await findAssociatedTokenAddress(publicKey, isDevnet ? USDC_DEVNET_MINT : USDC_MAINNET_MINT);
 
       // Get the house's USDC ATA
-      const houseUsdcAta = await getAssociatedTokenAddressSync(
-        isDevnet ? USDC_DEVNET_MINT : USDC_MAINNET_MINT,
-        HOUSE,
-        true
-      );
+      const houseUsdcAta = await findAssociatedTokenAddress(HOUSE, isDevnet ? USDC_DEVNET_MINT : USDC_MAINNET_MINT);
 
       // Get merchant balance
       try {
@@ -143,25 +143,13 @@ export function WithdrawFunds({
 
     try {
       // Get the merchant's USDC ATA
-      const merchantUsdcAta = await getAssociatedTokenAddressSync(
-        isDevnet ? USDC_DEVNET_MINT : USDC_MAINNET_MINT,
-        merchantPubkey,
-        true
-      );
+      const merchantUsdcAta = await findAssociatedTokenAddress(merchantPubkey, isDevnet ? USDC_DEVNET_MINT : USDC_MAINNET_MINT);
 
       // Get the owner's USDC ATA
-      const ownerUsdcAta = await getAssociatedTokenAddressSync(
-        isDevnet ? USDC_DEVNET_MINT : USDC_MAINNET_MINT,
-        publicKey,
-        true
-      );
+      const ownerUsdcAta = await findAssociatedTokenAddress(publicKey, isDevnet ? USDC_DEVNET_MINT : USDC_MAINNET_MINT);
 
       // Get the house's USDC ATA
-      const houseUsdcAta = await getAssociatedTokenAddressSync(
-        isDevnet ? USDC_DEVNET_MINT : USDC_MAINNET_MINT,
-        HOUSE,
-        true
-      );
+      const houseUsdcAta = await findAssociatedTokenAddress(HOUSE, isDevnet ? USDC_DEVNET_MINT : USDC_MAINNET_MINT);
 
       // Withdraw funds using withdrawUsdc instruction
       const tx = await program.methods

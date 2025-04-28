@@ -6,8 +6,8 @@ import { usePara } from '../para/para-provider';
 import { 
   TOKEN_PROGRAM_ID, 
   ASSOCIATED_TOKEN_PROGRAM_ID,
-  getAssociatedTokenAddressSync
 } from '@solana/spl-token';
+
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 import { useConnection } from '@/lib/connection-context';
 import { MainnetConnectionProvider } from '@/lib/mainnet-connection-provider';
@@ -15,6 +15,21 @@ import { MainnetConnectionProvider } from '@/lib/mainnet-connection-provider';
 // Token addresses
 const USDC_MINT = new PublicKey('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v');
 const USD_STAR_MINT = new PublicKey('BenJy1n3WTx9mTjEvy63e8Q1j4RqUc6E4VBMz3ir4Wo6');
+
+// Helper function to get associated token address
+async function findAssociatedTokenAddress(
+  walletAddress: PublicKey,
+  tokenMintAddress: PublicKey
+): Promise<PublicKey> {
+  return (await PublicKey.findProgramAddress(
+    [
+      walletAddress.toBuffer(),
+      TOKEN_PROGRAM_ID.toBuffer(),
+      tokenMintAddress.toBuffer(),
+    ],
+    ASSOCIATED_TOKEN_PROGRAM_ID
+  ))[0];
+}
 
 // Rate limiting helper
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -112,22 +127,16 @@ function BalanceDisplayInner() {
       setError(null);
 
       // Get ATAs
-      const [usdcAta, usdStarAta] = [
-        getAssociatedTokenAddressSync(
-          USDC_MINT,
+      const [usdcAta, usdStarAta] = await Promise.all([
+        findAssociatedTokenAddress(
           publicKey,
-          false,
-          TOKEN_PROGRAM_ID,
-          ASSOCIATED_TOKEN_PROGRAM_ID
+          USDC_MINT
         ),
-        getAssociatedTokenAddressSync(
-          USD_STAR_MINT,
+        findAssociatedTokenAddress(
           publicKey,
-          false,
-          TOKEN_PROGRAM_ID,
-          ASSOCIATED_TOKEN_PROGRAM_ID
+          USD_STAR_MINT
         )
-      ];
+      ]);
 
       // Get account infos in parallel
       const [usdcInfo, usdStarInfo] = await Promise.all([

@@ -4,10 +4,25 @@ import * as anchor from "@coral-xyz/anchor";
 import { Program, Idl, BN } from '@coral-xyz/anchor';
 import { PublicKey } from '@solana/web3.js';
 import { usePara } from '../para/para-provider';
-import { getAssociatedTokenAddressSync, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID, createAssociatedTokenAccountIdempotentInstruction } from '@solana/spl-token';
+import { TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import toast from 'react-hot-toast';
 import bs58 from 'bs58';
 import { env } from '@/utils/env';
+
+// Helper function to get associated token address
+async function findAssociatedTokenAddress(
+  walletAddress: PublicKey,
+  tokenMintAddress: PublicKey
+): Promise<PublicKey> {
+  return (await PublicKey.findProgramAddress(
+    [
+      walletAddress.toBuffer(),
+      TOKEN_PROGRAM_ID.toBuffer(),
+      tokenMintAddress.toBuffer(),
+    ],
+    ASSOCIATED_TOKEN_PROGRAM_ID
+  ))[0];
+}
 
 export interface MerchantAccount {
     owner: PublicKey;
@@ -119,18 +134,10 @@ export function RefundButton({ program, merchantPubkey, payment, onSuccess, isDe
             }
 
             // Get merchant's USDC ATA using merchant PDA as authority
-            const merchantUsdcAta = await getAssociatedTokenAddressSync(
-                usdcMint,
-                merchantPda,
-                true
-            );
+            const merchantUsdcAta = await findAssociatedTokenAddress(merchantPda, usdcMint);
 
             // Get recipient's USDC ATA
-            const recipientUsdcAta = await getAssociatedTokenAddressSync(
-                usdcMint,
-                payment.recipient,
-                true
-            );
+            const recipientUsdcAta = await findAssociatedTokenAddress(payment.recipient, usdcMint);
 
             // Convert amount to USDC decimals (6 decimals) and to BN value
             const refundAmountU64 = Math.floor(payment.amount * 1_000_000);
@@ -273,19 +280,19 @@ export function RefundButton({ program, merchantPubkey, payment, onSuccess, isDe
             // Check if recipient's ATA exists
             const recipientAtaInfo = await program.provider.connection.getAccountInfo(recipientUsdcAta);
 
-            // If recipient's ATA doesn't exist, create it first
-            if (!recipientAtaInfo) {
-                const provider = program.provider as anchor.AnchorProvider;
-                const createAtaTx = new anchor.web3.Transaction().add(
-                    createAssociatedTokenAccountIdempotentInstruction(
-                        publicKey,
-                        payment.recipient,
-                        usdcMint,
-                        recipientUsdcAta
-                    )
-                );
-                await provider.sendAndConfirm(createAtaTx);
-            }
+            // // If recipient's ATA doesn't exist, create it first
+            // if (!recipientAtaInfo) {
+            //     const provider = program.provider as anchor.AnchorProvider;
+            //     const createAtaTx = new anchor.web3.Transaction().add(
+            //         createAssociatedTokenAccountInstruction(
+            //             publicKey,
+            //             payment.recipient,
+            //             usdcMint,
+            //             recipientUsdcAta
+            //         )
+            //     );
+            //     await provider.sendAndConfirm(createAtaTx);
+            // }
 
             // Simulate first
             try {
