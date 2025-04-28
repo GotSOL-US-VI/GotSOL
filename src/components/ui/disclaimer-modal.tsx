@@ -1,7 +1,5 @@
 'use client';
 
-import { useState } from 'react';
-
 interface DisclaimerModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -35,7 +33,7 @@ export function DisclaimerModal({ isOpen, onClose }: DisclaimerModalProps) {
             <p>• The front-end user interface is not audited. The on-chain Anchor program the application is built on is not audited. They were created with care, but unknown vulnerabilties may still exist.</p>
             <p>• Your use of the application with any real mainnet funds is entirely of your own volition, and we do not accept liability for any lost funds as a result of you using this application.</p>
             <p>• We may use referral codes in our Perena USD* integration, or implement additional fees (0.005%-0.01% max) in the Jupiter Terminal that benefit us directly if you use these features within our application.</p>
-            <p>• Any non-referral based points (Petals) we receive as a result of user activity during the course of Perena's points farming period and prospective airdrop will be passed directly on to the users who created them (if not automatically done so already by Perena).</p>
+            <p>• Any non-referral based points (Petals) we receive as a result of user activity during the course of Perena&apos;s points farming period and prospective airdrop will be passed directly on to the users who created them (if not automatically done so already by Perena).</p>
             <p>• We will keep any referral-based points we generate as a result of the use of our referral code or our own USD* token balance. Our points are ours, and your points are yours.</p>           
             <p>• You agree not to use this platform for illegal or unlawful purposes.</p>
             <p>• We, the developers of this application, and our wallet provider, Para, do not have access to your wallet&apos;s private keys, nor your funds, and have no admin priveleges over your assets of any kind.</p>
