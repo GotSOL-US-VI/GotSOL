@@ -30,7 +30,6 @@ const USD_STAR_MINT = 'BenJy1n3WTx9mTjEvy63e8Q1j4RqUc6E4VBMz3ir4Wo6';
 // Custom styles for Jupiter Terminal
 const customStyles = `
 
-
   #jupiter-terminal button {
     color: #FFFFFF !important;
   }
@@ -105,8 +104,8 @@ export default function SwapPage() {
         const feeCollectorUsdStarAta = await findAssociatedTokenAddress(
           feeCollectorPubkey,
           new PublicKey(USD_STAR_MINT)
-        ); 
-        
+        );
+
         console.log('fee collector usdc ata:', feeCollectorUsdcAta.toString());
         console.log('fee collector USD* ata:', feeCollectorUsdStarAta.toString());
 
@@ -129,8 +128,8 @@ export default function SwapPage() {
           containerClassName: 'text-white [&_button]:!text-white [&_[class*="button"]]:!text-white [&_[class*="Button"]]:!text-white',
           // @ts-ignore - The wallet property exists but TypeScript doesn't recognize it
           wallet: paraWalletAdapter,
-          
-          // Then use it in your Jupiter Terminal configuration
+
+          // @ts-ignore - Fee collection properties not in type definitions
           platformFeeBps: 1, // 0.01% fee (1 basis point)
           platformFeeAccounts: {
             feeBps: 1,
@@ -193,7 +192,7 @@ export default function SwapPage() {
       <div className="flex gap-4">
         <div className="w-[20%] flex flex-col gap-4">
           <BalanceDisplay />
-          <p className="text-base">Perena&apos;s USD* is an interest-bearing stablecoin. <a 
+          <p className="text-base">Perena&apos;s USD* is an interest-bearing stablecoin. <a
             href="https://solscan.io/token/BenJy1n3WTx9mTjEvy63e8Q1j4RqUc6E4VBMz3ir4Wo6"
             target="_blank"
             rel="noopener noreferrer"
