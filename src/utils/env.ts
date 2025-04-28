@@ -4,7 +4,7 @@ export const USDC_MINT = {
 };
 
 export const env = {
-  heliusRpcUrl: process.env.NEXT_PUBLIC_HELIUS_RPC_URL!,
+  devnetHeliusRpcUrl: process.env.NEXT_PUBLIC_HELIUS_RPC_URL!,
   mainnetHeliusRpcUrl: process.env.NEXT_PUBLIC_MAINNET_HELIUS_RPC_URL!,
   programId: process.env.NEXT_PUBLIC_PROGRAM_ID!,
   isDevnet: process.env.NEXT_PUBLIC_HELIUS_RPC_URL?.includes('devnet') ?? false,

@@ -6,7 +6,7 @@ import { UiLayout } from '@/components/ui/ui-layout'
 import { ReactQueryProvider } from './react-query-provider'
 import { Analytics } from "@vercel/analytics/react"
 import { SpeedInsights } from "@vercel/speed-insights/next"
-import { ConnectionProvider } from "@/lib/connection-provider";
+import { ConnectionProvider } from "@/lib/devnet-connection-provider";
 import { ClientLayout } from '@/components/ui/client-layout';
 import { ExplorerLink } from '@/components/explorer-link';
 import { ReactNode } from 'react';

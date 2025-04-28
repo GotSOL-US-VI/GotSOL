@@ -6,7 +6,7 @@ import { env } from '@/utils/env';
 
 export function ConnectionProvider({ children }: { children: React.ReactNode }) {
   // Use devnet Helius RPC URL for merchant components
-  const connection = useMemo(() => new Connection(env.heliusRpcUrl, "confirmed"), []);
+  const connection = useMemo(() => new Connection(env.devnetHeliusRpcUrl, "confirmed"), []);
 
   return (
     <ConnectionContext.Provider value={{ connection }}>
