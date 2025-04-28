@@ -54,12 +54,12 @@ const BalanceDisplayContent = memo(({
 
   return (
     <div className="space-y-4 rounded-lg border border-base-content/10 p-4">
-      <div className="text-xs opacity-80 mb-2">
+      <div className="text-sm opacity-90 mb-2">
         Owner: <a 
           href={`https://solscan.io/account/${publicKey.toString()}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-mint underline hover:opacity-80 transition-opacity"
+          className="text-mint hover:opacity-80 transition-opacity"
         >
           {formatPubkey(publicKey)}
         </a>
@@ -82,7 +82,7 @@ const BalanceDisplayContent = memo(({
               href="https://app.perena.org/"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-mint underline hover:opacity-80 transition-opacity"
+              className="text-mint hover:opacity-80 transition-opacity"
             >
               Perena USD*
             </a> Balance

@@ -153,14 +153,14 @@ export default function SwapPage() {
       <div className="flex gap-4">
         <div className="w-[20%] flex flex-col gap-4">
           <BalanceDisplay />
-          <p className="text-sm">Perena&apos;s USD* is an interest-bearing stablecoin. <a 
+          <p className="text-base">Perena&apos;s USD* is an interest-bearing stablecoin. <a 
             href="https://solscan.io/token/BenJy1n3WTx9mTjEvy63e8Q1j4RqUc6E4VBMz3ir4Wo6"
             target="_blank"
             rel="noopener noreferrer"
             className="text-mint underline hover:opacity-80 transition-opacity"
           >
             Token Explorer
-          </a><br></br><br></br>It has no <em>Freeze Authority</em> nor <em>Permanent Delegate</em>, and therefore can not be frozen by the issuer or removed from your account without your permission.</p>
+          </a><br></br><br></br>It has no <em>Freeze Authority</em> nor <em>Permanent Delegate</em> and therefore can not be frozen by the issuer or removed from your account without your permission.</p>
         </div>
         <div className="flex-1">
           {!isConnected ? (
