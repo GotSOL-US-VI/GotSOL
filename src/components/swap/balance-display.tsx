@@ -39,8 +39,15 @@ const BalanceDisplayContent = memo(({
 
   return (
     <div className="space-y-4 rounded-lg border border-base-content/10 p-4">
-      <div className="text-xs opacity-70 mb-2">
-        Owner: {formatPubkey(publicKey)}
+      <div className="text-xs opacity-80 mb-2">
+        Owner: <a 
+          href={`https://solscan.io/account/${publicKey.toString()}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-mint underline hover:opacity-80 transition-opacity"
+        >
+          {formatPubkey(publicKey)}
+        </a>
       </div>
 
       <div className="space-y-2">
@@ -55,7 +62,16 @@ const BalanceDisplayContent = memo(({
         </div>
 
         <div className="flex justify-between items-center">
-          <span className="text-sm">Perena USD* Balance</span>
+          <span className="text-sm">
+            <a 
+              href="https://app.perena.org/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-mint underline hover:opacity-80 transition-opacity"
+            >
+              Perena USD*
+            </a> Balance
+          </span>
           <span>
             {isBalancesVisible
               ? `${usdStarBalance?.toFixed(6) ?? '0.000000'} USD*`
