@@ -190,7 +190,7 @@ export default function SwapPage() {
         <h1 className="text-2xl font-bold">Swap USDC to Perena&apos;s USD*</h1>
       </div>
       <div className="flex gap-4">
-        <div className="w-[20%] flex flex-col gap-4">
+        <div className="w-[30%] flex flex-col gap-4">
           <BalanceDisplay />
           <p className="text-base">Perena&apos;s USD* is an interest-bearing stablecoin. <a
             href="https://solscan.io/token/BenJy1n3WTx9mTjEvy63e8Q1j4RqUc6E4VBMz3ir4Wo6"
