@@ -10,6 +10,8 @@ import { ConnectionProvider } from "@/lib/devnet-connection-provider";
 import { ClientLayout } from '@/components/ui/client-layout';
 import { ExplorerLink } from '@/components/explorer-link';
 import { ReactNode } from 'react';
+import { DisclaimerButton } from '@/components/ui/disclaimer-button';
+import { DisclaimerProvider } from '@/components/ui/disclaimer-provider';
 
 export const metadata = {
   title: 'GotSOL - USDC Payments on Solana',
@@ -58,9 +60,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <ConnectionProvider>
               <ParaProvider>
                 <ClientLayout>
-                  <UiLayout defaultLinks={defaultLinks} merchantLinks={merchantLinks}>
-                    {children}
-                  </UiLayout>
+                  <DisclaimerProvider>
+                    <UiLayout defaultLinks={defaultLinks} merchantLinks={merchantLinks}>
+                      {children}
+                    </UiLayout>
+                    <DisclaimerButton />
+                  </DisclaimerProvider>
                 </ClientLayout>
               </ParaProvider>
             </ConnectionProvider>
