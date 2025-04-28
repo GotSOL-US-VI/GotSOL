@@ -4,9 +4,10 @@ import * as anchor from "@coral-xyz/anchor";
 import { Program, Idl, BN } from '@coral-xyz/anchor';
 import { PublicKey } from '@solana/web3.js';
 import { usePara } from '../para/para-provider';
-import { getAssociatedTokenAddress, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID, createAssociatedTokenAccountIdempotentInstruction } from '@solana/spl-token';
+import { getAssociatedTokenAddressSync, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID, createAssociatedTokenAccountIdempotentInstruction } from '@solana/spl-token';
 import toast from 'react-hot-toast';
 import bs58 from 'bs58';
+import { env } from '@/utils/env';
 
 export interface MerchantAccount {
     owner: PublicKey;
@@ -29,7 +30,7 @@ interface RefundButtonProps {
 }
 
 const USDC_MINT_DEVNET = new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU');
-const USDC_MINT_MAINNET = new PublicKey('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v');
+const USDC_MINT_MAINNET = new PublicKey(env.usdcMint);
 
 export function RefundButton({ program, merchantPubkey, payment, onSuccess, isDevnet = true }: RefundButtonProps) {
     const { connection } = useConnection();
@@ -118,14 +119,14 @@ export function RefundButton({ program, merchantPubkey, payment, onSuccess, isDe
             }
 
             // Get merchant's USDC ATA using merchant PDA as authority
-            const merchantUsdcAta = await getAssociatedTokenAddress(
+            const merchantUsdcAta = await getAssociatedTokenAddressSync(
                 usdcMint,
                 merchantPda,
                 true
             );
 
             // Get recipient's USDC ATA
-            const recipientUsdcAta = await getAssociatedTokenAddress(
+            const recipientUsdcAta = await getAssociatedTokenAddressSync(
                 usdcMint,
                 payment.recipient,
                 true

@@ -5,7 +5,7 @@ import { atom, useAtomValue, useSetAtom } from 'jotai'
 import { atomWithStorage } from 'jotai/utils'
 import { createContext, ReactNode, useContext } from 'react'
 import toast from 'react-hot-toast'
-import { env } from '../../utils/env'
+import { env } from '@/utils/env'
 
 export interface Cluster {
   name: string
@@ -26,9 +26,9 @@ export enum ClusterNetwork {
 // To use the mainnet-beta cluster, provide a custom endpoint
 export const defaultClusters: Cluster[] = [
   {
-    name: 'devnet',
-    endpoint: 'https://api.devnet.solana.com',
-    network: ClusterNetwork.Devnet,
+    name: env.isDevnet ? 'devnet' : 'mainnet-beta',
+    endpoint: env.heliusRpcUrl,
+    network: env.isDevnet ? ClusterNetwork.Devnet : ClusterNetwork.MainnetBeta,
   },
   // { name: 'local', endpoint: 'http://localhost:8899' },
   // {

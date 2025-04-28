@@ -1,16 +1,17 @@
 import { useConnection } from '@/lib/connection-context';
 import { PublicKey } from '@solana/web3.js';
-import { getAssociatedTokenAddress } from '@solana/spl-token';
+import { getAssociatedTokenAddressSync } from '@solana/spl-token';
 import { useCallback } from 'react';
 import { Program, Idl } from '@coral-xyz/anchor';
 import { encodeURL} from '@solana/pay';
 import BigNumber from 'bignumber.js';
 import QRCode from 'qrcode';
+import { env } from '@/utils/env';
 
 
 
 // USDC mint addresses
-const USDC_MINT = new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
+const USDC_MINT = new PublicKey(env.usdcMint);
 const USDC_DEVNET_MINT = new PublicKey("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU");
 
 export interface PaymentQRResult {
@@ -34,7 +35,7 @@ export function usePaymentQR(program: Program<Idl>) {
       await (program.account as any).merchant.fetch(merchantPubkey);
 
       // Get the merchant's USDC ATA
-      const merchantUsdcAta = await getAssociatedTokenAddress(
+      const merchantUsdcAta = await getAssociatedTokenAddressSync(
         isDevnet ? USDC_DEVNET_MINT : USDC_MINT,
         merchantPubkey,
         true

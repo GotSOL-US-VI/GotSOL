@@ -5,7 +5,7 @@ import { Program, Idl, BN } from '@coral-xyz/anchor';
 import { PublicKey } from '@solana/web3.js';
 import { usePara } from '../para/para-provider';
 import { useConnection } from '@/lib/connection-context';
-import { getAssociatedTokenAddress } from '@solana/spl-token';
+import { getAssociatedTokenAddressSync } from '@solana/spl-token';
 import toast from 'react-hot-toast';
 import * as anchor from '@coral-xyz/anchor';
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
@@ -60,21 +60,21 @@ export function WithdrawFunds({
 
     try {
       // Get the merchant's USDC ATA
-      const merchantUsdcAta = await getAssociatedTokenAddress(
+      const merchantUsdcAta = await getAssociatedTokenAddressSync(
         isDevnet ? USDC_DEVNET_MINT : USDC_MAINNET_MINT,
         merchantPubkey,
         true
       );
 
       // Get the owner's USDC ATA
-      const ownerUsdcAta = await getAssociatedTokenAddress(
+      const ownerUsdcAta = await getAssociatedTokenAddressSync(
         isDevnet ? USDC_DEVNET_MINT : USDC_MAINNET_MINT,
         publicKey,
         true
       );
 
       // Get the house's USDC ATA
-      const houseUsdcAta = await getAssociatedTokenAddress(
+      const houseUsdcAta = await getAssociatedTokenAddressSync(
         isDevnet ? USDC_DEVNET_MINT : USDC_MAINNET_MINT,
         HOUSE,
         true
@@ -143,21 +143,21 @@ export function WithdrawFunds({
 
     try {
       // Get the merchant's USDC ATA
-      const merchantUsdcAta = await getAssociatedTokenAddress(
+      const merchantUsdcAta = await getAssociatedTokenAddressSync(
         isDevnet ? USDC_DEVNET_MINT : USDC_MAINNET_MINT,
         merchantPubkey,
         true
       );
 
       // Get the owner's USDC ATA
-      const ownerUsdcAta = await getAssociatedTokenAddress(
+      const ownerUsdcAta = await getAssociatedTokenAddressSync(
         isDevnet ? USDC_DEVNET_MINT : USDC_MAINNET_MINT,
         publicKey,
         true
       );
 
       // Get the house's USDC ATA
-      const houseUsdcAta = await getAssociatedTokenAddress(
+      const houseUsdcAta = await getAssociatedTokenAddressSync(
         isDevnet ? USDC_DEVNET_MINT : USDC_MAINNET_MINT,
         HOUSE,
         true

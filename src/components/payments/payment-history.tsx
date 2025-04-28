@@ -2,7 +2,7 @@
 
 import { useConnection } from '@/lib/connection-context';
 import { PublicKey, ParsedTransactionWithMeta, ConfirmedSignatureInfo } from '@solana/web3.js';
-import { getAssociatedTokenAddress } from '@solana/spl-token';
+import { getAssociatedTokenAddressSync } from '@solana/spl-token';
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { Program, Idl } from '@coral-xyz/anchor';
 import { RefundButton } from './refund-button';
@@ -172,7 +172,7 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
     // Function to fetch payments
     const fetchPayments = useCallback(async (beforeSignature?: string): Promise<Payment[]> => {
         try {
-            const merchantUsdcAta = await getAssociatedTokenAddress(
+            const merchantUsdcAta = await getAssociatedTokenAddressSync(
                 isDevnet ? USDC_MINT_DEVNET : USDC_MINT_MAINNET,
                 merchantPubkey,
                 true
@@ -278,7 +278,7 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
 
     const setupPaymentListener = useCallback(async () => {
         try {
-            const merchantUsdcAta = await getAssociatedTokenAddress(
+            const merchantUsdcAta = await getAssociatedTokenAddressSync(
                 isDevnet ? USDC_MINT_DEVNET : USDC_MINT_MAINNET,
                 merchantPubkey,
                 true
