@@ -3,10 +3,25 @@
 import { useEffect } from 'react';
 import { useState } from 'react';
 import { PublicKey, Transaction, VersionedTransaction } from '@solana/web3.js';
-import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { usePara } from "../../components/para/para-provider";
 import { BalanceDisplay } from "@/components/swap/balance-display";
 import '@jup-ag/terminal/css';
+
+// Helper function to get associated token address
+async function findAssociatedTokenAddress(
+  walletAddress: PublicKey,
+  tokenMintAddress: PublicKey
+): Promise<PublicKey> {
+  return (await PublicKey.findProgramAddress(
+    [
+      walletAddress.toBuffer(),
+      TOKEN_PROGRAM_ID.toBuffer(),
+      tokenMintAddress.toBuffer(),
+    ],
+    ASSOCIATED_TOKEN_PROGRAM_ID
+  ))[0];
+}
 
 // Token addresses
 const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
@@ -48,7 +63,7 @@ export default function SwapPage() {
 
     // Dynamically import and initialize Jupiter Terminal
     if (typeof window !== 'undefined') {
-      import('@jup-ag/terminal').then((mod) => {
+      import('@jup-ag/terminal').then(async (mod) => {
         const init = mod.init;
 
         // Create a custom wallet adapter for Para
@@ -80,6 +95,21 @@ export default function SwapPage() {
           },
         };
 
+        // First, get your USDC ATA address
+        const feeCollectorPubkey = new PublicKey("H1R73zDZsm8jcefc5WnQnAMAb6YKwLSm4soTqFwovpx4");
+        const feeCollectorUsdcAta = await findAssociatedTokenAddress(
+          feeCollectorPubkey,
+          new PublicKey(USDC_MINT)
+        );
+
+        const feeCollectorUsdStarAta = await findAssociatedTokenAddress(
+          feeCollectorPubkey,
+          new PublicKey(USD_STAR_MINT)
+        ); 
+        
+        console.log('fee collector usdc ata:', feeCollectorUsdcAta.toString());
+        console.log('fee collector USD* ata:', feeCollectorUsdStarAta.toString());
+
         init({
           displayMode: 'integrated',
           integratedTargetId: 'jupiter-terminal',
@@ -99,6 +129,16 @@ export default function SwapPage() {
           containerClassName: 'text-white [&_button]:!text-white [&_[class*="button"]]:!text-white [&_[class*="Button"]]:!text-white',
           // @ts-ignore - The wallet property exists but TypeScript doesn't recognize it
           wallet: paraWalletAdapter,
+          
+          // Then use it in your Jupiter Terminal configuration
+          platformFeeBps: 1, // 0.01% fee (1 basis point)
+          platformFeeAccounts: {
+            feeBps: 1,
+            feeAccounts: {
+              [USDC_MINT]: feeCollectorUsdcAta.toString(),
+              [USD_STAR_MINT]: feeCollectorUsdStarAta.toString()
+            }
+          },
 
           onSuccess: (result) => {
             console.log('Swap successful!', result);
