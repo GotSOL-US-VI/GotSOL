@@ -55,7 +55,7 @@ const BalanceDisplayContent = memo(({
         </div>
 
         <div className="flex justify-between items-center">
-          <span className="text-sm">PERENA USD* Balance</span>
+          <span className="text-sm">Perena USD* Balance</span>
           <span>
             {isBalancesVisible
               ? `${usdStarBalance?.toFixed(6) ?? '0.000000'} USD*`

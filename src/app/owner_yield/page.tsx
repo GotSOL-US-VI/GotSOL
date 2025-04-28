@@ -144,6 +144,9 @@ export default function SwapPage() {
 
   return (
     <div className="container mx-auto p-4">
+              <div className="text-center">
+          <h1 className="text-2xl font-bold text-warning">This feature is under construction!</h1>
+        </div>
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold">Swap USDC ↔ USD*</h1>
       </div>
@@ -164,3 +167,5 @@ export default function SwapPage() {
     </div>
   );
 }
+
+

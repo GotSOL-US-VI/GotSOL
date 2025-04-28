@@ -26,7 +26,7 @@ export default function OffRampsPage({ params }: { params: { merchantId: string 
         subtitle={<p className="text-xl font-medium mt-4">Convert your USDC to fiat through our trusted partners</p>}
       />
 
-      <p className='flex justify-center'>This Product Offering should be available at launch, giving Merchant Owners the ability to move money from their bank account on-chain and back. THIS IS A DUMMY UI!</p>
+      <p className='flex justify-center'>This Product Offering should be available at launch, giving Merchant Owners the ability to move money from their bank account on-chain and back. <span className="text-error font-bold">THIS IS A DUMMY UI!</span></p>
 
       <div className="max-w-4xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
         <div className="card bg-base-300">
