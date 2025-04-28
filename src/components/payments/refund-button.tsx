@@ -8,6 +8,8 @@ import { TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID } from '@solana/spl-token
 import toast from 'react-hot-toast';
 import bs58 from 'bs58';
 import { env } from '@/utils/env';
+import { executeTransactionWithFeePayer } from '@/utils/execute-transaction';
+import { formatSolscanDevnetLink } from '@/utils/format-transaction-link';
 
 // Helper function to get associated token address
 async function findAssociatedTokenAddress(
@@ -54,7 +56,7 @@ export function RefundButton({ program, merchantPubkey, payment, onSuccess, isDe
     const publicKey = address ? new PublicKey(address) : null;
 
     const handleRefund = async () => {
-        if (!publicKey) {
+        if (!publicKey || !signer) {
             toast.error('Please connect your wallet');
             return;
         }
@@ -262,7 +264,7 @@ export function RefundButton({ program, merchantPubkey, payment, onSuccess, isDe
             });
 
             // Build the transaction
-            const tx = program.methods
+            const methodBuilder = program.methods
                 .refund(signaturePrefix, refundAmount)  // Pass the string directly
                 .accountsPartial({
                     owner: publicKey,
@@ -280,23 +282,9 @@ export function RefundButton({ program, merchantPubkey, payment, onSuccess, isDe
             // Check if recipient's ATA exists
             const recipientAtaInfo = await program.provider.connection.getAccountInfo(recipientUsdcAta);
 
-            // // If recipient's ATA doesn't exist, create it first
-            // if (!recipientAtaInfo) {
-            //     const provider = program.provider as anchor.AnchorProvider;
-            //     const createAtaTx = new anchor.web3.Transaction().add(
-            //         createAssociatedTokenAccountInstruction(
-            //             publicKey,
-            //             payment.recipient,
-            //             usdcMint,
-            //             recipientUsdcAta
-            //         )
-            //     );
-            //     await provider.sendAndConfirm(createAtaTx);
-            // }
-
             // Simulate first
             try {
-                const simulation = await tx.simulate();
+                const simulation = await methodBuilder.simulate();
                 console.log('Simulation success:', simulation);
             } catch (simError: any) {
                 // Still log the full error details for debugging
@@ -318,11 +306,42 @@ export function RefundButton({ program, merchantPubkey, payment, onSuccess, isDe
                 throw new Error('SIMULATION_FAILED');
             }
 
-            // If simulation succeeds, send the transaction
-            const txid = await tx.rpc();
+            // Create the accounts object for executeTransactionWithFeePayer
+            const accounts = {
+                owner: publicKey,
+                merchant: merchantPda,
+                merchantUsdcAta: merchantUsdcAta,
+                recipientUsdcAta: recipientUsdcAta,
+                refundRecord: refundRecord,
+                usdcMint: usdcMint,
+                recipient: payment.recipient,
+                tokenProgram: TOKEN_PROGRAM_ID,
+                associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+                systemProgram: anchor.web3.SystemProgram.programId,
+            };
+
+            // Execute the transaction with the fee payer
+            const txid = await executeTransactionWithFeePayer(program, methodBuilder, accounts, signer);
 
             console.log('Refund successful:', txid);
-            toast.success('Refund processed successfully!');
+            
+            toast.success(
+                <div>
+                    <p>Refund processed successfully!</p>
+                    <p className="text-xs mt-1">
+                        <a
+                            href={formatSolscanDevnetLink(txid)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="underline"
+                        >
+                            View transaction
+                        </a>
+                    </p>
+                </div>,
+                { duration: 8000 }
+            );
+            
             onSuccess?.();
 
         } catch (error) {

@@ -113,12 +113,12 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
             .filter((tx): tx is ParsedTransactionWithMeta => tx !== null)
             .map(tx => {
                 try {
-                    console.log('Processing transaction:', {
-                        signature: tx.transaction.signatures[0],
-                        preBalances: tx.meta?.preTokenBalances,
-                        postBalances: tx.meta?.postTokenBalances,
-                        logs: tx.meta?.logMessages
-                    });
+                    // console.log('Processing transaction:', {
+                    //     // signature: tx.transaction.signatures[0],
+                    //     // preBalances: tx.meta?.preTokenBalances,
+                    //     // postBalances: tx.meta?.postTokenBalances,
+                    //     // logs: tx.meta?.logMessages
+                    // });
 
                     // Find the merchant's token balance changes
                     const merchantPreBalance = tx.meta?.preTokenBalances?.find(b => 
@@ -133,7 +133,7 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
 
                     // Only process if there was a positive change in merchant's balance
                     if (amount <= 0) {
-                        console.log('Skipping transaction - no positive balance change:', amount);
+                        // console.log('Skipping transaction - no positive balance change:', amount);
                         return null;
                     }
 
@@ -158,7 +158,7 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
 
                     // Skip if we can't identify a valid external sender
                     if (!senderAccount) {
-                        console.log('Skipping transaction - no valid external sender found');
+                        // console.log('Skipping transaction - no valid external sender found');
                         return null;
                     }
 
@@ -174,7 +174,7 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
                         recipient,
                     };
 
-                    console.log('Processed payment:', payment);
+                    // console.log('Processed payment:', payment);
                     return payment;
                 } catch (error) {
                     console.error('Error processing transaction:', error);
@@ -213,7 +213,7 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
             console.log('Fetched transactions:', transactions.length);
 
             const newPayments = processTransactions(transactions);
-            console.log('Processed payments:', newPayments);
+            // console.log('Processed payments:', newPayments);
 
             if (signatures.length > 0) {
                 lastSignatureRef.current = signatures[signatures.length - 1].signature;

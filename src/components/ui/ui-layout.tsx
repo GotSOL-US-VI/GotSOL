@@ -53,6 +53,8 @@ export function UiLayout({
 
   // Update active merchant when entering a merchant dashboard
   useEffect(() => {
+    if (!pathname) return;
+    
     const merchantMatch = pathname.match(/\/merchant\/dashboard\/([^/]+)/)
     if (merchantMatch) {
       const merchantId = merchantMatch[1]
@@ -259,11 +261,22 @@ export function ellipsify(str = '', len = 4) {
 }
 
 export function useTransactionToast() {
-  return (signature: string) => {
+  return (signature: string, solscanLink?: string) => {
     toast.success(
       <div className={'text-center'}>
         <div className="text-lg">Transaction sent</div>
-        <ExplorerLink path={`tx/${signature}`} label={'View Transaction'} className="btn btn-xs btn-primary" />
+        {solscanLink ? (
+          <a 
+            href={solscanLink} 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            className="btn btn-xs btn-primary mt-2"
+          >
+            View on Solscan
+          </a>
+        ) : (
+          <ExplorerLink path={`tx/${signature}`} label={'View Transaction'} className="btn btn-xs btn-primary" />
+        )}
       </div>,
     )
   }

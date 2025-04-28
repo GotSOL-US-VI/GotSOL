@@ -6,6 +6,10 @@ export function ExplorerLink() {
   const pathname = usePathname();
   
   // Extract merchant ID from the URL
+  if (!pathname) {
+    return null;
+  }
+  
   const merchantMatch = pathname.match(/\/merchant\/dashboard\/([^/]+)/);
   if (!merchantMatch) {
     return null;

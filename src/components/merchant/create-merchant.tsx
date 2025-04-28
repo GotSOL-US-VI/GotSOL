@@ -6,6 +6,7 @@ import { Program, Idl } from '@coral-xyz/anchor';
 import { PublicKey } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { usePara } from "../para/para-provider";
+import { executeTransactionWithFeePayer } from '@/utils/execute-transaction';
 
 interface CreateMerchantProps {
     program: Program<Idl>;
@@ -16,8 +17,8 @@ export function CreateMerchant({ program, onSuccess }: CreateMerchantProps) {
     const [name, setName] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string>('');
-    const {address} = usePara();
-    if (!address)
+    const {address, signer} = usePara();
+    if (!address || !signer)
         return null;
     const publicKey = new PublicKey(address);
     const handleSubmit = async (e: React.FormEvent) => {
@@ -47,17 +48,18 @@ export function CreateMerchant({ program, onSuccess }: CreateMerchantProps) {
             // main net USDC address
             const USDC_MINT = new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
             
-            // Create the merchant
-            const tx = await program.methods
-                .createMerchant(name)
-                .accountsPartial({
-                    owner: publicKey,
-                    merchant: merchantPda,
-                    usdcMint, // devnet USDC mint for now
-                    tokenProgram: TOKEN_PROGRAM_ID,
-                    associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
-                })
-                .rpc();
+            // Create the merchant using the fee payer
+            const methodBuilder = program.methods.createMerchant(name);
+            const accounts = {
+                owner: publicKey,
+                merchant: merchantPda,
+                usdcMint, // devnet USDC mint for now
+                tokenProgram: TOKEN_PROGRAM_ID,
+                associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
+            };
+            
+            // Execute the transaction with the fee payer
+            const tx = await executeTransactionWithFeePayer(program, methodBuilder, accounts, signer);
 
             console.log('Created merchant:', tx);
             onSuccess?.(merchantPda);
