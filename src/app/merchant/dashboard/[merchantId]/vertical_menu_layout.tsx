@@ -52,6 +52,8 @@ export default function MerchantDashboardLayout({
   
   // Function to check if a nav item is active
   const isActive = (href: string, exact = false) => {
+    if (!pathname) return false;
+    
     if (exact) {
       return pathname === href
     }
