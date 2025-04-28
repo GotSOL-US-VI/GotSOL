@@ -50,7 +50,7 @@ export default function SwapPage() {
     if (typeof window !== 'undefined') {
       import('@jup-ag/terminal').then((mod) => {
         const init = mod.init;
-        
+
         // Create a custom wallet adapter for Para
         const paraWalletAdapter = {
           publicKey: address ? new PublicKey(address) : null,
@@ -76,7 +76,7 @@ export default function SwapPage() {
           on: (event: string, callback: (args: any) => void) => {
             // Implement event listeners if needed
             console.log(`Event listener for ${event} requested`);
-            return () => {}; // Return cleanup function
+            return () => { }; // Return cleanup function
           },
         };
 
@@ -144,15 +144,23 @@ export default function SwapPage() {
 
   return (
     <div className="container mx-auto p-4">
-              <div className="text-center">
-          <h1 className="text-2xl font-bold text-warning">This feature is under construction!</h1>
-        </div>
+      <div className="text-center">
+        <h1 className="text-2xl font-bold text-warning">This feature is under construction!</h1>
+      </div>
       <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">Swap USDC ↔ USD*</h1>
+        <h1 className="text-2xl font-bold">Swap USDC to Perena&apos;s USD*</h1>
       </div>
       <div className="flex gap-4">
-        <div className="w-[20%]">
+        <div className="w-[20%] flex flex-col gap-4">
           <BalanceDisplay />
+          <p className="text-sm">Perena&apos;s USD* is an interest-bearing stablecoin. <a 
+            href="https://solscan.io/token/BenJy1n3WTx9mTjEvy63e8Q1j4RqUc6E4VBMz3ir4Wo6"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-mint underline hover:opacity-80 transition-opacity"
+          >
+            Token Explorer
+          </a><br></br><br></br>It has no <em>Freeze Authority</em> nor <em>Permanent Delegate</em>, and therefore can not be frozen by the issuer or removed from your account without your permission.</p>
         </div>
         <div className="flex-1">
           {!isConnected ? (
