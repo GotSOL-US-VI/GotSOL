@@ -3,7 +3,7 @@ import { Program, web3 } from "@coral-xyz/anchor";
 import { Kumbaya } from "../target/types/kumbaya";
 import { PublicKey } from "@solana/web3.js";
 import { assert } from "chai";
-import { TOKEN_PROGRAM_ID, createMint } from "@solana/spl-token";
+import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 
 // associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
 

@@ -53,6 +53,8 @@ export function UiLayout({
 
   // Update active merchant when entering a merchant dashboard
   useEffect(() => {
+    if (!pathname) return;
+    
     const merchantMatch = pathname.match(/\/merchant\/dashboard\/([^/]+)/)
     if (merchantMatch) {
       const merchantId = merchantMatch[1]
