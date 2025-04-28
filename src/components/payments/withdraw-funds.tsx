@@ -12,6 +12,7 @@ import {
 import toast from 'react-hot-toast';
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 import { executeTransactionWithFeePayer } from '@/utils/execute-transaction';
+import { formatSolscanDevnetLink } from '@/utils/format-transaction-link';
 
 // Helper function to get associated token address
 async function findAssociatedTokenAddress(
@@ -30,9 +31,6 @@ async function findAssociatedTokenAddress(
 
 const USDC_DEVNET_MINT = new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU');
 const USDC_MAINNET_MINT = new PublicKey('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v');
-const MERCHANT_SHARE = 990; // 99%
-// const GOV_SHARE = 50; // 5%
-const HOUSE_SHARE = 10; // 10%
 const HOUSE = new PublicKey('Hth4EBxLWJSoRWj7raCKoniuzcvXt8MUFgGKty3B66ih');
 
 interface WithdrawFundsProps {
@@ -231,7 +229,23 @@ export function WithdrawFunds({
       const tx = await executeTransactionWithFeePayer(program, methodBuilder, accounts, signer);
 
       console.log('Withdrawal successful:', tx);
-      toast.success('Withdrawal successful!');
+      
+      toast.success(
+          <div>
+              <p>Withdrawal successful!</p>
+              <p className="text-xs mt-1">
+                  <a
+                      href={formatSolscanDevnetLink(tx)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline"
+                  >
+                      View transaction
+                  </a>
+              </p>
+          </div>,
+          { duration: 8000 }
+      );
       
       // Reset withdraw amount
       setWithdrawAmount('');

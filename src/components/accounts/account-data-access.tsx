@@ -15,6 +15,7 @@ import {
 import {useMutation, useQuery, useQueryClient} from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import {useTransactionToast} from '../ui/ui-layout'
+import { formatSolscanDevnetLink } from '@/utils/format-transaction-link'
 
 export function useGetBalance({ address }: { address: PublicKey }) {
   const { connection } = useConnection()
@@ -89,7 +90,9 @@ export function useTransferSol({ address }: { address: PublicKey }) {
     },
     onSuccess: (signature) => {
       if (signature) {
-        transactionToast(signature)
+        // Use the Solscan link in the toast
+        const solscanLink = formatSolscanDevnetLink(signature);
+        transactionToast(signature, solscanLink);
       }
       return Promise.all([
         client.invalidateQueries({
@@ -123,7 +126,8 @@ export function useRequestAirdrop({ address }: { address: PublicKey }) {
       return signature
     },
     onSuccess: (signature) => {
-      transactionToast(signature)
+      const solscanLink = formatSolscanDevnetLink(signature);
+      transactionToast(signature, solscanLink);
       return Promise.all([
         client.invalidateQueries({
           queryKey: ['get-balance', { endpoint: connection.rpcEndpoint, address }],
@@ -132,6 +136,9 @@ export function useRequestAirdrop({ address }: { address: PublicKey }) {
           queryKey: ['get-signatures', { endpoint: connection.rpcEndpoint, address }],
         }),
       ])
+    },
+    onError: (error) => {
+      toast.error(`Airdrop failed! ${error}`)
     },
   })
 }

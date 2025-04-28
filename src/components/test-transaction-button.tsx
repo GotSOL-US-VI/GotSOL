@@ -5,6 +5,7 @@ import { Program, Idl } from '@coral-xyz/anchor';
 import { testTransactionSigning } from '@/utils/test-transaction';
 import { usePara } from './para/para-provider';
 import { PublicKey } from '@solana/web3.js';
+import { formatSolscanDevnetLink } from '@/utils/format-transaction-link';
 
 interface TestTransactionButtonProps {
   program: Program<Idl>;
@@ -71,6 +72,16 @@ export function TestTransactionButton({ program }: TestTransactionButtonProps) {
       {signature && (
         <div className="alert alert-success mt-4">
           <span>Transaction successful! Signature: {signature.substring(0, 8)}...{signature.substring(signature.length - 8)}</span>
+          <div className="mt-2">
+            <a 
+              href={formatSolscanDevnetLink(signature)} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-blue-500 hover:underline"
+            >
+              View on Solscan
+            </a>
+          </div>
         </div>
       )}
     </div>

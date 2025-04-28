@@ -8,6 +8,7 @@ import { TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID } from "@solana/spl-token
 import { usePara } from "../para/para-provider";
 import toast from 'react-hot-toast';
 import { executeTransactionWithFeePayer } from '@/utils/execute-transaction';
+import { formatSolscanDevnetLink } from '@/utils/format-transaction-link';
 
 const USDC_DEVNET_MINT = new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU');
 const GOV = new PublicKey('7WxjvbhBgAcWfTnL8yQy6iP1vF4n5fKPc7tL7fMYvSsc');
@@ -198,12 +199,14 @@ export function MakeRevenuePaymentButton({ program, merchantPubkey, merchantName
             // Execute the transaction with the fee payer
             const tx = await executeTransactionWithFeePayer(program, methodBuilder, accounts, signer);
 
+            console.log('Revenue payment successful:', tx);
+            
             toast.success(
                 <div>
                     <p>Successfully paid revenue payment</p>
                     <p className="text-xs mt-1">
                         <a
-                            href={`https://solscan.io/tx/${tx}?cluster=devnet`}
+                            href={formatSolscanDevnetLink(tx)}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="underline"
