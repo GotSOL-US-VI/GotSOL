@@ -28,6 +28,8 @@ const defaultLinks = [
   { label: 'Create Merchant', path: '/merchant/setup' },
   // { label: 'Resources', path: '/links' },
   { label: 'Project Phases', path: '/roadmap' },
+  { label: 'Owner\'s Yield Dashboard', path: '/owner_yield' },
+
 ]
 
 interface MerchantLink {
