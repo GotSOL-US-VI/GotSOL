@@ -7,6 +7,7 @@ import { PublicKey } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { usePara } from "../para/para-provider";
 import toast from 'react-hot-toast';
+import { executeTransactionWithFeePayer } from '@/utils/execute-transaction';
 
 const USDC_DEVNET_MINT = new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU');
 const GOV = new PublicKey('7WxjvbhBgAcWfTnL8yQy6iP1vF4n5fKPc7tL7fMYvSsc');
@@ -43,7 +44,7 @@ export function MakeRevenuePaymentButton({ program, merchantPubkey, merchantName
     const [lifetimePaid, setLifetimePaid] = useState<number>(0);
     const [lastPayment, setLastPayment] = useState<number>(0);
     const [lastPaymentDate, setLastPaymentDate] = useState<string>('Never');
-    const { address } = usePara();
+    const { address, signer } = usePara();
     const publicKey = useMemo(() => {
         console.log('Wallet address changed:', address);
         return address ? new PublicKey(address) : null;
@@ -146,7 +147,7 @@ export function MakeRevenuePaymentButton({ program, merchantPubkey, merchantName
     }, [fetchData]);
 
     const handleMakeRevenuePayment = async () => {
-        if (!publicKey || !connection) {
+        if (!publicKey || !connection || !signer) {
             setError('Please connect your wallet first');
             return;
         }
@@ -179,22 +180,23 @@ export function MakeRevenuePaymentButton({ program, merchantPubkey, merchantName
                 USDC_DEVNET_MINT
             );
 
-            // Call the make_revenue_payment instruction
-            const tx = await program.methods
-                .make_revenue_payment()
-                .accountsPartial({
-                    owner: publicKey,
-                    merchant: merchantPubkey,
-                    complianceEscrow: complianceEscrowPda,
-                    compliance: compliancePda,
-                    usdcMint: USDC_DEVNET_MINT,
-                    theMan: GOV,
-                    theManUsdcAta: theManUsdcAta,
-                    associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
-                    tokenProgram: TOKEN_PROGRAM_ID,
-                    systemProgram: anchor.web3.SystemProgram.programId,
-                })
-                .rpc();
+            // Call the make_revenue_payment instruction using the fee payer
+            const methodBuilder = program.methods.make_revenue_payment();
+            const accounts = {
+                owner: publicKey,
+                merchant: merchantPubkey,
+                complianceEscrow: complianceEscrowPda,
+                compliance: compliancePda,
+                usdcMint: USDC_DEVNET_MINT,
+                theMan: GOV,
+                theManUsdcAta: theManUsdcAta,
+                associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
+                tokenProgram: TOKEN_PROGRAM_ID,
+                systemProgram: anchor.web3.SystemProgram.programId,
+            };
+            
+            // Execute the transaction with the fee payer
+            const tx = await executeTransactionWithFeePayer(program, methodBuilder, accounts, signer);
 
             toast.success(
                 <div>

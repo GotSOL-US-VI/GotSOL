@@ -11,6 +11,7 @@ import {
 } from '@solana/spl-token';
 import toast from 'react-hot-toast';
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
+import { executeTransactionWithFeePayer } from '@/utils/execute-transaction';
 
 // Helper function to get associated token address
 async function findAssociatedTokenAddress(
@@ -151,21 +152,83 @@ export function WithdrawFunds({
       // Get the house's USDC ATA
       const houseUsdcAta = await findAssociatedTokenAddress(HOUSE, isDevnet ? USDC_DEVNET_MINT : USDC_MAINNET_MINT);
 
-      // Withdraw funds using withdrawUsdc instruction
-      const tx = await program.methods
-        .withdrawUsdc(new BN(Math.floor(parseFloat(withdrawAmount) * 1e6))) // Convert to USDC base units
-        .accountsPartial({
-          owner: publicKey,
-          merchant: merchantPubkey,
-          usdcMint: isDevnet ? USDC_DEVNET_MINT : USDC_MAINNET_MINT,
-          merchantUsdcAta: merchantUsdcAta,
-          ownerUsdcAta: ownerUsdcAta,
-          house: HOUSE,
-          houseUsdcAta: houseUsdcAta,
-          associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
-          tokenProgram: TOKEN_PROGRAM_ID,
-        })
-        .rpc();
+      // Withdraw funds using withdrawUsdc instruction with the fee payer
+      const methodBuilder = program.methods.withdrawUsdc(new BN(Math.floor(parseFloat(withdrawAmount) * 1e6))); // Convert to USDC base units
+      
+      // Log the method builder for debugging
+      console.log('Method builder created for withdrawUsdc');
+      
+      // Create a fresh PublicKey instance to ensure it's valid
+      let ownerPublicKey: PublicKey;
+      try {
+        ownerPublicKey = new PublicKey(publicKey.toString());
+      } catch (error) {
+        console.error('Error creating owner public key:', error);
+        setError('Invalid owner public key');
+        setIsLoading(false);
+        return;
+      }
+      
+      // Log the public key for debugging
+      console.log('Owner public key:', {
+        original: publicKey.toString(),
+        new: ownerPublicKey.toString(),
+        isValid: PublicKey.isOnCurve(ownerPublicKey),
+        bytes: Array.from(ownerPublicKey.toBytes()).join(',')
+      });
+      
+      // Verify all public keys are valid
+      const verifyPublicKey = (key: PublicKey, name: string) => {
+        try {
+          const isValid = PublicKey.isOnCurve(key);
+          console.log(`${name} public key:`, {
+            value: key.toString(),
+            isValid,
+            bytes: Array.from(key.toBytes()).join(',')
+          });
+          return isValid;
+        } catch (error) {
+          console.error(`Error verifying ${name} public key:`, error);
+          return false;
+        }
+      };
+      
+      // Verify all public keys
+      verifyPublicKey(ownerPublicKey, 'Owner');
+      verifyPublicKey(merchantPubkey, 'Merchant');
+      verifyPublicKey(isDevnet ? USDC_DEVNET_MINT : USDC_MAINNET_MINT, 'USDC Mint');
+      verifyPublicKey(merchantUsdcAta, 'Merchant USDC ATA');
+      verifyPublicKey(ownerUsdcAta, 'Owner USDC ATA');
+      verifyPublicKey(HOUSE, 'House');
+      verifyPublicKey(houseUsdcAta, 'House USDC ATA');
+      verifyPublicKey(ASSOCIATED_TOKEN_PROGRAM_ID, 'Associated Token Program');
+      verifyPublicKey(TOKEN_PROGRAM_ID, 'Token Program');
+      
+      const accounts = {
+        owner: ownerPublicKey,
+        merchant: merchantPubkey,
+        usdcMint: isDevnet ? USDC_DEVNET_MINT : USDC_MAINNET_MINT,
+        merchantUsdcAta: merchantUsdcAta,
+        ownerUsdcAta: ownerUsdcAta,
+        house: HOUSE,
+        houseUsdcAta: houseUsdcAta,
+        associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      };
+      
+      // Log the accounts for debugging
+      console.log('Accounts for transaction:', {
+        owner: accounts.owner.toString(),
+        merchant: accounts.merchant.toString(),
+        usdcMint: accounts.usdcMint.toString(),
+        merchantUsdcAta: accounts.merchantUsdcAta.toString(),
+        ownerUsdcAta: accounts.ownerUsdcAta.toString(),
+        house: accounts.house.toString(),
+        houseUsdcAta: accounts.houseUsdcAta.toString(),
+      });
+      
+      // Execute the transaction with the fee payer
+      const tx = await executeTransactionWithFeePayer(program, methodBuilder, accounts, signer);
 
       console.log('Withdrawal successful:', tx);
       toast.success('Withdrawal successful!');
