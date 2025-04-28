@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
 import { useAnchorProvider } from '@/components/para/para-provider'
 import { Program, Idl } from '@coral-xyz/anchor'
 import * as kumbayaIdl from '@/utils/kumbaya.json'
-import { MakeRevenuePaymentButton } from '@/components/merchant/pay-the-man-button'
+import { MakeRevenuePaymentButton } from '@/components/merchant/make-revenue-payment'
 import { useConnection } from '@solana/wallet-adapter-react'
 
 export default function TaxCompliancePage({ params }: { params: { merchantId: string } }) {

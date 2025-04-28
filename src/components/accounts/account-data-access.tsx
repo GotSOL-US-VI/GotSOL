@@ -1,6 +1,6 @@
 'use client'
 
-import {TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID} from '@solana/spl-token'
+import { TOKEN_PROGRAM_ID} from '@solana/spl-token'
 import { useConnection } from '@/lib/connection-context'
 import { useWalletAdapterCompat } from '@/hooks/useWalletAdapterCompat'
 import {
@@ -44,7 +44,7 @@ export function useGetTokenAccounts({ address }: { address: PublicKey }) {
           programId: TOKEN_PROGRAM_ID,
         }),
         connection.getParsedTokenAccountsByOwner(address, {
-          programId: TOKEN_2022_PROGRAM_ID,
+          programId: TOKEN_PROGRAM_ID,
         }),
       ])
       return [...tokenAccounts.value, ...token2022Accounts.value]

@@ -4,7 +4,7 @@ import * as anchor from "@coral-xyz/anchor";
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Program, Idl } from '@coral-xyz/anchor';
 import { PublicKey } from '@solana/web3.js';
-import { TOKEN_PROGRAM_ID, getAssociatedTokenAddressSync, getAccount } from "@solana/spl-token";
+import { TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { usePara } from "../para/para-provider";
 import toast from 'react-hot-toast';
 
@@ -16,6 +16,21 @@ interface MakeRevenuePaymentButtonProps {
     merchantPubkey: PublicKey;
     merchantName: string;
     onSuccess?: () => void;
+}
+
+// Helper function to get associated token address
+async function findAssociatedTokenAddress(
+    walletAddress: PublicKey,
+    tokenMintAddress: PublicKey
+): Promise<PublicKey> {
+    return (await PublicKey.findProgramAddress(
+        [
+            walletAddress.toBuffer(),
+            TOKEN_PROGRAM_ID.toBuffer(),
+            tokenMintAddress.toBuffer(),
+        ],
+        ASSOCIATED_TOKEN_PROGRAM_ID
+    ))[0];
 }
 
 export function MakeRevenuePaymentButton({ program, merchantPubkey, merchantName, onSuccess }: MakeRevenuePaymentButtonProps) {
@@ -72,16 +87,17 @@ export function MakeRevenuePaymentButton({ program, merchantPubkey, merchantName
             // Get the escrow account balance
             try {
                 console.log('Fetching token account info for compliance escrow...');
-                const tokenAccount = await getAccount(connection, complianceEscrowPda);
-                console.log('Token Account Data:', {
-                    mint: tokenAccount.mint.toString(),
-                    owner: tokenAccount.owner.toString(),
-                    amount: tokenAccount.amount.toString()
-                });
-                
-                const balance = Number(tokenAccount.amount) / 1_000_000; // USDC has 6 decimals
-                console.log('Calculated Balance:', balance, 'USDC');
-                setEscrowBalance(balance);
+                const tokenAccountInfo = await connection.getAccountInfo(complianceEscrowPda);
+                if (tokenAccountInfo) {
+                    // Token accounts store their amount as a u64 (8 bytes)
+                    const amount = tokenAccountInfo.data.readBigUInt64LE(64);
+                    const balance = Number(amount) / 1_000_000; // USDC has 6 decimals
+                    console.log('Calculated Balance:', balance, 'USDC');
+                    setEscrowBalance(balance);
+                } else {
+                    console.log('Token account not found');
+                    setEscrowBalance(0);
+                }
             } catch (err) {
                 console.error('Error fetching compliance escrow:', err);
                 setEscrowBalance(0);
@@ -158,10 +174,9 @@ export function MakeRevenuePaymentButton({ program, merchantPubkey, merchantName
             );
             
             // Get GOV's USDC ATA
-            const theManUsdcAta = getAssociatedTokenAddressSync(
-                USDC_DEVNET_MINT,
+            const theManUsdcAta = await findAssociatedTokenAddress(
                 GOV,
-                false
+                USDC_DEVNET_MINT
             );
 
             // Call the make_revenue_payment instruction

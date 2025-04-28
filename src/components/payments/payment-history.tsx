@@ -2,11 +2,26 @@
 
 import { useConnection } from '@/lib/connection-context';
 import { PublicKey, ParsedTransactionWithMeta, ConfirmedSignatureInfo } from '@solana/web3.js';
-import { getAssociatedTokenAddress } from '@solana/spl-token';
+import { TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { Program, Idl } from '@coral-xyz/anchor';
 import { RefundButton } from './refund-button';
 import toast from 'react-hot-toast';
+
+// Helper function to get associated token address
+async function findAssociatedTokenAddress(
+  walletAddress: PublicKey,
+  tokenMintAddress: PublicKey
+): Promise<PublicKey> {
+  return (await PublicKey.findProgramAddress(
+    [
+      walletAddress.toBuffer(),
+      TOKEN_PROGRAM_ID.toBuffer(),
+      tokenMintAddress.toBuffer(),
+    ],
+    ASSOCIATED_TOKEN_PROGRAM_ID
+  ))[0];
+}
 
 interface PaymentHistoryProps {
     program: Program<Idl>;
@@ -172,10 +187,9 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
     // Function to fetch payments
     const fetchPayments = useCallback(async (beforeSignature?: string): Promise<Payment[]> => {
         try {
-            const merchantUsdcAta = await getAssociatedTokenAddress(
-                isDevnet ? USDC_MINT_DEVNET : USDC_MINT_MAINNET,
+            const merchantUsdcAta = await findAssociatedTokenAddress(
                 merchantPubkey,
-                true
+                isDevnet ? USDC_MINT_DEVNET : USDC_MINT_MAINNET
             );
 
             console.log('Fetching payments for ATA:', merchantUsdcAta.toString());
@@ -278,10 +292,9 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
 
     const setupPaymentListener = useCallback(async () => {
         try {
-            const merchantUsdcAta = await getAssociatedTokenAddress(
-                isDevnet ? USDC_MINT_DEVNET : USDC_MINT_MAINNET,
+            const merchantUsdcAta = await findAssociatedTokenAddress(
                 merchantPubkey,
-                true
+                isDevnet ? USDC_MINT_DEVNET : USDC_MINT_MAINNET
             );
 
             // Initial fetch of balance and payments
