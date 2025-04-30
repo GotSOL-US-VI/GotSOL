@@ -8,90 +8,6 @@
   },
   "instructions": [
     {
-      "name": "create_employee",
-      "discriminator": [
-        87,
-        175,
-        18,
-        124,
-        24,
-        81,
-        207,
-        40
-      ],
-      "accounts": [
-        {
-          "name": "merchant",
-          "writable": true
-        },
-        {
-          "name": "employee",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  101,
-                  109,
-                  112,
-                  108,
-                  111,
-                  121,
-                  101,
-                  101
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "merchant"
-              },
-              {
-                "kind": "account",
-                "path": "employee_pubkey"
-              }
-            ]
-          }
-        },
-        {
-          "name": "employee_pubkey"
-        },
-        {
-          "name": "payer",
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "system_program",
-          "address": "11111111111111111111111111111111"
-        }
-      ],
-      "args": [
-        {
-          "name": "name",
-          "type": "string"
-        },
-        {
-          "name": "role",
-          "type": {
-            "defined": {
-              "name": "EmployeeRole"
-            }
-          }
-        },
-        {
-          "name": "custom_limits",
-          "type": {
-            "option": {
-              "defined": {
-                "name": "RoleLimits"
-              }
-            }
-          }
-        }
-      ]
-    },
-    {
       "name": "create_merchant",
       "discriminator": [
         249,
@@ -104,6 +20,15 @@
         156
       ],
       "accounts": [
+        {
+          "name": "fee_payer",
+          "docs": [
+            "Optional fee payer account. If provided, this account will pay for transaction fees."
+          ],
+          "writable": true,
+          "signer": true,
+          "optional": true
+        },
         {
           "name": "owner",
           "writable": true,
@@ -251,602 +176,6 @@
       ]
     },
     {
-      "name": "employee_withdraw",
-      "discriminator": [
-        118,
-        139,
-        145,
-        246,
-        4,
-        254,
-        208,
-        142
-      ],
-      "accounts": [
-        {
-          "name": "employee_signer",
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "merchant",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  109,
-                  101,
-                  114,
-                  99,
-                  104,
-                  97,
-                  110,
-                  116
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "merchant.entity_name",
-                "account": "Merchant"
-              },
-              {
-                "kind": "account",
-                "path": "merchant.owner",
-                "account": "Merchant"
-              }
-            ]
-          }
-        },
-        {
-          "name": "employee",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  101,
-                  109,
-                  112,
-                  108,
-                  111,
-                  121,
-                  101,
-                  101
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "merchant"
-              },
-              {
-                "kind": "account",
-                "path": "employee_signer"
-              }
-            ]
-          }
-        },
-        {
-          "name": "usdc_mint"
-        },
-        {
-          "name": "merchant_usdc_ata",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "account",
-                "path": "merchant"
-              },
-              {
-                "kind": "const",
-                "value": [
-                  6,
-                  221,
-                  246,
-                  225,
-                  215,
-                  101,
-                  161,
-                  147,
-                  217,
-                  203,
-                  225,
-                  70,
-                  206,
-                  235,
-                  121,
-                  172,
-                  28,
-                  180,
-                  133,
-                  237,
-                  95,
-                  91,
-                  55,
-                  145,
-                  58,
-                  140,
-                  245,
-                  133,
-                  126,
-                  255,
-                  0,
-                  169
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "usdc_mint"
-              }
-            ],
-            "program": {
-              "kind": "const",
-              "value": [
-                140,
-                151,
-                37,
-                143,
-                78,
-                36,
-                137,
-                241,
-                187,
-                61,
-                16,
-                41,
-                20,
-                142,
-                13,
-                131,
-                11,
-                90,
-                19,
-                153,
-                218,
-                255,
-                16,
-                132,
-                4,
-                142,
-                123,
-                216,
-                219,
-                233,
-                248,
-                89
-              ]
-            }
-          }
-        },
-        {
-          "name": "house_usdc_ata",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "account",
-                "path": "house"
-              },
-              {
-                "kind": "const",
-                "value": [
-                  6,
-                  221,
-                  246,
-                  225,
-                  215,
-                  101,
-                  161,
-                  147,
-                  217,
-                  203,
-                  225,
-                  70,
-                  206,
-                  235,
-                  121,
-                  172,
-                  28,
-                  180,
-                  133,
-                  237,
-                  95,
-                  91,
-                  55,
-                  145,
-                  58,
-                  140,
-                  245,
-                  133,
-                  126,
-                  255,
-                  0,
-                  169
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "usdc_mint"
-              }
-            ],
-            "program": {
-              "kind": "const",
-              "value": [
-                140,
-                151,
-                37,
-                143,
-                78,
-                36,
-                137,
-                241,
-                187,
-                61,
-                16,
-                41,
-                20,
-                142,
-                13,
-                131,
-                11,
-                90,
-                19,
-                153,
-                218,
-                255,
-                16,
-                132,
-                4,
-                142,
-                123,
-                216,
-                219,
-                233,
-                248,
-                89
-              ]
-            }
-          }
-        },
-        {
-          "name": "house",
-          "writable": true
-        },
-        {
-          "name": "owner",
-          "writable": true
-        },
-        {
-          "name": "owner_usdc_ata",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "account",
-                "path": "owner"
-              },
-              {
-                "kind": "const",
-                "value": [
-                  6,
-                  221,
-                  246,
-                  225,
-                  215,
-                  101,
-                  161,
-                  147,
-                  217,
-                  203,
-                  225,
-                  70,
-                  206,
-                  235,
-                  121,
-                  172,
-                  28,
-                  180,
-                  133,
-                  237,
-                  95,
-                  91,
-                  55,
-                  145,
-                  58,
-                  140,
-                  245,
-                  133,
-                  126,
-                  255,
-                  0,
-                  169
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "usdc_mint"
-              }
-            ],
-            "program": {
-              "kind": "const",
-              "value": [
-                140,
-                151,
-                37,
-                143,
-                78,
-                36,
-                137,
-                241,
-                187,
-                61,
-                16,
-                41,
-                20,
-                142,
-                13,
-                131,
-                11,
-                90,
-                19,
-                153,
-                218,
-                255,
-                16,
-                132,
-                4,
-                142,
-                123,
-                216,
-                219,
-                233,
-                248,
-                89
-              ]
-            }
-          }
-        },
-        {
-          "name": "associated_token_program",
-          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
-        },
-        {
-          "name": "token_program"
-        },
-        {
-          "name": "system_program",
-          "address": "11111111111111111111111111111111"
-        }
-      ],
-      "args": [
-        {
-          "name": "amount",
-          "type": "u64"
-        }
-      ]
-    },
-    {
-      "name": "make_revenue_payment",
-      "discriminator": [
-        138,
-        228,
-        241,
-        31,
-        216,
-        222,
-        66,
-        48
-      ],
-      "accounts": [
-        {
-          "name": "owner",
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "merchant",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  109,
-                  101,
-                  114,
-                  99,
-                  104,
-                  97,
-                  110,
-                  116
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "merchant.entity_name",
-                "account": "Merchant"
-              },
-              {
-                "kind": "account",
-                "path": "owner"
-              }
-            ]
-          }
-        },
-        {
-          "name": "compliance_escrow",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  99,
-                  111,
-                  109,
-                  112,
-                  108,
-                  105,
-                  97,
-                  110,
-                  99,
-                  101,
-                  95,
-                  101,
-                  115,
-                  99,
-                  114,
-                  111,
-                  119
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "merchant"
-              }
-            ]
-          }
-        },
-        {
-          "name": "compliance",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  99,
-                  111,
-                  109,
-                  112,
-                  108,
-                  105,
-                  97,
-                  110,
-                  99,
-                  101
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "merchant"
-              }
-            ]
-          }
-        },
-        {
-          "name": "usdc_mint"
-        },
-        {
-          "name": "gov_account",
-          "writable": true
-        },
-        {
-          "name": "gov_usdc_ata",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "account",
-                "path": "gov_account"
-              },
-              {
-                "kind": "const",
-                "value": [
-                  6,
-                  221,
-                  246,
-                  225,
-                  215,
-                  101,
-                  161,
-                  147,
-                  217,
-                  203,
-                  225,
-                  70,
-                  206,
-                  235,
-                  121,
-                  172,
-                  28,
-                  180,
-                  133,
-                  237,
-                  95,
-                  91,
-                  55,
-                  145,
-                  58,
-                  140,
-                  245,
-                  133,
-                  126,
-                  255,
-                  0,
-                  169
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "usdc_mint"
-              }
-            ],
-            "program": {
-              "kind": "const",
-              "value": [
-                140,
-                151,
-                37,
-                143,
-                78,
-                36,
-                137,
-                241,
-                187,
-                61,
-                16,
-                41,
-                20,
-                142,
-                13,
-                131,
-                11,
-                90,
-                19,
-                153,
-                218,
-                255,
-                16,
-                132,
-                4,
-                142,
-                123,
-                216,
-                219,
-                233,
-                248,
-                89
-              ]
-            }
-          }
-        },
-        {
-          "name": "associated_token_program",
-          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
-        },
-        {
-          "name": "token_program"
-        },
-        {
-          "name": "system_program",
-          "address": "11111111111111111111111111111111"
-        }
-      ],
-      "args": []
-    },
-    {
       "name": "refund",
       "discriminator": [
         2,
@@ -859,6 +188,12 @@
         46
       ],
       "accounts": [
+        {
+          "name": "fee_payer",
+          "writable": true,
+          "signer": true,
+          "optional": true
+        },
         {
           "name": "owner",
           "writable": true,
@@ -1123,25 +458,69 @@
       ]
     },
     {
-      "name": "update_employee",
+      "name": "set_merchant_status",
       "discriminator": [
-        73,
-        4,
-        138,
-        145,
-        85,
-        224,
-        29,
-        186
+        76,
+        172,
+        99,
+        200,
+        233,
+        226,
+        212,
+        102
       ],
       "accounts": [
         {
-          "name": "merchant_owner",
+          "name": "house",
           "writable": true,
           "signer": true
         },
         {
           "name": "merchant",
+          "writable": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "is_active",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "name": "update_refund_limit",
+      "discriminator": [
+        212,
+        77,
+        145,
+        232,
+        91,
+        187,
+        156,
+        100
+      ],
+      "accounts": [
+        {
+          "name": "fee_payer",
+          "docs": [
+            "Optional fee payer account. If provided, this account will pay for transaction fees."
+          ],
+          "writable": true,
+          "signer": true,
+          "optional": true
+        },
+        {
+          "name": "owner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "merchant",
+          "writable": true,
           "pda": {
             "seeds": [
               {
@@ -1164,37 +543,7 @@
               },
               {
                 "kind": "account",
-                "path": "merchant_owner"
-              }
-            ]
-          }
-        },
-        {
-          "name": "employee",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  101,
-                  109,
-                  112,
-                  108,
-                  111,
-                  121,
-                  101,
-                  101
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "merchant"
-              },
-              {
-                "kind": "account",
-                "path": "employee.employee_pubkey",
-                "account": "Employee"
+                "path": "owner"
               }
             ]
           }
@@ -1206,20 +555,8 @@
       ],
       "args": [
         {
-          "name": "role",
-          "type": {
-            "option": {
-              "defined": {
-                "name": "EmployeeRole"
-              }
-            }
-          }
-        },
-        {
-          "name": "is_active",
-          "type": {
-            "option": "bool"
-          }
+          "name": "new_limit",
+          "type": "u64"
         }
       ]
     },
@@ -1236,6 +573,12 @@
         155
       ],
       "accounts": [
+        {
+          "name": "fee_payer",
+          "writable": true,
+          "signer": true,
+          "optional": true
+        },
         {
           "name": "owner",
           "writable": true,
@@ -1569,32 +912,6 @@
   ],
   "accounts": [
     {
-      "name": "Compliance",
-      "discriminator": [
-        70,
-        167,
-        82,
-        216,
-        51,
-        133,
-        241,
-        143
-      ]
-    },
-    {
-      "name": "Employee",
-      "discriminator": [
-        98,
-        238,
-        61,
-        252,
-        130,
-        77,
-        105,
-        67
-      ]
-    },
-    {
       "name": "Merchant",
       "discriminator": [
         71,
@@ -1623,42 +940,16 @@
   ],
   "events": [
     {
-      "name": "EmployeeCreated",
+      "name": "MerchantStatusChanged",
       "discriminator": [
-        148,
-        207,
-        96,
-        70,
-        37,
-        68,
+        17,
+        58,
+        131,
+        180,
+        84,
+        58,
         244,
-        250
-      ]
-    },
-    {
-      "name": "EmployeeUpdated",
-      "discriminator": [
-        15,
-        12,
-        101,
-        103,
-        9,
-        167,
-        130,
-        169
-      ]
-    },
-    {
-      "name": "EmployeeWithdrawal",
-      "discriminator": [
-        83,
-        108,
-        62,
-        7,
-        2,
-        57,
-        71,
-        70
+        14
       ]
     },
     {
@@ -1673,19 +964,6 @@
         57,
         161
       ]
-    },
-    {
-      "name": "RevenuePayment",
-      "discriminator": [
-        127,
-        54,
-        122,
-        247,
-        3,
-        138,
-        243,
-        249
-      ]
     }
   ],
   "errors": [
@@ -1696,253 +974,36 @@
     },
     {
       "code": 6001,
-      "name": "UnauthorizedWithdrawal",
-      "msg": "Unauthorized withdrawal attempt; only the Merchant's Owner can withdraw, or amount is 0."
+      "name": "NotMerchantOwner",
+      "msg": "Only the Merchant's Owner can call this instruction."
     },
     {
       "code": 6002,
+      "name": "ZeroAmountWithdrawal",
+      "msg": "Withdrawal amount must be greater than 0"
+    },
+    {
+      "code": 6003,
       "name": "InvalidMerchantName",
       "msg": "Invalid merchant name: cannot be empty"
     },
     {
-      "code": 6003,
-      "name": "UnauthorizedRefund",
-      "msg": "Unauthorized refund; caller is not the Merchant's Owner, or amount is 0."
-    },
-    {
       "code": 6004,
-      "name": "InactiveEmployee",
-      "msg": "Employee account is inactive"
+      "name": "InactiveMerchant",
+      "msg": "This merchant account is currently inactive. Do not pass the fee payer account in your transaction, and the Owner will pay for the transaction instead."
     },
     {
       "code": 6005,
-      "name": "ExceedsDailyLimit",
-      "msg": "Employee has exceeded their daily transaction limit"
+      "name": "ExceedsRefundLimit",
+      "msg": "Refund amount exceeds the merchant's configured limit"
     },
     {
       "code": 6006,
-      "name": "InvalidEmployeeWallet",
-      "msg": "Invalid employee wallet address format"
-    },
-    {
-      "code": 6007,
-      "name": "InvalidEmployeeName",
-      "msg": "Employee name cannot be empty"
-    },
-    {
-      "code": 6008,
-      "name": "EmployeeAlreadyExists",
-      "msg": "Employee already exists for this merchant"
-    },
-    {
-      "code": 6009,
-      "name": "InvalidEmployeeRole",
-      "msg": "Employee role is invalid for this operation"
-    },
-    {
-      "code": 6010,
-      "name": "EmployeeCannotBeOwner",
-      "msg": "Employee cannot be the same as the merchant owner"
+      "name": "UnauthorizedStatusChange",
+      "msg": "Only the HOUSE account can change merchant status"
     }
   ],
   "types": [
-    {
-      "name": "Compliance",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "lifetime_paid",
-            "type": "u64"
-          },
-          {
-            "name": "last_payment",
-            "type": "i64"
-          },
-          {
-            "name": "bump",
-            "type": "u8"
-          }
-        ]
-      }
-    },
-    {
-      "name": "DailyLimit",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "withdraw_limit",
-            "type": "u64"
-          },
-          {
-            "name": "refund_limit",
-            "type": "u64"
-          },
-          {
-            "name": "withdraw_used",
-            "type": "u64"
-          },
-          {
-            "name": "refund_used",
-            "type": "u64"
-          },
-          {
-            "name": "last_reset",
-            "type": "i64"
-          }
-        ]
-      }
-    },
-    {
-      "name": "Employee",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "merchant",
-            "type": "pubkey"
-          },
-          {
-            "name": "employee_pubkey",
-            "type": "pubkey"
-          },
-          {
-            "name": "role",
-            "type": {
-              "defined": {
-                "name": "EmployeeRole"
-              }
-            }
-          },
-          {
-            "name": "name",
-            "type": "string"
-          },
-          {
-            "name": "daily_limits",
-            "type": {
-              "defined": {
-                "name": "DailyLimit"
-              }
-            }
-          },
-          {
-            "name": "is_active",
-            "type": "bool"
-          },
-          {
-            "name": "bump",
-            "type": "u8"
-          }
-        ]
-      }
-    },
-    {
-      "name": "EmployeeCreated",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "merchant",
-            "type": "pubkey"
-          },
-          {
-            "name": "employee",
-            "type": "pubkey"
-          },
-          {
-            "name": "role",
-            "type": "string"
-          },
-          {
-            "name": "name",
-            "type": "string"
-          }
-        ]
-      }
-    },
-    {
-      "name": "EmployeeRole",
-      "type": {
-        "kind": "enum",
-        "variants": [
-          {
-            "name": "Owner"
-          },
-          {
-            "name": "Manager3"
-          },
-          {
-            "name": "Manager2"
-          },
-          {
-            "name": "Manager1"
-          },
-          {
-            "name": "Employee3"
-          },
-          {
-            "name": "Employee2"
-          },
-          {
-            "name": "Employee1"
-          }
-        ]
-      }
-    },
-    {
-      "name": "EmployeeUpdated",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "merchant",
-            "type": "pubkey"
-          },
-          {
-            "name": "employee",
-            "type": "pubkey"
-          },
-          {
-            "name": "new_role",
-            "type": {
-              "option": "string"
-            }
-          },
-          {
-            "name": "is_active",
-            "type": {
-              "option": "bool"
-            }
-          }
-        ]
-      }
-    },
-    {
-      "name": "EmployeeWithdrawal",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "merchant",
-            "type": "pubkey"
-          },
-          {
-            "name": "employee",
-            "type": "pubkey"
-          },
-          {
-            "name": "amount",
-            "type": "u64"
-          },
-          {
-            "name": "timestamp",
-            "type": "i64"
-          }
-        ]
-      }
-    },
     {
       "name": "Merchant",
       "type": {
@@ -1965,8 +1026,36 @@
             "type": "u64"
           },
           {
+            "name": "is_active",
+            "type": "bool"
+          },
+          {
+            "name": "refund_limit",
+            "type": "u64"
+          },
+          {
             "name": "merchant_bump",
             "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "MerchantStatusChanged",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "merchant",
+            "type": "pubkey"
+          },
+          {
+            "name": "is_active",
+            "type": "bool"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
           }
         ]
       }
@@ -2007,46 +1096,6 @@
           {
             "name": "bump",
             "type": "u8"
-          }
-        ]
-      }
-    },
-    {
-      "name": "RevenuePayment",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "merchant",
-            "type": "pubkey"
-          },
-          {
-            "name": "amount",
-            "type": "u64"
-          },
-          {
-            "name": "timestamp",
-            "type": "i64"
-          },
-          {
-            "name": "lifetime_paid",
-            "type": "u64"
-          }
-        ]
-      }
-    },
-    {
-      "name": "RoleLimits",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "withdraw_limit",
-            "type": "u64"
-          },
-          {
-            "name": "refund_limit",
-            "type": "u64"
           }
         ]
       }
