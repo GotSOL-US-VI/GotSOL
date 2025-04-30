@@ -51,6 +51,7 @@ export function CreateMerchant({ program, onSuccess }: CreateMerchantProps) {
             // Create the merchant using the fee payer
             const methodBuilder = program.methods.createMerchant(name);
             const accounts = {
+                feePayer: null,
                 owner: publicKey,
                 merchant: merchantPda,
                 usdcMint, // devnet USDC mint for now
