@@ -1,6 +1,6 @@
 <mxfile host="Electron" agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/26.2.15 Chrome/134.0.6998.205 Electron/35.2.1 Safari/537.36" version="26.2.15">
   <diagram name="Page-1" id="ixEnn9pW8xHnraaHGQjy">
-    <mxGraphModel dx="815" dy="449" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+    <mxGraphModel dx="1188" dy="654" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -71,19 +71,6 @@
         <mxCell id="qp32YkYb4Xcl16sfedbd-2" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FF8800;" parent="1" vertex="1">
           <mxGeometry x="302.5" y="600" width="310" height="80" as="geometry" />
         </mxCell>
-        <mxCell id="qp32YkYb4Xcl16sfedbd-16" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=0.25;exitDx=0;exitDy=0;entryX=0.048;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;startArrow=classic;startFill=0;endArrow=none;" parent="1" source="qp32YkYb4Xcl16sfedbd-2" target="qp32YkYb4Xcl16sfedbd-5" edge="1">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="270" y="620" />
-              <mxPoint x="270" y="670" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="qp32YkYb4Xcl16sfedbd-17" value="Signs transactions" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="qp32YkYb4Xcl16sfedbd-16" vertex="1" connectable="0">
-          <mxGeometry x="0.3769" y="1" relative="1" as="geometry">
-            <mxPoint x="-51" y="-16" as="offset" />
-          </mxGeometry>
-        </mxCell>
         <mxCell id="qp32YkYb4Xcl16sfedbd-22" value="RPC" style="shape=parallelogram;html=1;strokeWidth=2;perimeter=parallelogramPerimeter;whiteSpace=wrap;rounded=1;arcSize=12;size=0.23;" parent="1" vertex="1">
           <mxGeometry x="732.5" y="700" width="100" height="60" as="geometry" />
         </mxCell>
@@ -116,7 +103,7 @@
         <mxCell id="qp32YkYb4Xcl16sfedbd-28" value="&lt;font style=&quot;color: rgb(0, 0, 0); font-size: 15px;&quot;&gt;Owner + Accounts&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#06FFFF;" parent="1" vertex="1">
           <mxGeometry x="360" y="530" width="107.5" height="80" as="geometry" />
         </mxCell>
-        <mxCell id="PKaQDn718l8RqTAJyzzs-3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.25;exitY=1;exitDx=0;exitDy=0;entryX=0.25;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1">
+        <mxCell id="PKaQDn718l8RqTAJyzzs-3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.25;exitY=1;exitDx=0;exitDy=0;entryX=0.25;entryY=1;entryDx=0;entryDy=0;" parent="1" edge="1">
           <mxGeometry relative="1" as="geometry">
             <mxPoint x="477.505" y="630" as="sourcePoint" />
             <mxPoint x="387.505" y="610" as="targetPoint" />
@@ -263,17 +250,29 @@
             <mxPoint x="-1" y="-4" as="offset" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="PKaQDn718l8RqTAJyzzs-1" value="&lt;font&gt;KYC AML OFAC&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#000000;fontColor=#FFFFFF;" vertex="1" parent="1">
+        <mxCell id="PKaQDn718l8RqTAJyzzs-1" value="&lt;font&gt;KYC AML OFAC&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#000000;fontColor=#FFFFFF;" parent="1" vertex="1">
           <mxGeometry x="340" y="480" width="100" height="20" as="geometry" />
         </mxCell>
-        <mxCell id="PKaQDn718l8RqTAJyzzs-2" value="Para MPC Social Sign-on" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=15;fontColor=#000000;" vertex="1" parent="1">
+        <mxCell id="PKaQDn718l8RqTAJyzzs-2" value="Para MPC Social Sign-on" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=15;fontColor=#000000;" parent="1" vertex="1">
           <mxGeometry x="362.5" y="640" width="190" height="30" as="geometry" />
         </mxCell>
-        <mxCell id="PKaQDn718l8RqTAJyzzs-4" value="Pays" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=12;fontColor=#000000;labelBackgroundColor=#FF8800;" vertex="1" parent="1">
+        <mxCell id="PKaQDn718l8RqTAJyzzs-4" value="Pays" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=12;fontColor=#000000;labelBackgroundColor=#FF8800;" parent="1" vertex="1">
           <mxGeometry x="393.13" y="615" width="50" height="30" as="geometry" />
         </mxCell>
-        <mxCell id="PKaQDn718l8RqTAJyzzs-7" value="Constraint-based Security" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#000000;fontColor=#FFFFFF;" vertex="1" parent="1">
+        <mxCell id="PKaQDn718l8RqTAJyzzs-7" value="Constraint-based Security" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#000000;fontColor=#FFFFFF;" parent="1" vertex="1">
           <mxGeometry x="502.5" y="820" width="150" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="NqRsfzHgHO7xVapNRgMl-1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.25;entryDx=0;entryDy=0;" parent="1" target="qp32YkYb4Xcl16sfedbd-2" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="270" y="670" as="sourcePoint" />
+            <mxPoint x="270" y="610" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="270" y="620" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="NqRsfzHgHO7xVapNRgMl-5" value="&lt;span style=&quot;font-family: Helvetica; font-size: 11px; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: 400; letter-spacing: normal; orphans: 2; text-align: center; text-indent: 0px; text-transform: none; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; white-space: nowrap; text-decoration-thickness: initial; text-decoration-style: initial; text-decoration-color: initial; float: none; display: inline !important;&quot;&gt;Signs transactions&lt;/span&gt;" style="text;whiteSpace=wrap;html=1;labelBackgroundColor=default;fontColor=default;fontFamily=Helvetica;fontSize=11;resizable=0;" parent="1" vertex="1">
+          <mxGeometry x="170" y="630" width="120" height="40" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>
