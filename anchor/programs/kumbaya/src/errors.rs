@@ -5,33 +5,45 @@ pub enum CustomError {
     #[msg("Insufficient funds for withdrawal; input amount is greater than available balance.")]
     InsufficientFunds,
 
-    #[msg("Unauthorized withdrawal attempt; only the Merchant's Owner can withdraw, or amount is 0.")]
-    UnauthorizedWithdrawal,
+    #[msg("Only the Merchant's Owner can call this instruction.")]
+    NotMerchantOwner,
+
+    #[msg("Withdrawal amount must be greater than 0")]
+    ZeroAmountWithdrawal,
 
     #[msg("Invalid merchant name: cannot be empty")]
     InvalidMerchantName,
 
-    #[msg("Unauthorized refund; caller is not the Merchant's Owner, or amount is 0.")]
-    UnauthorizedRefund,
+    #[msg("This merchant account is currently inactive. Do not pass the fee payer account in your transaction, and the Owner will pay for the transaction instead.")]
+    InactiveMerchant,
 
-    #[msg("Employee account is inactive")]
-    InactiveEmployee,
+    #[msg("Refund amount exceeds the merchant's configured limit")]
+    ExceedsRefundLimit,
 
-    #[msg("Employee has exceeded their daily transaction limit")]
-    ExceedsDailyLimit,
+    #[msg("Only the HOUSE account can change merchant status")]
+    UnauthorizedStatusChange,
     
-    #[msg("Invalid employee wallet address format")]
-    InvalidEmployeeWallet,
-    
-    #[msg("Employee name cannot be empty")]
-    InvalidEmployeeName,
-    
-    #[msg("Employee already exists for this merchant")]
-    EmployeeAlreadyExists,
-    
-    #[msg("Employee role is invalid for this operation")]
-    InvalidEmployeeRole,
-    
-    #[msg("Employee cannot be the same as the merchant owner")]
-    EmployeeCannotBeOwner,
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //////////////////// LEAVING THIS CODE HERE FOR A LATER UPGRADE, SAVING SPACE ON-CHAIN FOR NOW ///////////////////////////////
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // #[msg("Employee account is inactive")]
+    // InactiveEmployee,
+
+    // #[msg("Employee has exceeded their daily transaction limit")]
+    // ExceedsDailyLimit,
+
+    // #[msg("Invalid employee wallet address format")]
+    // InvalidEmployeeWallet,
+
+    // #[msg("Employee name cannot be empty")]
+    // InvalidEmployeeName,
+
+    // #[msg("Employee already exists for this merchant")]
+    // EmployeeAlreadyExists,
+
+    // #[msg("Employee role is invalid for this operation")]
+    // InvalidEmployeeRole,
+
+    // #[msg("Employee cannot be the same as the merchant owner")]
+    // EmployeeCannotBeOwner,
 }

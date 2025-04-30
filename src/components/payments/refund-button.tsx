@@ -267,6 +267,7 @@ export function RefundButton({ program, merchantPubkey, payment, onSuccess, isDe
             const methodBuilder = program.methods
                 .refund(signaturePrefix, refundAmount)  // Pass the string directly
                 .accountsPartial({
+                    // feePayer: null,
                     owner: publicKey,
                     merchant: merchantPda,
                     merchantUsdcAta: merchantUsdcAta,

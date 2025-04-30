@@ -9,8 +9,8 @@ mod events;
 mod state;
 
 use crate::context::*;
-use crate::state::{EmployeeRole, RoleLimits};
-use crate::events::{EmployeeCreated, EmployeeUpdated, EmployeeWithdrawal, RevenuePayment};
+// use crate::state::{EmployeeRole, RoleLimits};
+// use crate::events::{EmployeeCreated, EmployeeUpdated, EmployeeWithdrawal, RevenuePayment};
 
 declare_id!("RKAxBK5mBxYta3FUfMLHafMj8xakd8PLsH3PXFa773r");
 
@@ -33,65 +33,79 @@ pub mod kumbaya {
         Ok(())
     }
 
-    pub fn make_revenue_payment(ctx: Context<MakeRevenuePayment>) -> Result<()> {
-        // Get the amount before making the payment
-        let amount = ctx.accounts.compliance_escrow.amount;
-        
-        // Make the payment
-        ctx.accounts.make_revenue_payment(&ctx.bumps)?;
-        
-        // Emit the event after the payment is made
-        emit!(RevenuePayment {
-            merchant: ctx.accounts.merchant.key(),
-            amount,
-            timestamp: Clock::get()?.unix_timestamp,
-            lifetime_paid: ctx.accounts.compliance.lifetime_paid,
-        });
-        
+    pub fn set_merchant_status(ctx: Context<SetMerchantStatus>, is_active: bool) -> Result<()> {
+        ctx.accounts.set_status(is_active)?;
         Ok(())
     }
 
-    pub fn create_employee(
-        ctx: Context<CreateEmployee>, 
-        name: String, 
-        role: EmployeeRole,
-        custom_limits: Option<RoleLimits>
-    ) -> Result<()> {
-        ctx.accounts.init(role, name.clone(), custom_limits)?;
-
-        emit!(EmployeeCreated {
-            merchant: ctx.accounts.merchant.key(),
-            employee: ctx.accounts.employee_pubkey.key(),
-            role: format!("{:?}", role),
-            name,
-        });
-
-        Ok(())
-    }
-
-    pub fn update_employee(ctx: Context<UpdateEmployee>, role: Option<EmployeeRole>, is_active: Option<bool>) -> Result<()> {
-        ctx.accounts.update(role, is_active)?;
-
-        emit!(EmployeeUpdated {
-            merchant: ctx.accounts.merchant.key(),
-            employee: ctx.accounts.employee.employee_pubkey,
-            new_role: role.map(|r| format!("{:?}", r)),
-            is_active,
-        });
-
-        Ok(())
-    }
-
-    pub fn employee_withdraw(ctx: Context<EmployeeWithdrawUSDC>, amount: u64) -> Result<()> {
-        ctx.accounts.withdraw(amount)?;
-
-        emit!(EmployeeWithdrawal {
-            merchant: ctx.accounts.merchant.key(),
-            employee: ctx.accounts.employee_signer.key(),
-            amount,
-            timestamp: Clock::get()?.unix_timestamp,
-        });
-
+    pub fn update_refund_limit(ctx: Context<UpdateRefundLimit>, new_limit: u64) -> Result<()> {
+        ctx.accounts.update_limit(new_limit)?;
         Ok(())
     }
 }
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////// LEAVING THIS CODE HERE FOR A LATER UPGRADE, SAVING SPACE ON-CHAIN FOR NOW ///////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// pub fn make_revenue_payment(ctx: Context<MakeRevenuePayment>) -> Result<()> {
+//     // Get the amount before making the payment
+//     let amount = ctx.accounts.compliance_escrow.amount;
+
+//     // Make the payment
+//     ctx.accounts.make_revenue_payment(&ctx.bumps)?;
+
+//     // Emit the event after the payment is made
+//     emit!(RevenuePayment {
+//         merchant: ctx.accounts.merchant.key(),
+//         amount,
+//         timestamp: Clock::get()?.unix_timestamp,
+//         lifetime_paid: ctx.accounts.compliance.lifetime_paid,
+//     });
+
+//     Ok(())
+// }
+
+// pub fn create_employee(
+//     ctx: Context<CreateEmployee>,
+//     name: String,
+//     role: EmployeeRole,
+//     custom_limits: Option<RoleLimits>
+// ) -> Result<()> {
+//     ctx.accounts.init(role, name.clone(), custom_limits)?;
+
+//     emit!(EmployeeCreated {
+//         merchant: ctx.accounts.merchant.key(),
+//         employee: ctx.accounts.employee_pubkey.key(),
+//         role: format!("{:?}", role),
+//         name,
+//     });
+
+//     Ok(())
+// }
+
+// pub fn update_employee(ctx: Context<UpdateEmployee>, role: Option<EmployeeRole>, is_active: Option<bool>) -> Result<()> {
+//     ctx.accounts.update(role, is_active)?;
+
+//     emit!(EmployeeUpdated {
+//         merchant: ctx.accounts.merchant.key(),
+//         employee: ctx.accounts.employee.employee_pubkey,
+//         new_role: role.map(|r| format!("{:?}", r)),
+//         is_active,
+//     });
+
+//     Ok(())
+// }
+
+// pub fn employee_withdraw(ctx: Context<EmployeeWithdrawUSDC>, amount: u64) -> Result<()> {
+//     ctx.accounts.withdraw(amount)?;
+
+//     emit!(EmployeeWithdrawal {
+//         merchant: ctx.accounts.merchant.key(),
+//         employee: ctx.accounts.employee_signer.key(),
+//         amount,
+//         timestamp: Clock::get()?.unix_timestamp,
+//     });
+
+//     Ok(())
+// }
