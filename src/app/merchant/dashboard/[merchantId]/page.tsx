@@ -125,14 +125,13 @@ export default function MerchantDashboardPage({ params }: { params: { merchantId
           <div>
             <div className="card bg-base-300 shadow-xl">
               <div className="card-body p-4">
-                <WithdrawFunds
-                  merchantPubkey={merchantPubkey}
-                  isDevnet={true}
-                  onBalanceUpdate={setMerchantBalance}
-                  onOwnerBalanceUpdate={setOwnerBalance}
-                  merchantBalance={merchantBalance}
-                  ownerBalance={ownerBalance}
-                />
+                {owner && merchantPubkey && (
+                  <WithdrawFunds
+                    merchantPubkey={merchantPubkey}
+                    ownerPubkey={owner}
+                    isDevnet={true}
+                  />
+                )}
               </div>
             </div>
           </div>

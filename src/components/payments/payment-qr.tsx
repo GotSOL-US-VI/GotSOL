@@ -90,7 +90,7 @@ export function PaymentQR({ merchantPubkey, isDevnet = true }: PaymentQRProps) {
       // TODO: Implement QR code generation using Para's payment API
       // This will need to be implemented based on your specific requirements
       // and Para's available methods for generating payment QR codes
-      const result = {
+      const result: { qrCode: string; error: { message: string } | null } = {
         qrCode: 'placeholder-qr-code',
         error: null
       };

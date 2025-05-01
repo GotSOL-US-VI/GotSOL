@@ -6,11 +6,13 @@ import { TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID } from "@solana/spl-token
 import { useWallet } from "@getpara/react-sdk";
 import toast from 'react-hot-toast';
 import { formatSolscanDevnetLink } from '@/utils/format-transaction-link';
+import { Program, Idl } from '@coral-xyz/anchor';
 
 const USDC_DEVNET_MINT = new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU');
 const GOV = new PublicKey('7WxjvbhBgAcWfTnL8yQy6iP1vF4n5fKPc7tL7fMYvSsc');
 
 interface MakeRevenuePaymentButtonProps {
+    program: Program<Idl>;
     merchantPubkey: PublicKey;
     merchantName: string;
     onSuccess?: () => void;
@@ -31,7 +33,7 @@ async function findAssociatedTokenAddress(
     ))[0];
 }
 
-export function MakeRevenuePaymentButton({ merchantPubkey, merchantName, onSuccess }: MakeRevenuePaymentButtonProps) {
+export function MakeRevenuePaymentButton({ program, merchantPubkey, merchantName, onSuccess }: MakeRevenuePaymentButtonProps) {
     const { data: wallet } = useWallet();
     const [isLoading, setIsLoading] = useState(false);
     const [isRefreshing, setIsRefreshing] = useState(false);

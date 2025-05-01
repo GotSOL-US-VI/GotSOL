@@ -3,13 +3,11 @@ import { useConnection } from '@/lib/connection-context';
 import * as anchor from "@coral-xyz/anchor";
 import { Program, Idl, BN } from '@coral-xyz/anchor';
 import { PublicKey } from '@solana/web3.js';
-import { usePara } from '../para/para-provider';
 import { TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import toast from 'react-hot-toast';
-import bs58 from 'bs58';
 import { env } from '@/utils/env';
-import { executeTransactionWithFeePayer } from '@/utils/execute-transaction';
 import { formatSolscanDevnetLink } from '@/utils/format-transaction-link';
+import { useWallet } from "@getpara/react-sdk";
 
 // Helper function to get associated token address
 async function findAssociatedTokenAddress(
@@ -51,12 +49,12 @@ const USDC_MINT_MAINNET = new PublicKey(env.usdcMint);
 
 export function RefundButton({ program, merchantPubkey, payment, onSuccess, isDevnet = true }: RefundButtonProps) {
     const { connection } = useConnection();
-    const { address, signer } = usePara();
+    const { data: wallet } = useWallet();
     const [isLoading, setIsLoading] = useState(false);
-    const publicKey = address ? new PublicKey(address) : null;
+    const publicKey = wallet?.address ? new PublicKey(wallet.address) : null;
 
     const handleRefund = async () => {
-        if (!publicKey || !signer) {
+        if (!publicKey || !wallet) {
             toast.error('Please connect your wallet');
             return;
         }
@@ -263,11 +261,10 @@ export function RefundButton({ program, merchantPubkey, payment, onSuccess, isDe
                 recipient: payment.recipient.toString()
             });
 
-            // Build the transaction
-            const methodBuilder = program.methods
-                .refund(signaturePrefix, refundAmount)  // Pass the string directly
-                .accountsPartial({
-                    // feePayer: null,
+            // Send the transaction
+            const txid = await program.methods
+                .refund(signaturePrefix, refundAmount)
+                .accounts({
                     owner: publicKey,
                     merchant: merchantPda,
                     merchantUsdcAta: merchantUsdcAta,
@@ -278,51 +275,8 @@ export function RefundButton({ program, merchantPubkey, payment, onSuccess, isDe
                     tokenProgram: TOKEN_PROGRAM_ID,
                     associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
                     systemProgram: anchor.web3.SystemProgram.programId,
-                });
-
-            // Check if recipient's ATA exists
-            const recipientAtaInfo = await program.provider.connection.getAccountInfo(recipientUsdcAta);
-
-            // Simulate first
-            try {
-                const simulation = await methodBuilder.simulate();
-                console.log('Simulation success:', simulation);
-            } catch (simError: any) {
-                // Still log the full error details for debugging
-                console.error('Simulation error details:', {
-                    error: simError,
-                    logs: simError.logs,
-                    message: simError.message
-                });
-
-                // Get logs from simulation response
-                const simulationLogs = simError?.simulationResponse?.logs || [];
-
-                // Check if any log contains "already in use"
-                if (simulationLogs.some((log: string) => log.includes('already in use'))) {
-                    throw new Error('REFUND_ALREADY_PROCESSED');
-                }
-
-                // For other simulation errors, throw a generic error
-                throw new Error('SIMULATION_FAILED');
-            }
-
-            // Create the accounts object for executeTransactionWithFeePayer
-            const accounts = {
-                owner: publicKey,
-                merchant: merchantPda,
-                merchantUsdcAta: merchantUsdcAta,
-                recipientUsdcAta: recipientUsdcAta,
-                refundRecord: refundRecord,
-                usdcMint: usdcMint,
-                recipient: payment.recipient,
-                tokenProgram: TOKEN_PROGRAM_ID,
-                associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
-                systemProgram: anchor.web3.SystemProgram.programId,
-            };
-
-            // Execute the transaction with the fee payer
-            const txid = await executeTransactionWithFeePayer(program, methodBuilder, accounts, signer);
+                })
+                .rpc();
 
             console.log('Refund successful:', txid);
             

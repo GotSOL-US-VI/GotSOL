@@ -109,45 +109,117 @@ export function PaymentHistory({ merchantPubkey, isDevnet = true, onBalanceUpdat
 
                             // Handle both parsed and partially decoded instructions
                             if ('parsed' in instruction) {
-                                const { type, info } = instruction.parsed;
+                                // Skip non-token instructions
+                                if (instruction.program !== 'spl-token') {
+                                    return false;
+                                }
+
+                                // Log the full parsed instruction for debugging
+                                console.log('Full parsed instruction:', JSON.stringify(instruction.parsed, null, 2));
+
+                                // Ensure we have the parsed info object
+                                if (!instruction.parsed || typeof instruction.parsed !== 'object') {
+                                    return false;
+                                }
+
+                                // Handle both string type and object parsed data
+                                const parsedData = typeof instruction.parsed === 'string' 
+                                    ? { type: instruction.parsed } 
+                                    : instruction.parsed;
+
+                                // Check if we have the required info
+                                if (!('type' in parsedData)) {
+                                    console.log('Missing type in parsed instruction:', parsedData);
+                                    return false;
+                                }
+
+                                const { type } = parsedData;
                                 
                                 // Check if it's a transfer or transferChecked instruction
                                 const isTransferType = type === 'transfer' || type === 'transferChecked';
-                                const isToMerchant = info.destination === merchantUsdcAta.toString();
+                                if (!isTransferType) {
+                                    return false;
+                                }
+
+                                // For transferChecked instructions, the structure might be different
+                                let destination: string | undefined;
+                                let authority: string | undefined;
+                                let amount: string | undefined;
+
+                                if ('info' in parsedData && parsedData.info) {
+                                    // Standard token instruction format
+                                    const info = parsedData.info;
+                                    destination = info.destination;
+                                    
+                                    // Handle different authority fields
+                                    authority = info.authority || info.multisigAuthority || info.source;
+                                    
+                                    // Handle different amount formats
+                                    if (info.tokenAmount) {
+                                        amount = info.tokenAmount.amount;
+                                    } else if (info.amount) {
+                                        amount = info.amount;
+                                    }
+                                } else if ('source' in parsedData) {
+                                    // Alternative format sometimes used
+                                    destination = parsedData.destination;
+                                    authority = parsedData.source;
+                                    amount = parsedData.amount;
+                                }
+
+                                if (!destination) {
+                                    console.log('Missing destination in transfer instruction:', parsedData);
+                                    return false;
+                                }
+
+                                const isToMerchant = destination === merchantUsdcAta.toString();
                                 
                                 console.log('Checking parsed instruction:', {
                                     type,
                                     program: instruction.program,
-                                    destination: info.destination,
+                                    destination,
+                                    authority,
+                                    amount,
                                     merchantAta: merchantUsdcAta.toString(),
                                     isTransferType,
                                     isToMerchant,
-                                    authority: info.authority,
-                                    info: info
+                                    rawParsedData: parsedData
                                 });
+                                
+                                // Store the extracted data in the instruction for later use
+                                (instruction as any)._extractedData = {
+                                    authority,
+                                    amount,
+                                    destination
+                                };
                                 
                                 return isTransferType && isToMerchant;
                             } else {
                                 // For partially decoded instructions, check if it's a token program instruction
                                 const isTokenProgram = instruction.programId.toString() === TOKEN_PROGRAM_ID.toString();
                                 
-                                if (isTokenProgram) {
-                                    console.log('Found token program instruction:', instruction);
-                                    
-                                    // Check if this is a transfer by examining the accounts
-                                    const accounts = instruction.accounts || [];
-                                    const isToMerchant = accounts.some(acc => acc.toString() === merchantUsdcAta.toString());
-                                    
-                                    if (isToMerchant) {
-                                        console.log('Found potential transfer to merchant:', {
-                                            accounts: accounts.map(acc => acc.toString()),
-                                            data: instruction.data
-                                        });
-                                    }
-                                    
-                                    return isToMerchant;
+                                if (!isTokenProgram) {
+                                    return false;
                                 }
-                                return false;
+
+                                // Check if this is a transfer by examining the accounts
+                                const accounts = instruction.accounts || [];
+                                if (accounts.length === 0) {
+                                    return false;
+                                }
+
+                                const isToMerchant = accounts.some(acc => 
+                                    acc && acc.toString() === merchantUsdcAta.toString()
+                                );
+                                
+                                if (isToMerchant) {
+                                    console.log('Found potential transfer to merchant:', {
+                                        accounts: accounts.map(acc => acc.toString()),
+                                        data: instruction.data
+                                    });
+                                }
+                                
+                                return isToMerchant;
                             }
                         }
                     );
@@ -159,31 +231,41 @@ export function PaymentHistory({ merchantPubkey, isDevnet = true, onBalanceUpdat
 
                     try {
                         let authority: string | undefined;
-                        let amount: number | undefined;
+                        let amount: string | undefined;
 
                         if ('parsed' in transferInstruction) {
-                            const { info } = transferInstruction.parsed;
-                            authority = info.authority;
-                            amount = Number(info.amount);
+                            // Get the data we extracted earlier
+                            const extractedData = (transferInstruction as any)._extractedData;
+                            authority = extractedData?.authority;
+                            amount = extractedData?.amount;
+
+                            // Additional logging for debugging
+                            console.log('Extracted transfer data:', {
+                                authority,
+                                amount,
+                                rawInstruction: transferInstruction.parsed
+                            });
                         } else {
                             // For partially decoded instructions, try to get the authority from the accounts
-                            // Typically, the authority (sender) is the first account in a transfer instruction
                             authority = transferInstruction.accounts[0]?.toString();
-                            
-                            // For partially decoded instructions, we need to parse the amount from the instruction data
-                            // This depends on your specific program's instruction format
-                            console.log('Partially decoded instruction data:', transferInstruction.data);
+                            console.log('Partially decoded instruction data:', {
+                                accounts: transferInstruction.accounts.map(acc => acc.toString()),
+                                data: transferInstruction.data
+                            });
                         }
 
-                        if (!authority || typeof authority !== 'string') {
-                            console.log('Invalid or missing authority in transaction:', tx.transaction.signatures[0]);
+                        if (!authority) {
+                            console.log('Invalid or missing authority in transaction:', tx.transaction.signatures[0], {
+                                instruction: transferInstruction,
+                                parsed: 'parsed' in transferInstruction ? transferInstruction.parsed : undefined
+                            });
                             return null;
                         }
 
                         // Create payment object with additional error handling
                         const payment = {
                             signature: tx.transaction.signatures[0],
-                            amount: (amount || 0) / Math.pow(10, 6), // Convert from USDC decimals
+                            amount: amount ? Number(amount) / Math.pow(10, 6) : 0, // Convert from USDC decimals
                             memo: tx.meta?.logMessages?.find(log => log.includes('Memo:'))?.replace('Program log: Memo:', '').trim() || null,
                             timestamp: tx.blockTime ? tx.blockTime * 1000 : Date.now(),
                             sender: new PublicKey(authority)

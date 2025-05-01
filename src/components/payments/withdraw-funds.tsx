@@ -1,24 +1,31 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import { useConnection } from '@/lib/connection-context';
 import { PublicKey } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import toast from 'react-hot-toast';
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
+import { useUsdcBalance } from '@/hooks/use-usdc-balance';
+import { useQueryClient } from '@tanstack/react-query';
+import { useWallet, useClient } from "@getpara/react-sdk";
+import * as anchor from "@coral-xyz/anchor";
+import { Program, Idl } from '@coral-xyz/anchor';
+import { formatSolscanDevnetLink } from '@/utils/format-transaction-link';
+import { ParaSolanaWeb3Signer } from "@getpara/solana-web3.js-v1-integration";
+import { getKumbayaProgram } from '../../../anchor/src/kumbaya-exports';
 
 interface WithdrawFundsProps {
   merchantPubkey: PublicKey;
   ownerPubkey: PublicKey;
   isDevnet?: boolean;
   onSuccess?: () => void;
-  onBalanceUpdate?: (balance: number) => void;
-  onOwnerBalanceUpdate?: (balance: number) => void;
 }
 
 // USDC mint addresses
 const USDC_MINT = new PublicKey('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v');
 const USDC_DEVNET_MINT = new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU');
+const HOUSE = new PublicKey('Hth4EBxLWJSoRWj7raCKoniuzcvXt8MUFgGKty3B66ih');
 
 // Helper function to get associated token address
 async function findAssociatedTokenAddress(
@@ -39,85 +46,30 @@ export function WithdrawFunds({
   merchantPubkey, 
   ownerPubkey,
   isDevnet = true,
-  onSuccess, 
-  onBalanceUpdate,
-  onOwnerBalanceUpdate 
+  onSuccess
 }: WithdrawFundsProps) {
   const { connection } = useConnection();
-  const [localMerchantBalance, setLocalMerchantBalance] = useState<number>(0);
-  const [localOwnerBalance, setLocalOwnerBalance] = useState<number>(0);
+  const { data: wallet } = useWallet();
+  const para = useClient();
+  const queryClient = useQueryClient();
   const [withdrawAmount, setWithdrawAmount] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [showBalances, setShowBalances] = useState(true);
   const [isBalancesVisible, setIsBalancesVisible] = useState(true);
 
-  const fetchBalances = useCallback(async () => {
-    if (!merchantPubkey || !ownerPubkey || !connection) return;
+  // Use the new hook for both merchant and owner balances
+  const { data: merchantBalance = 0, isLoading: isMerchantBalanceLoading } = useUsdcBalance({
+    address: merchantPubkey,
+    isDevnet
+  });
 
-    try {
-      setIsLoading(true);
-      setError(null);
-
-      // Get the USDC mint based on network
-      const usdcMint = isDevnet ? USDC_DEVNET_MINT : USDC_MINT;
-
-      // Get ATAs for both merchant and owner
-      const [merchantUsdcAta, ownerUsdcAta] = await Promise.all([
-        findAssociatedTokenAddress(merchantPubkey, usdcMint),
-        findAssociatedTokenAddress(ownerPubkey, usdcMint)
-      ]);
-
-      console.log('Fetching balances for:', {
-        merchantPubkey: merchantPubkey.toString(),
-        ownerPubkey: ownerPubkey.toString(),
-        merchantUsdcAta: merchantUsdcAta.toString(),
-        ownerUsdcAta: ownerUsdcAta.toString(),
-        isDevnet
-      });
-
-      // Get account infos to check if ATAs exist
-      const [merchantAtaInfo, ownerAtaInfo] = await Promise.all([
-        connection.getAccountInfo(merchantUsdcAta),
-        connection.getAccountInfo(ownerUsdcAta)
-      ]);
-
-      // Fetch balances for existing accounts
-      const [merchantBalance, ownerBalance] = await Promise.all([
-        merchantAtaInfo ? connection.getTokenAccountBalance(merchantUsdcAta).catch(() => null) : Promise.resolve(null),
-        ownerAtaInfo ? connection.getTokenAccountBalance(ownerUsdcAta).catch(() => null) : Promise.resolve(null)
-      ]);
-
-      // Update local state
-      const merchantUsdcBalance = merchantBalance ? Number(merchantBalance.value.uiAmount) : 0;
-      const ownerUsdcBalance = ownerBalance ? Number(ownerBalance.value.uiAmount) : 0;
-
-      setLocalMerchantBalance(merchantUsdcBalance);
-      setLocalOwnerBalance(ownerUsdcBalance);
-
-      // Update parent components if callbacks provided
-      if (onBalanceUpdate) {
-        onBalanceUpdate(merchantUsdcBalance);
-      }
-      if (onOwnerBalanceUpdate) {
-        onOwnerBalanceUpdate(ownerUsdcBalance);
-      }
-
-    } catch (err) {
-      console.error('Error fetching balances:', err);
-      setError('Failed to fetch balances');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [connection, merchantPubkey, ownerPubkey, isDevnet, onBalanceUpdate, onOwnerBalanceUpdate]);
-
-  // Fetch balances on mount and when dependencies change
-  useEffect(() => {
-    fetchBalances();
-  }, [fetchBalances]);
+  const { data: ownerBalance = 0, isLoading: isOwnerBalanceLoading } = useUsdcBalance({
+    address: ownerPubkey,
+    isDevnet
+  });
 
   const handleWithdraw = async () => {
-    if (!merchantPubkey || !ownerPubkey || !connection) {
+    if (!wallet?.address || !connection || !para) {
       setError('Please connect your wallet');
       return;
     }
@@ -127,7 +79,7 @@ export function WithdrawFunds({
       return;
     }
 
-    if (localMerchantBalance === 0 || parseFloat(withdrawAmount) > localMerchantBalance) {
+    if (merchantBalance === 0 || parseFloat(withdrawAmount) > merchantBalance) {
       setError('Insufficient balance');
       return;
     }
@@ -136,14 +88,81 @@ export function WithdrawFunds({
     setError(null);
 
     try {
-      // TODO: Implement withdrawal using Para's API
-      // This will need to be implemented based on your specific requirements
-      // and Para's available methods for withdrawing funds
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
+      // Create Para Solana signer
+      const solanaSigner = new ParaSolanaWeb3Signer(para, connection);
 
-      toast.success('Withdrawal successful!');
+      // Create the provider with Para signer
+      const provider = new anchor.AnchorProvider(
+        connection,
+        {
+          publicKey: new PublicKey(wallet.address),
+          signTransaction: solanaSigner.signTransaction.bind(solanaSigner),
+          signAllTransactions: async (txs) => {
+            return Promise.all(txs.map(tx => solanaSigner.signTransaction(tx)));
+          }
+        },
+        { commitment: 'confirmed' }
+      );
+
+      // Get the program using the helper function
+      const program = getKumbayaProgram(provider);
+
+      // Convert amount to USDC decimals (6 decimals)
+      const withdrawAmountU64 = Math.floor(parseFloat(withdrawAmount) * 1_000_000);
+
+      // Get the USDC mint based on network
+      const usdcMint = isDevnet ? USDC_DEVNET_MINT : USDC_MINT;
+
+      // Get merchant's USDC ATA
+      const merchantUsdcAta = await findAssociatedTokenAddress(merchantPubkey, usdcMint);
+
+      // Get owner's USDC ATA
+      const ownerUsdcAta = await findAssociatedTokenAddress(ownerPubkey, usdcMint);
+
+      // Get house's USDC ATA
+      const houseUsdcAta = await findAssociatedTokenAddress(HOUSE, usdcMint);
+
+      // Send the withdraw transaction
+      const txid = await program.methods
+        .withdrawUsdc(new anchor.BN(withdrawAmountU64))
+        .accountsPartial({
+          owner: ownerPubkey,
+          merchant: merchantPubkey,
+          merchantUsdcAta: merchantUsdcAta,
+          ownerUsdcAta: ownerUsdcAta,
+          house: HOUSE,
+          houseUsdcAta: houseUsdcAta,
+          usdcMint: usdcMint,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+          systemProgram: anchor.web3.SystemProgram.programId,
+        })
+        .rpc();
+
+      // Invalidate the balance queries to trigger a refresh
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['usdc-balance', merchantPubkey.toString()] }),
+        queryClient.invalidateQueries({ queryKey: ['usdc-balance', ownerPubkey.toString()] })
+      ]);
+
+      toast.success(
+        <div>
+          <p>Withdrawal successful!</p>
+          <p className="text-xs mt-1">
+            <a
+              href={formatSolscanDevnetLink(txid)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline"
+            >
+              View transaction
+            </a>
+          </p>
+        </div>,
+        { duration: 8000 }
+      );
+
       setWithdrawAmount('');
-      await fetchBalances();
       
       if (onSuccess) {
         onSuccess();
@@ -158,8 +177,8 @@ export function WithdrawFunds({
   };
 
   const handleMaxClick = () => {
-    if (localMerchantBalance > 0) {
-      setWithdrawAmount(localMerchantBalance.toFixed(6));
+    if (merchantBalance > 0) {
+      setWithdrawAmount(merchantBalance.toFixed(6));
     }
   };
 
@@ -169,6 +188,8 @@ export function WithdrawFunds({
       setWithdrawAmount(value);
     }
   };
+
+  const isLoadingBalances = isMerchantBalanceLoading || isOwnerBalanceLoading;
 
   return (
     <div className="space-y-6 rounded-lg border border-base-content/10 p-6 mb-6">
@@ -192,22 +213,30 @@ export function WithdrawFunds({
       <div className="space-y-4">
         <div className="flex justify-between items-center">
           <span className="text-sm">Merchant's USDC Balance</span>
-          <span>
-            {isBalancesVisible 
-              ? (localMerchantBalance > 0 ? `${localMerchantBalance.toFixed(6)} USDC` : '0.000000 USDC')
-              : '••••••• USDC'
-            }
-          </span>
+          {isLoadingBalances ? (
+            <span className="loading loading-spinner loading-xs" />
+          ) : (
+            <span>
+              {isBalancesVisible 
+                ? (merchantBalance > 0 ? `${merchantBalance.toFixed(6)} USDC` : '0.000000 USDC')
+                : '••••••• USDC'
+              }
+            </span>
+          )}
         </div>
 
         <div className="flex justify-between items-center">
           <span className="text-sm">Owner's USDC Balance</span>
-          <span>
-            {isBalancesVisible
-              ? (localOwnerBalance > 0 ? `${localOwnerBalance.toFixed(6)} USDC` : '0.000000 USDC')
-              : '••••••• USDC'
-            }
-          </span>
+          {isLoadingBalances ? (
+            <span className="loading loading-spinner loading-xs" />
+          ) : (
+            <span>
+              {isBalancesVisible
+                ? (ownerBalance > 0 ? `${ownerBalance.toFixed(6)} USDC` : '0.000000 USDC')
+                : '••••••• USDC'
+              }
+            </span>
+          )}
         </div>
 
         <div className="space-y-2">
@@ -235,7 +264,7 @@ export function WithdrawFunds({
         <button
           onClick={handleMaxClick}
           className="btn btn-outline"
-          disabled={isLoading || localMerchantBalance <= 0}
+          disabled={isLoading || merchantBalance <= 0}
         >
           MAX
         </button>
@@ -247,8 +276,8 @@ export function WithdrawFunds({
             !ownerPubkey || 
             !withdrawAmount || 
             parseFloat(withdrawAmount) <= 0 || 
-            localMerchantBalance <= 0 || 
-            parseFloat(withdrawAmount) > localMerchantBalance || 
+            merchantBalance <= 0 || 
+            parseFloat(withdrawAmount) > merchantBalance || 
             isLoading
           }
         >
