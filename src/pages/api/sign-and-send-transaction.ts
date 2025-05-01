@@ -1,18 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { Connection, Transaction, Keypair } from '@solana/web3.js';
-
-// Initialize connection to Solana network (use your RPC URL)
-const connection = new Connection(process.env.NEXT_PUBLIC_HELIUS_RPC_URL || '');
-
-// Initialize fee payer keypair from environment variable
-const feePayerPrivateKey = process.env.FEE_PAYER_PRIVATE_KEY;
-if (!feePayerPrivateKey) {
-  throw new Error('FEE_PAYER_PRIVATE_KEY environment variable is not set');
-}
-
-const feePayerKeypair = Keypair.fromSecretKey(
-  new Uint8Array(feePayerPrivateKey.split(',').map(num => parseInt(num)))
-);
+import { Connection, Transaction, VersionedTransaction } from '@solana/web3.js';
+import { env } from '@/utils/env';
+import { signTransactionWithFeePayer, checkFeePayerBalance } from '@/lib/para-server';
 
 export default async function handler(
   req: NextApiRequest,
@@ -23,41 +12,51 @@ export default async function handler(
   }
 
   try {
-    const { serializedTransaction } = req.body;
+    const { transaction } = req.body;
 
-    if (!serializedTransaction) {
-      return res.status(400).json({ error: 'Missing serializedTransaction in request body' });
+    if (!transaction) {
+      return res.status(400).json({ error: 'Transaction is required' });
     }
 
-    // Convert base64 string to buffer
-    const transactionBuffer = Buffer.from(serializedTransaction, 'base64');
+    // Check if fee payer has sufficient balance
+    const hasBalance = await checkFeePayerBalance();
+    if (!hasBalance) {
+      return res.status(400).json({ error: 'Fee payer has insufficient balance' });
+    }
 
-    // Deserialize the transaction
-    const transaction = Transaction.from(transactionBuffer);
+    // Convert the transaction to a Buffer
+    const transactionBuffer = Buffer.from(transaction, 'base64');
 
     // Sign the transaction with the fee payer
-    transaction.sign(feePayerKeypair);
+    const signedTransaction = await signTransactionWithFeePayer(transactionBuffer);
 
-    // Send the signed transaction
-    const signature = await connection.sendRawTransaction(
-      transaction.serialize(),
-      {
-        skipPreflight: false,
-        preflightCommitment: 'confirmed',
-      }
+    // Initialize connection
+    const connection = new Connection(
+      env.isDevnet ? env.devnetHeliusRpcUrl : env.mainnetHeliusRpcUrl,
+      'confirmed'
     );
 
+    // Send the transaction
+    const signature = await connection.sendRawTransaction(signedTransaction, {
+      skipPreflight: false,
+      preflightCommitment: 'confirmed',
+    });
+
     // Wait for confirmation
-    const confirmation = await connection.confirmTransaction(signature);
+    const confirmation = await connection.confirmTransaction(signature, 'confirmed');
 
     if (confirmation.value.err) {
       throw new Error(`Transaction failed: ${confirmation.value.err}`);
     }
 
-    // Return the signature
-    return res.status(200).json({ signature });
+    return res.status(200).json({
+      signature,
+      confirmation,
+    });
   } catch (error) {
-    console.error('Error processing transaction:', error);
-    return res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' });
+    console.error('Error in sign-and-send-transaction:', error);
+    return res.status(500).json({
+      error: error instanceof Error ? error.message : 'An unknown error occurred',
+    });
   }
 } 

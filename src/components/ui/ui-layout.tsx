@@ -6,21 +6,15 @@ import * as React from 'react'
 import { ReactNode, Suspense, useEffect, useRef, useState } from 'react'
 import toast, { Toaster } from 'react-hot-toast'
 import Image from 'next/image'
+import { useWallet, useAccount, useModal } from '@getpara/react-sdk'
 
 import { AccountChecker } from '../accounts/account-ui'
 import { ClusterChecker, ClusterUiSelect, ExplorerLink } from '../cluster/cluster-ui'
-import { usePara } from "@/components/para/para-provider";
-// import { WalletButton } from '../para/para-provider'
-
-interface Link {
-  label: string | ReactNode;
-  path: string;
-}
 
 interface UiLayoutProps {
-  children: ReactNode;
-  defaultLinks: Link[];
-  merchantLinks: Link[];
+  children: ReactNode
+  defaultLinks: { label: string | ReactNode; path: string }[]
+  merchantLinks: { label: string | ReactNode; path: string }[]
 }
 
 export function UiLayout({
@@ -31,10 +25,11 @@ export function UiLayout({
   const pathname = usePathname()
   const [theme, setTheme] = React.useState<'light' | 'dark'>('dark')
   const [activeMerchant, setActiveMerchant] = React.useState<string | null>(null)
-  const { isConnected, openModal, email, address } = usePara();
+  const { data: wallet } = useWallet();
+  const { data: account } = useAccount();
+  const { openModal } = useModal();
   const [mounted, setMounted] = React.useState(false)
 
-  // console.log("wallet:", address);
   useEffect(() => {
     setMounted(true)
     // Check for saved theme preference
@@ -137,9 +132,9 @@ export function UiLayout({
                 )}
               </button>
               <div className="btn btn-primary rounded-btn">
-                {isConnected ? (
+                {account?.isConnected ? (
                   <button onClick={openModal}>
-                    {email}
+                    {account.email}
                   </button>
                 ) : (
                   <button onClick={openModal}>
@@ -147,8 +142,6 @@ export function UiLayout({
                   </button>
                 )}
               </div>
-              {/* <WalletButton /> */}
-              {/* <ClusterUiSelect /> */}
             </div>
           </div>
           <ClusterChecker>
@@ -181,56 +174,6 @@ export function UiLayout({
   )
 }
 
-export function AppModal({
-  children,
-  title,
-  hide,
-  show,
-  submit,
-  submitDisabled,
-  submitLabel,
-}: {
-  children: ReactNode
-  title: string
-  hide: () => void
-  show: boolean
-  submit?: () => void
-  submitDisabled?: boolean
-  submitLabel?: string
-}) {
-  const dialogRef = useRef<HTMLDialogElement | null>(null)
-
-  useEffect(() => {
-    if (!dialogRef.current) return
-    if (show) {
-      dialogRef.current.showModal()
-    } else {
-      dialogRef.current.close()
-    }
-  }, [show, dialogRef])
-
-  return (
-    <dialog className="modal" ref={dialogRef}>
-      <div className="modal-box space-y-5">
-        <h3 className="font-bold text-lg text-mint">{title}</h3>
-        {children}
-        <div className="modal-action">
-          <div className="join space-x-2">
-            {submit ? (
-              <button className="btn btn-primary" onClick={submit} disabled={submitDisabled}>
-                {submitLabel || 'Save'}
-              </button>
-            ) : null}
-            <button onClick={hide} className="btn">
-              Close
-            </button>
-          </div>
-        </div>
-      </div>
-    </dialog>
-  )
-}
-
 export function AppHero({
   children,
   title,
@@ -255,7 +198,7 @@ export function AppHero({
 
 export function ellipsify(str = '', len = 4) {
   if (str.length > 30) {
-    return str.substring(0, len) + '..' + str.substring(str.length - len, str.length)
+    return str.substring(0, len) + '..' + str.substring(str.length - len)
   }
   return str
 }

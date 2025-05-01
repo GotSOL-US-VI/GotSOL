@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { useState } from 'react';
 import { PublicKey, Transaction, VersionedTransaction } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID } from "@solana/spl-token";
-import { usePara } from "../../components/para/para-provider";
+import { useWallet } from "@getpara/react-sdk";
 import { BalanceDisplay } from "@/components/swap/balance-display";
 import '@jup-ag/terminal/css';
 
@@ -44,7 +44,9 @@ const customStyles = `
 `;
 
 export default function SwapPage() {
-  const { address, signer } = usePara();
+  const { data: wallet } = useWallet();
+  const address = wallet?.address;
+  const signer = (wallet as any)?.signer;
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {

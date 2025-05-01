@@ -2,13 +2,13 @@
 
 import { PublicKey } from '@solana/web3.js'
 import { useEffect, useState } from 'react'
-import { useAnchorProvider } from '@/components/para/para-provider'
+import { useAnchorProvider, ParaAnchorProvider } from '@/components/para/para-provider'
 import { Program, Idl } from '@coral-xyz/anchor'
 import * as kumbayaIdl from '@/utils/kumbaya.json'
 import { MakeRevenuePaymentButton } from '@/components/merchant/make-revenue-payment'
 import { useConnection } from '@solana/wallet-adapter-react'
 
-export default function TaxCompliancePage({ params }: { params: { merchantId: string } }) {
+function TaxComplianceContent({ params }: { params: { merchantId: string } }) {
   const [mounted, setMounted] = useState(false)
   const [merchantName, setMerchantName] = useState<string>('')
   const [program, setProgram] = useState<Program<Idl> | null>(null)
@@ -99,4 +99,12 @@ export default function TaxCompliancePage({ params }: { params: { merchantId: st
       </div>
     </div>
   )
+}
+
+export default function TaxCompliancePage({ params }: { params: { merchantId: string } }) {
+  return (
+    <ParaAnchorProvider>
+      <TaxComplianceContent params={params} />
+    </ParaAnchorProvider>
+  );
 } 

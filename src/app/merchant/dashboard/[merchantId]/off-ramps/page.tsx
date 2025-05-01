@@ -1,23 +1,10 @@
 'use client'
 
 import { AppHero } from '@/components/ui/ui-layout'
-import { useWalletAdapterCompat } from '@/hooks/useWalletAdapterCompat'
-import { usePara } from '@/components/para/para-provider'
-import { PublicKey } from '@solana/web3.js';
+
 
 export default function OffRampsPage({ params }: { params: { merchantId: string } }) {
-  const { address } = usePara();
-  if (!address)
-    return null;
-  const publicKey = new PublicKey(address);
 
-  if (!publicKey) {
-    return (
-      <div className="text-center py-12">
-        <p className="text-xl opacity-70">Please connect your wallet to view off-ramp options</p>
-      </div>
-    )
-  }
 
   return (
     <div>

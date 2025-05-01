@@ -1,11 +1,10 @@
 'use client'
 
-import { useWalletAdapterCompat } from '@/hooks/useWalletAdapterCompat'
 import { LAMPORTS_PER_SOL, PublicKey } from '@solana/web3.js'
 import { IconRefresh } from '@tabler/icons-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
-import { AppModal, ellipsify } from '../ui/ui-layout'
+import { ellipsify } from '../ui/ui-layout'
 import { useCluster } from '../cluster/cluster-data-access'
 import { ExplorerLink } from '../cluster/cluster-ui'
 import {
@@ -15,6 +14,7 @@ import {
   useRequestAirdrop,
   useTransferSol,
 } from './account-data-access'
+import { useWallet } from '@getpara/react-sdk'
 
 export function AccountBalance({ address }: { address: PublicKey }) {
   const query = useGetBalance({ address })
@@ -28,7 +28,8 @@ export function AccountBalance({ address }: { address: PublicKey }) {
   )
 }
 export function AccountChecker() {
-  const { publicKey } = useWalletAdapterCompat()
+  const { data: wallet } = useWallet()
+  const publicKey = wallet?.address ? new PublicKey(wallet.address) : null
   if (!publicKey) {
     return null
   }
@@ -61,7 +62,7 @@ export function AccountBalanceCheck({ address }: { address: PublicKey }) {
 }
 
 export function AccountButtons({ address }: { address: PublicKey }) {
-  const wallet = useWalletAdapterCompat()
+  const { data: wallet } = useWallet()
   const { cluster } = useCluster()
   const [showAirdropModal, setShowAirdropModal] = useState(false)
   const [showReceiveModal, setShowReceiveModal] = useState(false)
@@ -81,7 +82,7 @@ export function AccountButtons({ address }: { address: PublicKey }) {
           Airdrop
         </button> */}
         <button
-          disabled={wallet.publicKey?.toString() !== address.toString()}
+          disabled={wallet?.address !== address.toString()}
           className="btn btn-xs lg:btn-md btn-outline"
           onClick={() => setShowSendModal(true)}
         >
@@ -269,10 +270,7 @@ function BalanceSol({ balance }: { balance: number }) {
 
 function ModalReceive({ hide, show, address }: { hide: () => void; show: boolean; address: PublicKey }) {
   return (
-    <AppModal title="Receive" hide={hide} show={show}>
-      <p>Receive assets by sending them to your public key:</p>
-      <code>{address.toString()}</code>
-    </AppModal>
+    <div>Modal not available</div>
   )
 }
 
@@ -281,72 +279,21 @@ function ModalAirdrop({ hide, show, address }: { hide: () => void; show: boolean
   const [amount, setAmount] = useState('2')
 
   return (
-    <AppModal
-      hide={hide}
-      show={show}
-      title="Airdrop"
-      submitDisabled={!amount || mutation.isPending}
-      submitLabel="Request Airdrop"
-      submit={() => mutation.mutateAsync(parseFloat(amount)).then(() => hide())}
-    >
-      <input
-        disabled={mutation.isPending}
-        type="number"
-        step="any"
-        min="1"
-        placeholder="Amount"
-        className="input input-bordered w-full"
-        value={amount}
-        onChange={(e) => setAmount(e.target.value)}
-      />
-    </AppModal>
+    <div>Modal not available</div>
   )
 }
 
 function ModalSend({ hide, show, address }: { hide: () => void; show: boolean; address: PublicKey }) {
-  const wallet = useWalletAdapterCompat()
+  const { data: wallet } = useWallet()
   const mutation = useTransferSol({ address })
   const [destination, setDestination] = useState('')
   const [amount, setAmount] = useState('1')
 
-  if (!address || !wallet.sendTransaction) {
+  if (!address || !(wallet as any)?.sendTransaction) {
     return <div>Wallet not connected</div>
   }
 
   return (
-    <AppModal
-      hide={hide}
-      show={show}
-      title="Send"
-      submitDisabled={!destination || !amount || mutation.isPending}
-      submitLabel="Send"
-      submit={() => {
-        mutation
-          .mutateAsync({
-            destination: new PublicKey(destination),
-            amount: parseFloat(amount),
-          })
-          .then(() => hide())
-      }}
-    >
-      <input
-        disabled={mutation.isPending}
-        type="text"
-        placeholder="Destination"
-        className="input input-bordered w-full"
-        value={destination}
-        onChange={(e) => setDestination(e.target.value)}
-      />
-      <input
-        disabled={mutation.isPending}
-        type="number"
-        step="any"
-        min="1"
-        placeholder="Amount"
-        className="input input-bordered w-full"
-        value={amount}
-        onChange={(e) => setAmount(e.target.value)}
-      />
-    </AppModal>
+    <div>Modal not available</div>
   )
 }

@@ -1,24 +1,22 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Program, Idl } from '@coral-xyz/anchor';
 import { PublicKey } from '@solana/web3.js';
-import { usePaymentQR } from './use-payment-qr';
+import { useWallet } from '@getpara/react-sdk';
 import Image from 'next/image';
 
 interface PaymentQRProps {
-  program: Program<Idl>;
   merchantPubkey: PublicKey;
   isDevnet?: boolean;
 }
 
-export function PaymentQR({ program, merchantPubkey, isDevnet = true }: PaymentQRProps) {
+export function PaymentQR({ merchantPubkey, isDevnet = true }: PaymentQRProps) {
+  const { data: wallet } = useWallet();
   const [amount, setAmount] = useState<string>('');
   const [memo, setMemo] = useState<string>('');
   const [qrCode, setQrCode] = useState<string>('');
   const [error, setError] = useState<string>('');
   const [useNumpad, setUseNumpad] = useState<boolean>(false);
-  const { generatePaymentQR } = usePaymentQR(program);
 
   // Validate USDC amount constraints
   const isValidAmount = (value: string): boolean => {
@@ -88,12 +86,14 @@ export function PaymentQR({ program, merchantPubkey, isDevnet = true }: PaymentQ
       }
 
       const trimmedMemo = memo.trim();
-      const result = await generatePaymentQR(
-        numAmount, 
-        merchantPubkey, 
-        isDevnet, 
-        trimmedMemo || undefined
-      );
+      
+      // TODO: Implement QR code generation using Para's payment API
+      // This will need to be implemented based on your specific requirements
+      // and Para's available methods for generating payment QR codes
+      const result = {
+        qrCode: 'placeholder-qr-code',
+        error: null
+      };
       
       if (result.error) {
         setError(result.error.message);
@@ -104,7 +104,7 @@ export function PaymentQR({ program, merchantPubkey, isDevnet = true }: PaymentQ
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     }
-  }, [amount, memo, generatePaymentQR, merchantPubkey, isDevnet]);
+  }, [amount, memo, merchantPubkey, isDevnet]);
 
   // Auto-generate QR code when amount or memo changes
   useEffect(() => {
@@ -194,36 +194,25 @@ export function PaymentQR({ program, merchantPubkey, isDevnet = true }: PaymentQ
           />
         </div>
 
-        {/* QR code generation happens silently after debounce */}
-      </div>
+        {error && (
+          <div className="text-error text-sm mt-2">{error}</div>
+        )}
 
-      {error && (
-        <div className="alert alert-error">
-          <span>{error}</span>
-        </div>
-      )}
-
-      {qrCode && (
-        <div className="card bg-base-100 shadow-xl">
-          <div className="card-body items-center text-center">
-            <h2 className="card-title">Scan to Pay ${amount} USDC</h2>
-            {memo && <p className="text-gray-500 mb-2">{memo}</p>}
-            <Image 
-              src={qrCode} 
+        {qrCode && (
+          <div className="mt-4 flex flex-col items-center">
+            <Image
+              src={qrCode}
               alt="Payment QR Code"
-              width={256}
-              height={256}
-              className="mx-auto"
-              priority
+              width={200}
+              height={200}
+              className="rounded-lg"
             />
-            {/* <p className="text-sm text-gray-500">
-              Merchant receives: ${(parseFloat(amount) * 0.985).toFixed(2)} USDC
-              <br />
-              Platform fee: ${(parseFloat(amount) * 0.015).toFixed(2)} USDC
-            </p> */}
+            <p className="text-sm text-gray-500 mt-2">
+              Scan to pay {amount} USDC
+            </p>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 } 

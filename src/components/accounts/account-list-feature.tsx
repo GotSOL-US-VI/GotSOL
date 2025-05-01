@@ -1,31 +1,33 @@
 'use client'
 
 import { PublicKey } from '@solana/web3.js'
-import { usePara } from '../para/para-provider'
-import { redirect } from 'next/navigation'
+import { useWallet } from '@getpara/react-sdk'
+import { useParaModal } from '../para/para-provider'
 
 export default function AccountListFeature() {
-  const { isConnected, openModal, email, address } = usePara();
-  if (!address)
-    return null;
-  const publicKey = new PublicKey(address);
+  const { data: wallet } = useWallet();
+  const { openModal } = useParaModal();
+  const address = wallet?.address;
+  const email = (wallet as any)?.email;
+  const isConnected = !!address;
 
-
-  if (publicKey) {
-    return redirect(`/account/${publicKey.toString()}`)
+  if (!address) {
+    return (
+      <div className="btn btn-primary rounded-btn">
+        <button onClick={openModal}>
+          Sign in with Para
+        </button>
+      </div>
+    );
   }
+
+  const publicKey = new PublicKey(address);
 
   return (
     <div className="btn btn-primary rounded-btn">
-      {isConnected ? (
-        <button onClick={() => openModal}>
-          {email}
-        </button>
-      ) : (
-        <button onClick={() => openModal}>
-          {'Sign in with Para'}
-        </button>
-      )}
+      <button>
+        {email || address.slice(0, 4) + '...' + address.slice(-4)}
+      </button>
     </div>
-  )
+  );
 }

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, memo, useRef } from 'react';
 import { PublicKey } from '@solana/web3.js';
-import { usePara } from '../para/para-provider';
+import { useWallet } from '../para/para-provider';
 import { 
   TOKEN_PROGRAM_ID, 
   ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -13,7 +13,8 @@ import { useConnection } from '@/lib/connection-context';
 import { MainnetConnectionProvider } from '@/lib/mainnet-connection-provider';
 
 // Token addresses
-const USDC_MINT = new PublicKey('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v');
+const USDC_MAINNET_MINT = new PublicKey('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v');
+const USDC_DEVNET_MINT = new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU');
 const USD_STAR_MINT = new PublicKey('BenJy1n3WTx9mTjEvy63e8Q1j4RqUc6E4VBMz3ir4Wo6');
 
 // Helper function to get associated token address
@@ -103,7 +104,7 @@ BalanceDisplayContent.displayName = 'BalanceDisplayContent';
 
 // Inner component that uses the connection
 function BalanceDisplayInner() {
-  const { address } = usePara();
+  const { data: wallet } = useWallet();
   const { connection } = useConnection();
   const [usdcBalance, setUsdcBalance] = useState<number | null>(null);
   const [usdStarBalance, setUsdStarBalance] = useState<number | null>(null);
@@ -116,7 +117,7 @@ function BalanceDisplayInner() {
   const timeoutRef = useRef<NodeJS.Timeout>();
   const mountedRef = useRef(true);
 
-  const publicKey = address ? new PublicKey(address) : null;
+  const publicKey = wallet?.publicKey ? new PublicKey(wallet.publicKey) : null;
 
   const fetchBalances = useCallback(async () => {
     // Prevent concurrent fetches
@@ -126,11 +127,22 @@ function BalanceDisplayInner() {
       isFetching.current = true;
       setError(null);
 
+      // Determine if we're on devnet based on the connection URL
+      const isDevnet = connection.rpcEndpoint.includes('devnet');
+      const usdcMint = isDevnet ? USDC_DEVNET_MINT : USDC_MAINNET_MINT;
+
+      console.log('Fetching balances:', {
+        publicKey: publicKey.toString(),
+        isDevnet,
+        usdcMint: usdcMint.toString(),
+        connection: connection.rpcEndpoint
+      });
+
       // Get ATAs
       const [usdcAta, usdStarAta] = await Promise.all([
         findAssociatedTokenAddress(
           publicKey,
-          USDC_MINT
+          usdcMint
         ),
         findAssociatedTokenAddress(
           publicKey,
