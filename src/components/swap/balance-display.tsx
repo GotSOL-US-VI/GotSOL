@@ -2,19 +2,17 @@
 
 import { useEffect, useState, useCallback, memo, useRef } from 'react';
 import { PublicKey } from '@solana/web3.js';
-import { useWallet } from '../para/para-provider';
+import { useWallet } from "@getpara/react-sdk";
 import { 
   TOKEN_PROGRAM_ID, 
   ASSOCIATED_TOKEN_PROGRAM_ID,
 } from '@solana/spl-token';
-
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 import { useConnection } from '@/lib/connection-context';
 import { MainnetConnectionProvider } from '@/lib/mainnet-connection-provider';
 
-// Token addresses
-const USDC_MAINNET_MINT = new PublicKey('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v');
-const USDC_DEVNET_MINT = new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU');
+// Token addresses - using mainnet addresses directly since this is a mainnet-only component
+const USDC_MINT = new PublicKey('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v');
 const USD_STAR_MINT = new PublicKey('BenJy1n3WTx9mTjEvy63e8Q1j4RqUc6E4VBMz3ir4Wo6');
 
 // Helper function to get associated token address
@@ -127,22 +125,11 @@ function BalanceDisplayInner() {
       isFetching.current = true;
       setError(null);
 
-      // Determine if we're on devnet based on the connection URL
-      const isDevnet = connection.rpcEndpoint.includes('devnet');
-      const usdcMint = isDevnet ? USDC_DEVNET_MINT : USDC_MAINNET_MINT;
-
-      console.log('Fetching balances:', {
-        publicKey: publicKey.toString(),
-        isDevnet,
-        usdcMint: usdcMint.toString(),
-        connection: connection.rpcEndpoint
-      });
-
       // Get ATAs
       const [usdcAta, usdStarAta] = await Promise.all([
         findAssociatedTokenAddress(
           publicKey,
-          usdcMint
+          USDC_MINT
         ),
         findAssociatedTokenAddress(
           publicKey,
@@ -264,8 +251,10 @@ function BalanceDisplayInner() {
 // Wrapper component that provides the mainnet connection
 export function BalanceDisplay() {
   return (
-    <MainnetConnectionProvider>
-      <BalanceDisplayInner />
-    </MainnetConnectionProvider>
+    <div className="bg-base-100 rounded-3xl shadow-xl p-6">
+      <MainnetConnectionProvider>
+        <BalanceDisplayInner />
+      </MainnetConnectionProvider>
+    </div>
   );
 }

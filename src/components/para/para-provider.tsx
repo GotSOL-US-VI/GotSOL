@@ -8,6 +8,7 @@ import { useClient } from '@getpara/react-sdk';
 import { ParaSolanaWeb3Signer } from "@getpara/solana-web3.js-v1-integration";
 import * as anchor from '@coral-xyz/anchor';
 import { PublicKey } from '@solana/web3.js';
+import { env } from '@/utils/env';
 
 const ParaContext = createContext({
   openModal: () => {},
@@ -19,6 +20,13 @@ export const useParaModal = () => useContext(ParaContext);
 
 export function ParaProvider({ children }: { children: React.ReactNode }) {
     const [isOpen, setIsOpen] = useState(false);
+    const { connection } = useConnection();
+
+    const environment = useMemo(() => {
+        // Check if the connection is mainnet based on the RPC URL
+        const isMainnet = connection?.rpcEndpoint === env.mainnetHeliusRpcUrl;
+        return isMainnet ? Environment.PRODUCTION : Environment.DEVELOPMENT;
+    }, [connection]);
 
     const openModal = () => setIsOpen(true);
     const closeModal = () => setIsOpen(false);
@@ -27,7 +35,7 @@ export function ParaProvider({ children }: { children: React.ReactNode }) {
         <ParaContext.Provider value={{ openModal, closeModal, isOpen }}>
             <ParaProviderV2
                 paraClientConfig={{
-                    env: Environment.DEVELOPMENT,
+                    env: environment,
                     apiKey: process.env.NEXT_PUBLIC_PARA_API_KEY || "",
                 }}
             >
