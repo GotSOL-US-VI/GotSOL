@@ -8,6 +8,8 @@ import toast from 'react-hot-toast';
 import { env } from '@/utils/env';
 import { formatSolscanDevnetLink } from '@/utils/format-transaction-link';
 import { useWallet } from "@getpara/react-sdk";
+import type { Kumbaya } from '../../../anchor/target/types/kumbaya';
+import { useQueryClient } from '@tanstack/react-query';
 
 // Helper function to get associated token address
 async function findAssociatedTokenAddress(
@@ -33,7 +35,7 @@ export interface MerchantAccount {
 }
 
 interface RefundButtonProps {
-    program: Program<Idl>;
+    program: Program<Kumbaya>;
     merchantPubkey: PublicKey;
     payment: {
         signature: string;
@@ -51,6 +53,7 @@ export function RefundButton({ program, merchantPubkey, payment, onSuccess, isDe
     const { connection } = useConnection();
     const { data: wallet } = useWallet();
     const [isLoading, setIsLoading] = useState(false);
+    const queryClient = useQueryClient();
     const publicKey = wallet?.address ? new PublicKey(wallet.address) : null;
 
     const handleRefund = async () => {
@@ -264,7 +267,7 @@ export function RefundButton({ program, merchantPubkey, payment, onSuccess, isDe
             // Send the transaction
             const txid = await program.methods
                 .refund(signaturePrefix, refundAmount)
-                .accounts({
+                .accountsPartial({
                     owner: publicKey,
                     merchant: merchantPda,
                     merchantUsdcAta: merchantUsdcAta,
@@ -273,12 +276,19 @@ export function RefundButton({ program, merchantPubkey, payment, onSuccess, isDe
                     usdcMint: usdcMint,
                     recipient: payment.recipient,
                     tokenProgram: TOKEN_PROGRAM_ID,
-                    associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
                     systemProgram: anchor.web3.SystemProgram.programId,
                 })
                 .rpc();
 
             console.log('Refund successful:', txid);
+            
+            // Wait for confirmation
+            await connection.confirmTransaction(txid, 'confirmed');
+            
+            // Invalidate the merchant's USDC balance query
+            await queryClient.invalidateQueries({
+                queryKey: ['usdc-balance', merchantPubkey.toString(), isDevnet]
+            });
             
             toast.success(
                 <div>
@@ -296,8 +306,6 @@ export function RefundButton({ program, merchantPubkey, payment, onSuccess, isDe
                 </div>,
                 { duration: 8000 }
             );
-            
-            onSuccess?.();
 
         } catch (error) {
             console.error('Refund error:', error);

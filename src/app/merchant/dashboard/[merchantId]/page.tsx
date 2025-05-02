@@ -4,10 +4,13 @@ import { useWallet } from '@getpara/react-sdk';
 import { PaymentQR } from '@/components/payments/payment-qr';
 import { PaymentHistory } from '@/components/payments/payment-history';
 import { WithdrawFunds } from '@/components/payments/withdraw-funds';
-import { useMemo, useState, useEffect, useCallback } from 'react';
-import { PublicKey, Connection } from '@solana/web3.js';
-import { BorshCoder, Idl } from '@coral-xyz/anchor';
-import idl from '@/utils/kumbaya.json';
+import { useMemo, useState, useEffect } from 'react';
+import { PublicKey } from '@solana/web3.js';
+import { Program } from '@coral-xyz/anchor';
+import { useConnection } from '@/lib/connection-context';
+import { getKumbayaProgram } from '../../../../../anchor/src/kumbaya-exports';
+import type { Kumbaya } from '../../../../../anchor/target/types/kumbaya';
+import { useAnchorProvider, ParaAnchorProvider } from '@/components/para/para-provider';
 
 const USDC_DEVNET_MINT = new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU');
 
@@ -21,17 +24,10 @@ function getAssociatedTokenAddress(walletAddress: PublicKey, mint: PublicKey) {
   )[0];
 }
 
-// Get the correct RPC URL based on isDevnet
-function getSolanaRpcUrl(isDevnet: boolean) {
-  if (isDevnet) {
-    return process.env.NEXT_PUBLIC_HELIUS_RPC_URL || 'https://api.devnet.solana.com';
-  } else {
-    return process.env.NEXT_PUBLIC_MAINNET_HELIUS_RPC_URL || '';
-  }
-}
-
-export default function MerchantDashboardPage({ params }: { params: { merchantId: string } }) {
+function DashboardContent({ params }: { params: { merchantId: string } }) {
   const { data: wallet } = useWallet();
+  const { connection } = useConnection();
+  const provider = useAnchorProvider();
   const [merchantName, setMerchantName] = useState<string>('');
   const [merchantBalance, setMerchantBalance] = useState<number>(0);
   const [ownerBalance, setOwnerBalance] = useState<number>(0);
@@ -52,29 +48,34 @@ export default function MerchantDashboardPage({ params }: { params: { merchantId
     }
   }, [params.merchantId]);
 
+  // Initialize program
+  const program = useMemo(() => {
+    if (!provider) return null;
+    return getKumbayaProgram(provider);
+  }, [provider]);
+
   useEffect(() => {
-    const fetchMerchantInfo = async () => {
-      if (!merchantPubkey) return;
+    const fetchMerchantData = async () => {
+      if (!program || !merchantPubkey) return;
+      
       try {
-        const connection = new Connection(getSolanaRpcUrl(isDevnet));
-        const accountInfo = await connection.getAccountInfo(merchantPubkey);
-        if (!accountInfo) return;
-        const coder = new BorshCoder(idl as Idl);
-        const decoded = coder.accounts.decode('Merchant', accountInfo.data);
-        setMerchantName(decoded.entity_name);
-        setOwner(decoded.owner);
+        const merchantAccount = await (program.account as any).merchant.fetch(merchantPubkey);
+        if (merchantAccount) {
+          setMerchantName(merchantAccount.entityName);
+          setOwner(merchantAccount.owner);
+        }
       } catch (err) {
-        console.error('Error fetching merchant info:', err);
+        console.error('Error fetching merchant data:', err);
       }
     };
-    fetchMerchantInfo();
-  }, [merchantPubkey, isDevnet]);
+    
+    fetchMerchantData();
+  }, [program, merchantPubkey]);
 
   useEffect(() => {
     const fetchBalances = async () => {
-      if (!merchantPubkey || !owner) return;
+      if (!merchantPubkey || !owner || !connection) return;
       try {
-        const connection = new Connection(getSolanaRpcUrl(isDevnet));
         // Merchant USDC ATA
         const merchantUsdcAta = getAssociatedTokenAddress(merchantPubkey, USDC_DEVNET_MINT);
         const merchantAtaInfo = await connection.getTokenAccountBalance(merchantUsdcAta).catch(() => null);
@@ -88,9 +89,9 @@ export default function MerchantDashboardPage({ params }: { params: { merchantId
       }
     };
     fetchBalances();
-  }, [merchantPubkey, owner, isDevnet]);
+  }, [merchantPubkey, owner, connection]);
 
-  if (!wallet?.address || !merchantPubkey) {
+  if (!wallet?.address || !merchantPubkey || !program) {
     return (
       <div className="container mx-auto py-8 text-center">
         <p className="text-lg">Please connect your wallet to continue</p>
@@ -141,6 +142,7 @@ export default function MerchantDashboardPage({ params }: { params: { merchantId
             <div className="card bg-base-300 shadow-xl">
               <div className="card-body p-4">
                 <PaymentHistory
+                  program={program}
                   merchantPubkey={merchantPubkey}
                   isDevnet={true}
                   onBalanceUpdate={setMerchantBalance}
@@ -151,5 +153,13 @@ export default function MerchantDashboardPage({ params }: { params: { merchantId
         </div>
       </div>
     </div>
+  );
+}
+
+export default function DashboardPage({ params }: { params: { merchantId: string } }) {
+  return (
+    <ParaAnchorProvider>
+      <DashboardContent params={params} />
+    </ParaAnchorProvider>
   );
 } 
