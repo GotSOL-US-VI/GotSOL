@@ -141,8 +141,8 @@ export function WithdrawFunds({
 
       // Invalidate the balance queries to trigger a refresh
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['usdc-balance', merchantPubkey.toString()] }),
-        queryClient.invalidateQueries({ queryKey: ['usdc-balance', ownerPubkey.toString()] })
+        queryClient.invalidateQueries({ queryKey: ['usdc-balance', merchantPubkey.toString(), isDevnet] }),
+        queryClient.invalidateQueries({ queryKey: ['usdc-balance', ownerPubkey.toString(), isDevnet] })
       ]);
 
       toast.success(

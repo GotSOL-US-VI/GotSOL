@@ -37,6 +37,7 @@
     "@types/qrcode": "^1.5.5",
     "@vercel/analytics": "^1.5.0",
     "@vercel/speed-insights": "^1.2.0",
+    "bignumber.js": "^9.1.2",
     "bs58": "^6.0.0",
     "daisyui": "^4.12.10",
     "jotai": "^2.9.1",

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { PublicKey } from '@solana/web3.js';
 import { useWallet } from '@getpara/react-sdk';
 import Image from 'next/image';
+import { usePaymentQR } from './use-payment-qr';
 
 interface PaymentQRProps {
   merchantPubkey: PublicKey;
@@ -75,6 +76,8 @@ export function PaymentQR({ merchantPubkey, isDevnet = true }: PaymentQRProps) {
     setMemo(e.target.value);
   };
 
+  const { generatePaymentQR } = usePaymentQR();
+
   const generateQR = useCallback(async () => {
     try {
       setError('');
@@ -86,14 +89,7 @@ export function PaymentQR({ merchantPubkey, isDevnet = true }: PaymentQRProps) {
       }
 
       const trimmedMemo = memo.trim();
-      
-      // TODO: Implement QR code generation using Para's payment API
-      // This will need to be implemented based on your specific requirements
-      // and Para's available methods for generating payment QR codes
-      const result: { qrCode: string; error: { message: string } | null } = {
-        qrCode: 'placeholder-qr-code',
-        error: null
-      };
+      const result = await generatePaymentQR(numAmount, merchantPubkey, isDevnet, trimmedMemo);
       
       if (result.error) {
         setError(result.error.message);
@@ -104,7 +100,7 @@ export function PaymentQR({ merchantPubkey, isDevnet = true }: PaymentQRProps) {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     }
-  }, [amount, memo, merchantPubkey, isDevnet]);
+  }, [amount, memo, merchantPubkey, isDevnet, generatePaymentQR]);
 
   // Auto-generate QR code when amount or memo changes
   useEffect(() => {
@@ -203,8 +199,8 @@ export function PaymentQR({ merchantPubkey, isDevnet = true }: PaymentQRProps) {
             <Image
               src={qrCode}
               alt="Payment QR Code"
-              width={200}
-              height={200}
+              width={250}
+              height={250}
               className="rounded-lg"
             />
             <p className="text-sm text-gray-500 mt-2">

@@ -7,10 +7,11 @@ import { useConnection } from '@/lib/connection-context';
 import { formatSolscanDevnetLink } from '@/utils/format-transaction-link';
 import { TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import toast from 'react-hot-toast';
-import { Program, Idl } from '@coral-xyz/anchor';
+import { Program } from '@coral-xyz/anchor';
 import { RefundButton } from './refund-button';
 import type { Kumbaya } from '../../../anchor/target/types/kumbaya';
 import { retryWithBackoff } from '@/utils/para';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface PaymentHistoryProps {
     program: Program<Kumbaya>;
@@ -52,6 +53,31 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
     const [payments, setPayments] = useState<Payment[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string>('');
+    const queryClient = useQueryClient();
+
+    // Utility function to format USDC amount
+    const formatUSDCAmount = (amount: number): string => {
+        // For amounts between 0.10 and 0.90, always show 2 decimal places
+        if (amount >= 0.10 && amount < 1 && amount.toFixed(6).endsWith('000000')) {
+            return amount.toFixed(2);
+        }
+        // For all other amounts, show up to 6 decimals but trim trailing zeros
+        const withDecimals = amount.toFixed(6);
+        return withDecimals.replace(/\.?0+$/, '');
+    };
+
+    // Debug logging for memos
+    useEffect(() => {
+        payments.forEach(payment => {
+            if (payment.memo) {
+                console.log('Payment memo:', {
+                    signature: payment.signature,
+                    memo: payment.memo,
+                    type: typeof payment.memo
+                });
+            }
+        });
+    }, [payments]);
 
     const fetchPayments = useCallback(async () => {
         try {
@@ -93,209 +119,101 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
                 );
 
                 // Process and filter the transactions
-                const processedPayments = transactions
+                const processedPayments = await Promise.all(transactions
                     .filter((tx): tx is ParsedTransactionWithMeta => 
                         tx !== null && 
                         tx.meta !== null
                     )
-                    .map(tx => {
-                        // Log the full transaction for debugging
-                        console.log('Processing transaction:', {
-                            signature: tx.transaction.signatures[0],
-                            instructions: tx.transaction.message.instructions
-                        });
-
-                        // Find the token transfer instruction that transfers TO the merchant's ATA
+                    .map(async tx => {
+                        // Find the token transfer instruction
                         const transferInstruction = tx.transaction.message.instructions.find(
                             (instruction: ParsedInstruction | PartiallyDecodedInstruction) => {
-                                // Log the raw instruction for debugging
-                                console.log('Examining instruction:', instruction);
-
-                                // Handle both parsed and partially decoded instructions
                                 if ('parsed' in instruction) {
-                                    // Skip non-token instructions
-                                    if (instruction.program !== 'spl-token') {
-                                        return false;
-                                    }
+                                    if (instruction.program !== 'spl-token') return false;
 
-                                    // Log the full parsed instruction for debugging
-                                    console.log('Full parsed instruction:', JSON.stringify(instruction.parsed, null, 2));
-
-                                    // Ensure we have the parsed info object
-                                    if (!instruction.parsed || typeof instruction.parsed !== 'object') {
-                                        return false;
-                                    }
-
-                                    // Handle both string type and object parsed data
                                     const parsedData = typeof instruction.parsed === 'string' 
                                         ? { type: instruction.parsed } 
                                         : instruction.parsed;
 
-                                    // Check if we have the required info
-                                    if (!('type' in parsedData)) {
-                                        console.log('Missing type in parsed instruction:', parsedData);
-                                        return false;
-                                    }
+                                    if (!('type' in parsedData)) return false;
 
                                     const { type } = parsedData;
-                                    
-                                    // Check if it's a transfer or transferChecked instruction
                                     const isTransferType = type === 'transfer' || type === 'transferChecked';
-                                    if (!isTransferType) {
-                                        return false;
-                                    }
+                                    if (!isTransferType) return false;
 
-                                    // For transferChecked instructions, the structure might be different
                                     let destination: string | undefined;
-                                    let authority: string | undefined;
-                                    let amount: string | undefined;
-
                                     if ('info' in parsedData && parsedData.info) {
-                                        // Standard token instruction format
-                                        const info = parsedData.info;
-                                        destination = info.destination;
-                                        
-                                        // Handle different authority fields
-                                        authority = info.authority || info.multisigAuthority || info.source;
-                                        
-                                        // Handle different amount formats
-                                        if (info.tokenAmount) {
-                                            amount = info.tokenAmount.amount;
-                                        } else if (info.amount) {
-                                            amount = info.amount;
-                                        }
-                                    } else if ('source' in parsedData) {
-                                        // Alternative format sometimes used
-                                        destination = parsedData.destination;
-                                        authority = parsedData.source;
-                                        amount = parsedData.amount;
+                                        destination = parsedData.info.destination;
                                     }
 
-                                    if (!destination) {
-                                        console.log('Missing destination in transfer instruction:', parsedData);
-                                        return false;
-                                    }
-
-                                    const isToMerchant = destination === merchantUsdcAta.toString();
-                                    
-                                    console.log('Checking parsed instruction:', {
-                                        type,
-                                        program: instruction.program,
-                                        destination,
-                                        authority,
-                                        amount,
-                                        merchantAta: merchantUsdcAta.toString(),
-                                        isTransferType,
-                                        isToMerchant,
-                                        rawParsedData: parsedData
-                                    });
-                                    
-                                    // Store the extracted data in the instruction for later use
-                                    (instruction as any)._extractedData = {
-                                        authority,
-                                        amount,
-                                        destination
-                                    };
-                                    
-                                    return isTransferType && isToMerchant;
-                                } else {
-                                    // For partially decoded instructions, check if it's a token program instruction
-                                    const isTokenProgram = instruction.programId.toString() === TOKEN_PROGRAM_ID.toString();
-                                    
-                                    if (!isTokenProgram) {
-                                        return false;
-                                    }
-
-                                    // Check if this is a transfer by examining the accounts
-                                    const accounts = instruction.accounts || [];
-                                    if (accounts.length === 0) {
-                                        return false;
-                                    }
-
-                                    const isToMerchant = accounts.some(acc => 
-                                        acc && acc.toString() === merchantUsdcAta.toString()
-                                    );
-                                    
-                                    if (isToMerchant) {
-                                        console.log('Found potential transfer to merchant:', {
-                                            accounts: accounts.map(acc => acc.toString()),
-                                            data: instruction.data
-                                        });
-                                    }
-                                    
-                                    return isToMerchant;
+                                    return destination === merchantUsdcAta.toString();
                                 }
+                                return false;
                             }
                         );
 
-                        if (!transferInstruction) {
-                            console.log('No valid transfer instruction found in transaction:', tx.transaction.signatures[0]);
-                            return null;
-                        }
+                        if (!transferInstruction || !('parsed' in transferInstruction)) return null;
 
-                        try {
-                            let authority: string | undefined;
-                            let amount: string | undefined;
+                        const parsedData = typeof transferInstruction.parsed === 'string'
+                            ? { type: transferInstruction.parsed }
+                            : transferInstruction.parsed;
 
-                            if ('parsed' in transferInstruction) {
-                                // Get the data we extracted earlier
-                                const extractedData = (transferInstruction as any)._extractedData;
-                                authority = extractedData?.authority;
-                                amount = extractedData?.amount;
+                        if (!('info' in parsedData)) return null;
 
-                                // Additional logging for debugging
-                                console.log('Extracted transfer data:', {
-                                    authority,
-                                    amount,
-                                    rawInstruction: transferInstruction.parsed
-                                });
-                            } else {
-                                // For partially decoded instructions, try to get the authority from the accounts
-                                authority = transferInstruction.accounts[0]?.toString();
-                                console.log('Partially decoded instruction data:', {
-                                    accounts: transferInstruction.accounts.map(acc => acc.toString()),
-                                    data: transferInstruction.data
-                                });
-                            }
+                        const info = parsedData.info;
+                        const authority = info.authority || info.multisigAuthority || info.source;
+                        const amount = info.tokenAmount?.amount || info.amount;
 
-                            if (!authority) {
-                                console.log('Invalid or missing authority in transaction:', tx.transaction.signatures[0], {
-                                    instruction: transferInstruction,
-                                    parsed: 'parsed' in transferInstruction ? transferInstruction.parsed : undefined
-                                });
-                                return null;
-                            }
+                        if (!authority || !amount) return null;
 
-                            // Create payment object with additional error handling
-                            const payment = {
-                                signature: tx.transaction.signatures[0],
-                                amount: amount ? Number(amount) / Math.pow(10, 6) : 0, // Convert from USDC decimals
-                                memo: tx.meta?.logMessages?.find(log => log.includes('Memo:'))?.replace('Program log: Memo:', '').trim() || null,
-                                timestamp: tx.blockTime ? tx.blockTime * 1000 : Date.now(),
-                                sender: new PublicKey(authority)
-                            };
+                        // Extract memo from transaction logs
+                        let memo = null;
+                        if (tx.meta?.logMessages) {
+                            console.log('Transaction logs for', tx.transaction.signatures[0], ':', tx.meta.logMessages);
                             
-                            console.log('Successfully processed payment:', payment);
-                            return payment;
-                        } catch (err) {
-                            console.error('Error processing payment:', err, {
-                                signature: tx.transaction.signatures[0],
-                                instruction: transferInstruction
+                            // Look for memo in transaction logs
+                            const memoLog = tx.meta.logMessages.find(log => {
+                                const lowerLog = log.toLowerCase();
+                                return lowerLog.includes('program log: memo (len') || lowerLog.includes('memo program: memo');
                             });
-                            return null;
+                            
+                            if (memoLog) {
+                                // Extract memo content
+                                const matches = memoLog.match(/(?:Program log: Memo \(len \d+\): |Memo Program: Memo )(.+)/i);
+                                if (matches && matches[1]) {
+                                    // Remove surrounding quotes if they exist
+                                    memo = matches[1].trim().replace(/^"(.*)"$/, '$1');
+                                    console.log('Found memo:', memo);
+                                } else {
+                                    console.log('Could not extract memo from log:', memoLog);
+                                }
+                            } else {
+                                console.log('No memo found in logs');
+                            }
                         }
-                    })
-                    .filter((payment): payment is Payment => payment !== null);
 
-                console.log('Final processed payments:', processedPayments);
-                setPayments(processedPayments);
+                        const payment = {
+                            signature: tx.transaction.signatures[0],
+                            amount: Number(amount) / Math.pow(10, 6),
+                            memo,
+                            timestamp: tx.blockTime ? tx.blockTime * 1000 : Date.now(),
+                            sender: new PublicKey(authority)
+                        };
+
+                        console.log('Created payment object:', payment);
+                        return payment;
+                    }));
+
+                const validPayments = processedPayments.filter((payment): payment is Payment => payment !== null);
+                console.log('Final processed payments with memos:', validPayments);
+                setPayments(validPayments);
 
                 // Update balance if callback is provided
                 if (onBalanceUpdate) {
                     const balance = await connection.getTokenAccountBalance(merchantUsdcAta);
                     onBalanceUpdate(Number(balance.value.uiAmount || 0));
                 }
-            }, 3, 2000); // 3 retries, starting with 2 second delay
+            }, 3, 2000);
 
         } catch (err) {
             console.error('Error fetching payments:', err);
@@ -306,10 +224,148 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
         }
     }, [connection, merchantPubkey, isDevnet, onBalanceUpdate]);
 
+    // Add new function to process a single transaction
+    const processNewTransaction = useCallback(async (signature: string) => {
+        try {
+            const tx = await connection.getParsedTransaction(signature, 'confirmed');
+            if (!tx || !tx.meta) return null;
+
+            const usdcMint = isDevnet ? USDC_DEVNET_MINT : USDC_MINT;
+            const merchantUsdcAta = await findAssociatedTokenAddress(merchantPubkey, usdcMint);
+
+            // Find the token transfer instruction
+            const transferInstruction = tx.transaction.message.instructions.find(
+                (instruction: ParsedInstruction | PartiallyDecodedInstruction) => {
+                    if ('parsed' in instruction) {
+                        if (instruction.program !== 'spl-token') return false;
+
+                        const parsedData = typeof instruction.parsed === 'string' 
+                            ? { type: instruction.parsed } 
+                            : instruction.parsed;
+
+                        if (!('type' in parsedData)) return false;
+
+                        const { type } = parsedData;
+                        const isTransferType = type === 'transfer' || type === 'transferChecked';
+                        if (!isTransferType) return false;
+
+                        let destination: string | undefined;
+                        let amount: string | undefined;
+
+                        if ('info' in parsedData && parsedData.info) {
+                            destination = parsedData.info.destination;
+                            amount = parsedData.info.tokenAmount?.amount || parsedData.info.amount;
+                        }
+
+                        return destination === merchantUsdcAta.toString();
+                    }
+                    return false;
+                }
+            );
+
+            if (!transferInstruction || !('parsed' in transferInstruction)) return null;
+
+            const parsedData = typeof transferInstruction.parsed === 'string'
+                ? { type: transferInstruction.parsed }
+                : transferInstruction.parsed;
+
+            if (!('info' in parsedData)) return null;
+
+            const info = parsedData.info;
+            const authority = info.authority || info.multisigAuthority || info.source;
+            const amount = info.tokenAmount?.amount || info.amount;
+
+            if (!authority || !amount) return null;
+
+            const payment: Payment = {
+                signature,
+                amount: Number(amount) / Math.pow(10, 6),
+                memo: tx.meta.logMessages?.find(log => log.includes('Memo:'))?.replace('Program log: Memo:', '').trim() || null,
+                timestamp: tx.blockTime ? tx.blockTime * 1000 : Date.now(),
+                sender: new PublicKey(authority)
+            };
+
+            return payment;
+        } catch (err) {
+            console.error('Error processing new transaction:', err);
+            return null;
+        }
+    }, [connection, merchantPubkey, isDevnet]);
+
     // Initial fetch
     useEffect(() => {
         fetchPayments();
-    }, [fetchPayments]);
+
+        // Set up subscription to merchant's USDC ATA
+        const setupSubscription = async () => {
+            try {
+                const usdcMint = isDevnet ? USDC_DEVNET_MINT : USDC_MINT;
+                const merchantUsdcAta = await findAssociatedTokenAddress(merchantPubkey, usdcMint);
+
+                // Subscribe to account changes
+                const subscriptionId = connection.onAccountChange(
+                    merchantUsdcAta,
+                    async (_, context) => {
+                        console.log('Detected change in merchant USDC ATA');
+                        
+                        // Get the latest transaction signature
+                        const signatures = await connection.getSignaturesForAddress(merchantUsdcAta, {
+                            limit: 1
+                        });
+
+                        if (signatures.length === 0) return;
+
+                        const latestSignature = signatures[0].signature;
+                        const newPayment = await processNewTransaction(latestSignature);
+
+                        if (newPayment) {
+                            setPayments(prevPayments => {
+                                // Check if payment already exists
+                                if (prevPayments.some(p => p.signature === newPayment.signature)) {
+                                    return prevPayments;
+                                }
+                                // Add new payment to the top
+                                return [newPayment, ...prevPayments];
+                            });
+
+                            // Show toast notification for new payment
+                            const toastMessage = `${formatUSDCAmount(newPayment.amount)} USDC payment to Merchant ${merchantPubkey.toString()}`;
+                            toast.success(toastMessage, {
+                                duration: 5000,
+                                position: 'bottom-right'
+                            });
+
+                            // Invalidate the merchant's USDC balance query
+                            await queryClient.invalidateQueries({
+                                queryKey: ['usdc-balance', merchantPubkey.toString(), isDevnet]
+                            });
+
+                            // Update balance if callback is provided
+                            if (onBalanceUpdate) {
+                                const balance = await connection.getTokenAccountBalance(merchantUsdcAta);
+                                onBalanceUpdate(Number(balance.value.uiAmount || 0));
+                            }
+                        }
+                    },
+                    'confirmed'
+                );
+
+                // Cleanup subscription on unmount
+                return () => {
+                    console.log('Cleaning up USDC ATA subscription...');
+                    connection.removeAccountChangeListener(subscriptionId);
+                };
+            } catch (err) {
+                console.error('Error setting up USDC ATA subscription:', err);
+                toast.error('Failed to set up real-time updates');
+            }
+        };
+
+        const cleanup = setupSubscription();
+        return () => {
+            cleanup.then(cleanupFn => cleanupFn?.());
+        };
+    }, [fetchPayments, connection, merchantPubkey, isDevnet, processNewTransaction, onBalanceUpdate, queryClient]);
 
     if (isLoading) {
         return (
@@ -343,33 +399,35 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
             ) : (
                 <div className={`space-y-2 ${payments.length > 5 ? 'max-h-[500px] overflow-y-auto pr-2' : ''}`}>
                     {payments.map((payment) => (
-                        <div key={payment.signature} className="card bg-base-100 shadow">
+                        <div key={payment.signature} className="card bg-[#1C1C1C] shadow mb-2">
                             <div className="card-body p-4">
                                 <div className="flex justify-between items-start">
-                                    <div>
-                                        <p className="font-semibold">
-                                            +{payment.amount.toFixed(2)} USDC
+                                    <div className="space-y-1">
+                                        <p className="text-[#00b5ff] font-medium">
+                                            +{formatUSDCAmount(payment.amount)} USDC
                                         </p>
-                                        {payment.memo && (
-                                            <p className="text-sm text-gray-500">{payment.memo}</p>
-                                        )}
-                                        <p className="text-xs text-gray-400">
+                                        <p className="text-gray-400 text-sm">
                                             {new Date(payment.timestamp).toLocaleString()}
                                         </p>
+                                        {payment.memo && payment.memo.length > 0 && (
+                                            <p className="text-sm text-gray-300 mt-1">
+                                                Memo: {payment.memo}
+                                            </p>
+                                        )}
                                         <a 
                                             href={formatSolscanDevnetLink(payment.signature)}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            className="text-xs text-mint hover:opacity-80"
+                                            className="text-xs text-mint text-sm hover:opacity-80 block"
                                         >
                                             View on Solscan
                                         </a>
                                     </div>
                                     <div className="flex flex-col items-end gap-2">
-                                        <div className="text-xs text-gray-400">
+                                        <p className="text-gray-400 text-sm">
                                             From: {payment.sender.toString().slice(0, 4)}...
                                             {payment.sender.toString().slice(-4)}
-                                        </div>
+                                        </p>
                                         <RefundButton
                                             program={program}
                                             merchantPubkey={merchantPubkey}
