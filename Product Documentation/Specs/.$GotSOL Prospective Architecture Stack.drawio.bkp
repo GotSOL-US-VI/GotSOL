@@ -273,12 +273,12 @@
           <mxGeometry x="170" y="630" width="120" height="40" as="geometry" />
         </mxCell>
         <mxCell id="texffEij4Fj4lZX1Nn7l-2" value="&lt;div&gt;The House&lt;/div&gt;" style="swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;fillColor=#0011FF;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;html=1;" parent="1" vertex="1">
-          <mxGeometry x="72.5" y="930" width="120" height="110" as="geometry">
+          <mxGeometry x="72.5" y="930" width="120" height="140" as="geometry">
             <mxRectangle x="10" y="390" width="130" height="30" as="alternateBounds" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="texffEij4Fj4lZX1Nn7l-5" value="Para MPC? or Squads Multi-sig?&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;Separate Key from program Auth&lt;/div&gt;" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" parent="texffEij4Fj4lZX1Nn7l-2" vertex="1">
-          <mxGeometry y="26" width="120" height="84" as="geometry" />
+        <mxCell id="texffEij4Fj4lZX1Nn7l-5" value="Para MPC? or Squads Multi-sig?&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;Separate Key from program Auth&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;Company Treasury&lt;/div&gt;" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" parent="texffEij4Fj4lZX1Nn7l-2" vertex="1">
+          <mxGeometry y="26" width="120" height="114" as="geometry" />
         </mxCell>
         <mxCell id="texffEij4Fj4lZX1Nn7l-6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" parent="texffEij4Fj4lZX1Nn7l-2" source="texffEij4Fj4lZX1Nn7l-5" target="texffEij4Fj4lZX1Nn7l-5" edge="1">
           <mxGeometry relative="1" as="geometry" />
