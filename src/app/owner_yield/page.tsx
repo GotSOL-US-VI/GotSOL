@@ -1,11 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useWallet } from "@getpara/react-sdk";
+import { useWallet, useClient } from "@getpara/react-sdk";
 import { BalanceDisplay } from "@/components/swap/balance-display";
 import { useConnection } from '@/lib/connection-context';
 import { ArrowsUpDownIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import { useTokenBalance } from '@/hooks/useTokenBalance';
+import { PublicKey, VersionedTransaction } from '@solana/web3.js';
+import { ParaSolanaWeb3Signer } from "@getpara/solana-web3.js-v1-integration";
+import { useParaModal } from '@/components/para/para-provider';
 
 // Token addresses - using mainnet addresses directly since this is a mainnet-only component
 const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
@@ -14,26 +17,48 @@ const USD_STAR_MINT = 'BenJy1n3WTx9mTjEvy63e8Q1j4RqUc6E4VBMz3ir4Wo6';
 function SwapPageInner() {
   const { data: wallet } = useWallet();
   const { connection } = useConnection();
-  const address = wallet?.address;
-  const signer = (wallet as any)?.signer;
+  const para = useClient();
+  const { openModal } = useParaModal();
   const [isConnected, setIsConnected] = useState(false);
   const [amount, setAmount] = useState('');
   const [quote, setQuote] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [solanaSigner, setSolanaSigner] = useState<ParaSolanaWeb3Signer | null>(null);
 
   // Get USDC balance using our custom hook
   const { balance: usdcBalance, isLoading: isBalanceLoading } = useTokenBalance(USDC_MINT);
 
+  // Get wallet public key and signer
+  const publicKey = wallet?.address ? new PublicKey(wallet.address) : null;
+
   useEffect(() => {
-    const connected = !!address;
+    const connected = !!publicKey;
     setIsConnected(connected);
+
+    const setupSigner = async () => {
+      if (connected && para && connection && wallet?.id) {
+        try {
+          const signer = new ParaSolanaWeb3Signer(para, connection, wallet.id);
+          setSolanaSigner(signer);
+        } catch (err) {
+          console.error('Error creating signer:', err);
+          setSolanaSigner(null);
+        }
+      } else {
+        setSolanaSigner(null);
+      }
+    };
+
+    setupSigner();
+
     console.log('Wallet connection status:', {
-      address,
+      publicKey: publicKey?.toString(),
+      walletId: wallet?.id,
       connected,
-      signer: !!signer
+      hasSigner: !!solanaSigner
     });
-  }, [address, signer]);
+  }, [publicKey, para, connection, wallet?.id]);
 
   const getQuote = async (inputAmount: number) => {
     try {
@@ -45,16 +70,28 @@ function SwapPageInner() {
         inputAmount,
         amountInDecimals,
         inputMint: USDC_MINT,
-        outputMint: USD_STAR_MINT
+        outputMint: USD_STAR_MINT,
+        userPublicKey: publicKey?.toString()
       });
 
-      const response = await fetch(`https://quote-api.jup.ag/v6/quote?inputMint=${USDC_MINT}&outputMint=${USD_STAR_MINT}&amount=${amountInDecimals}&slippageBps=50`);
-      const data = await response.json();
+      const response = await fetch('/api/jupiter/quote', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          inputMint: USDC_MINT,
+          outputMint: USD_STAR_MINT,
+          amount: amountInDecimals,
+          slippageBps: 50
+        })
+      });
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to get quote');
+        throw new Error('Failed to get quote');
       }
 
+      const data = await response.json();
       console.log('Quote received:', data);
       setQuote(data);
     } catch (err) {
@@ -66,11 +103,13 @@ function SwapPageInner() {
   };
 
   const executeSwap = async () => {
-    if (!quote || !signer || !address) {
+    if (!quote || !publicKey || !solanaSigner || !connection) {
       console.error('Cannot execute swap:', { 
         hasQuote: !!quote, 
-        hasSigner: !!signer, 
-        hasAddress: !!address 
+        hasPublicKey: !!publicKey,
+        hasSigner: !!solanaSigner,
+        hasConnection: !!connection,
+        walletId: wallet?.id
       });
       return;
     }
@@ -79,35 +118,45 @@ function SwapPageInner() {
       setIsLoading(true);
       setError(null);
 
-      console.log('Executing swap with address:', address);
+      console.log('Executing swap with public key:', publicKey.toString());
 
-      const transactions = await (
-        await fetch('https://quote-api.jup.ag/v6/swap', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            quoteResponse: quote,
-            userPublicKey: address,
-            wrapAndUnwrapSol: false,
-          })
+      const swapResponse = await fetch('/api/jupiter/swap', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          quoteResponse: quote,
+          userPublicKey: publicKey.toString()
         })
-      ).json();
+      });
 
-      console.log('Got swap transaction:', transactions);
+      if (!swapResponse.ok) {
+        throw new Error('Failed to get swap transaction');
+      }
 
-      const { swapTransaction } = transactions;
-      const swapTransactionBuf = Buffer.from(swapTransaction, 'base64');
+      const swapData = await swapResponse.json();
+      console.log('Swap transaction data:', swapData);
+
+      const swapTransactionBuf = Buffer.from(swapData.swapTransaction, 'base64');
+      const transaction = VersionedTransaction.deserialize(swapTransactionBuf);
       
       console.log('Signing transaction...');
-      const signedTx = await signer.signTransaction(swapTransactionBuf);
+      const signedTx = await solanaSigner.signTransaction(transaction);
       
       console.log('Sending transaction...');
-      const txid = await connection.sendRawTransaction(signedTx.serialize());
+      const txid = await connection.sendRawTransaction(signedTx.serialize(), {
+        skipPreflight: true,
+        maxRetries: 3
+      });
       console.log('Transaction sent:', txid);
       
-      await connection.confirmTransaction(txid);
+      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
+      await connection.confirmTransaction({
+        signature: txid,
+        blockhash,
+        lastValidBlockHeight
+      });
       console.log('Transaction confirmed');
 
       setAmount('');
@@ -122,7 +171,7 @@ function SwapPageInner() {
   };
 
   const handleMaxClick = () => {
-    if (!wallet?.publicKey || !usdcBalance) return;
+    if (!publicKey || !usdcBalance) return;
     const maxAmount = usdcBalance.toString();
     console.log('Setting max amount:', maxAmount);
     setAmount(maxAmount);
@@ -130,7 +179,7 @@ function SwapPageInner() {
   };
 
   const handleHalfClick = () => {
-    if (!wallet?.publicKey || !usdcBalance) return;
+    if (!publicKey || !usdcBalance) return;
     const halfAmount = (usdcBalance / 2).toString();
     console.log('Setting half amount:', halfAmount);
     setAmount(halfAmount);
@@ -245,25 +294,26 @@ function SwapPageInner() {
                 </div>
               )}
 
-              {!isConnected && (
+              {!isConnected ? (
                 <button 
                   className="btn btn-primary w-full rounded-xl"
+                  onClick={openModal}
                 >
                   Connect Wallet
                 </button>
+              ) : (
+                <button
+                  className="btn btn-primary w-full rounded-xl"
+                  onClick={executeSwap}
+                  disabled={!quote || isLoading}
+                >
+                  {isLoading ? (
+                    <span className="loading loading-spinner loading-sm"></span>
+                  ) : (
+                    'Swap'
+                  )}
+                </button>
               )}
-
-              <button
-                className="btn btn-primary w-full rounded-xl"
-                onClick={executeSwap}
-                disabled={!quote || isLoading}
-              >
-                {isLoading ? (
-                  <span className="loading loading-spinner loading-sm"></span>
-                ) : (
-                  'Swap'
-                )}
-              </button>
             </div>
           </div>
         </div>
