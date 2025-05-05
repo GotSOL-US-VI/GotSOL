@@ -75,7 +75,7 @@ export function MakeRevenuePaymentButton({ program, merchantPubkey, merchantName
     return (
         <div className="card bg-base-200 shadow-xl">
             <div className="card-body">
-                <h2 className="card-title">Make Revenue Payment</h2>
+                <h2 className="card-title">Make Revenue Payment (dummy UI, button is non-functional)</h2>
                 <div className="stats shadow">
                     <div className="stat">
                         <div className="stat-title">Escrow Balance</div>
