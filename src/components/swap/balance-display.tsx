@@ -52,8 +52,8 @@ const BalanceDisplayContent = memo(({
   };
 
   return (
-    <div className="space-y-4 rounded-lg border border-base-content/10 p-4">
-      <div className="text-sm opacity-90 mb-2">
+    <div className="space-y-5 rounded-lg border border-base-content/10 p-5">
+      <div className="text-base opacity-90 mb-3">
         Owner: <a 
           href={`https://solscan.io/account/${publicKey.toString()}`}
           target="_blank"
@@ -64,9 +64,9 @@ const BalanceDisplayContent = memo(({
         </a>
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-3">
         <div className="flex justify-between items-center">
-          <span className="text-sm">USDC Balance</span>
+          <span className="text-base">USDC Balance</span>
           <span>
             {isBalancesVisible 
               ? `${usdcBalance?.toFixed(6) ?? '0.000000'} USDC`
@@ -76,7 +76,7 @@ const BalanceDisplayContent = memo(({
         </div>
 
         <div className="flex justify-between items-center">
-          <span className="text-sm">
+          <span className="text-base">
             <a 
               href="https://app.perena.org/"
               target="_blank"
@@ -115,7 +115,12 @@ function BalanceDisplayInner() {
   const timeoutRef = useRef<NodeJS.Timeout>();
   const mountedRef = useRef(true);
 
-  const publicKey = wallet?.publicKey ? new PublicKey(wallet.publicKey) : null;
+  // Get the public key from Para wallet's address field
+  const publicKey = wallet?.address ? new PublicKey(wallet.address) : null;
+
+  // Debug logs
+  console.log('Para wallet data:', wallet);
+  console.log('Derived public key:', publicKey?.toString());
 
   const fetchBalances = useCallback(async () => {
     // Prevent concurrent fetches
@@ -201,7 +206,7 @@ function BalanceDisplayInner() {
   if (!publicKey) {
     return (
       <div className="text-center py-4">
-        <p className="text-sm opacity-70">Please connect your wallet to view balances</p>
+        <p className="text-base opacity-70">Please connect your wallet to view balances</p>
       </div>
     );
   }
@@ -225,7 +230,7 @@ function BalanceDisplayInner() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Your Balances</h2>
+        <h2 className="text-xl font-semibold">Your Token Balances</h2>
         <button
           onClick={toggleVisibility}
           className="btn btn-ghost btn-sm btn-circle"
@@ -251,9 +256,9 @@ function BalanceDisplayInner() {
 // Wrapper component that provides the mainnet connection
 export function BalanceDisplay() {
   return (
-    <div className="bg-base-100 rounded-3xl shadow-xl p-6">
+    <div className="bg-base-100 rounded-3xl shadow-xl">
       <MainnetConnectionProvider>
-      <BalanceDisplayInner />
+        <BalanceDisplayInner />
       </MainnetConnectionProvider>
     </div>
   );

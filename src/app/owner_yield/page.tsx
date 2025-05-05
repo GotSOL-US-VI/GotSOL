@@ -131,7 +131,7 @@ function SwapPageInner() {
   useEffect(() => {
     const connected = !!publicKey;
     setIsConnected(connected);
-    
+
     if (connected) {
       setupSigner();
     } else {
@@ -193,8 +193,8 @@ function SwapPageInner() {
 
   const executeSwap = async () => {
     if (!quote || !publicKey || !solanaSigner || !connection) {
-      console.error('Cannot execute swap:', { 
-        hasQuote: !!quote, 
+      console.error('Cannot execute swap:', {
+        hasQuote: !!quote,
         hasPublicKey: !!publicKey,
         hasSigner: !!solanaSigner,
         hasConnection: !!connection,
@@ -236,20 +236,20 @@ function SwapPageInner() {
 
       const swapTransactionBuf = Buffer.from(swapData.swapTransaction, 'base64');
       const transaction = VersionedTransaction.deserialize(swapTransactionBuf);
-      
+
       console.log('Signing transaction...');
       const signedTx = await solanaSigner.signTransaction(transaction);
-      
+
       console.log('Sending transaction...');
       const txid = await connection.sendRawTransaction(signedTx.serialize(), {
         skipPreflight: true,
         maxRetries: 3
       });
       console.log('Transaction sent:', txid);
-      
+
       // Show pending toast
       toast.loading('Transaction pending...', { id: txid });
-      
+
       try {
         const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
         const confirmation = await connection.confirmTransaction({
@@ -315,7 +315,25 @@ function SwapPageInner() {
       <div className="flex gap-8">
         {/* Balance Display Section - 30% width */}
         <div className="w-[30%]">
-          <BalanceDisplay />
+          <div className="flex flex-col space-y-6 p-6">
+            <BalanceDisplay />
+            <p className="text-base">Perena&apos;s USD* is an interest-bearing stablecoin. <a
+              href="https://perena.notion.site/Product-Documentation-15fa37a29ca48060afd9cabb21b44d5c"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-mint underline hover:opacity-80 transition-opacity"
+            >
+              Perena&apos;s Product Documentation
+            </a> </p>
+            <p className="text-base">It has no <em>Freeze Authority</em> nor <em>Permanent Delegate</em> and therefore can not be frozen by the issuer or removed from your account without your permission. <a
+              href="https://solscan.io/token/BenJy1n3WTx9mTjEvy63e8Q1j4RqUc6E4VBMz3ir4Wo6"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-mint underline hover:opacity-80 transition-opacity"
+            >
+              Token Explorer
+            </a> </p>
+          </div>
         </div>
 
         {/* Swap Section - 70% width */}
@@ -356,9 +374,9 @@ function SwapPageInner() {
                   />
                   <div className="flex items-center gap-2 bg-base-300 rounded-xl px-3 py-2">
                     {usdcToken ? (
-                      <img 
-                        src={usdcToken.logoURI} 
-                        alt={usdcToken.symbol} 
+                      <img
+                        src={usdcToken.logoURI}
+                        alt={usdcToken.symbol}
                         className="w-6 h-6"
                       />
                     ) : (
@@ -372,14 +390,14 @@ function SwapPageInner() {
                     ${amount || '0.00'}
                   </div>
                   <div className="flex gap-2">
-                    <button 
+                    <button
                       onClick={handleHalfClick}
                       disabled={isBalanceLoading || !usdcBalance}
                       className="text-xs bg-base-300 hover:bg-base-300/80 px-2 py-1 rounded-lg transition-colors disabled:opacity-50"
                     >
                       Half
                     </button>
-                    <button 
+                    <button
                       onClick={handleMaxClick}
                       disabled={isBalanceLoading || !usdcBalance}
                       className="text-xs bg-base-300 hover:bg-base-300/80 px-2 py-1 rounded-lg transition-colors disabled:opacity-50"
@@ -406,13 +424,13 @@ function SwapPageInner() {
                   </div>
                   <div className="flex items-center gap-2 bg-base-300 rounded-xl px-3 py-2">
                     {usdStarToken?.logoURI ? (
-                      <img 
-                        src={usdStarToken.logoURI} 
+                      <img
+                        src={usdStarToken.logoURI}
                         alt="USD*"
                         className="w-6 h-6"
                       />
                     ) : (
-                      <img 
+                      <img
                         src={USD_STAR_LOGO}
                         alt="USD*"
                         className="w-6 h-6"
@@ -451,7 +469,7 @@ function SwapPageInner() {
               )}
 
               {!isConnected ? (
-                <button 
+                <button
                   className="btn btn-primary w-full rounded-xl"
                   onClick={openModal}
                 >
