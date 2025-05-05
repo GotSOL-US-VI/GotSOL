@@ -14,6 +14,9 @@ import { useParaModal } from '@/components/para/para-provider';
 const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
 const USD_STAR_MINT = 'BenJy1n3WTx9mTjEvy63e8Q1j4RqUc6E4VBMz3ir4Wo6';
 
+// Add fallback image URL for USD*
+const USD_STAR_LOGO = 'https://ipfs.filebase.io/ipfs/QmPA375TeXunjaEQ5agLB7RQWgEpQaU59TD8RmUJxo17Ec';
+
 function SwapPageInner() {
   const { data: wallet } = useWallet();
   const { connection } = useConnection();
@@ -25,6 +28,7 @@ function SwapPageInner() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [solanaSigner, setSolanaSigner] = useState<ParaSolanaWeb3Signer | null>(null);
+  const [tokenList, setTokenList] = useState<any>(null);
 
   // Get USDC balance using our custom hook
   const { balance: usdcBalance, isLoading: isBalanceLoading } = useTokenBalance(USDC_MINT);
@@ -33,6 +37,28 @@ function SwapPageInner() {
   const publicKey = useMemo(() => {
     return wallet?.address ? new PublicKey(wallet.address) : null;
   }, [wallet?.address]);
+
+  // Fetch Jupiter token list
+  useEffect(() => {
+    const fetchTokenList = async () => {
+      try {
+        const response = await fetch('https://token.jup.ag/strict');
+        const data = await response.json();
+        const tokens = data.reduce((acc: any, token: any) => {
+          acc[token.address] = token;
+          return acc;
+        }, {});
+        setTokenList(tokens);
+      } catch (err) {
+        console.error('Error fetching token list:', err);
+      }
+    };
+    fetchTokenList();
+  }, []);
+
+  // Get token metadata
+  const usdcToken = tokenList?.[USDC_MINT];
+  const usdStarToken = tokenList?.[USD_STAR_MINT];
 
   // Setup signer function
   const setupSigner = useCallback(async () => {
@@ -210,7 +236,7 @@ function SwapPageInner() {
         <div className="w-[70%]">
           <div className="bg-base-100 rounded-3xl shadow-xl p-6">
             <div className="mb-6">
-              <h2 className="text-xl font-semibold mb-1">Convert Stablecoins</h2>
+              <h2 className="text-xl font-semibold mb-1">Swap USDC to Perena&apos;s USD*</h2>
             </div>
 
             <div className="space-y-4">
@@ -243,11 +269,15 @@ function SwapPageInner() {
                     }}
                   />
                   <div className="flex items-center gap-2 bg-base-300 rounded-xl px-3 py-2">
-                    <img 
-                      src="https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/solana/assets/EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v/logo.png" 
-                      alt="USDC" 
-                      className="w-6 h-6"
-                    />
+                    {usdcToken ? (
+                      <img 
+                        src={usdcToken.logoURI} 
+                        alt={usdcToken.symbol} 
+                        className="w-6 h-6"
+                      />
+                    ) : (
+                      <div className="w-6 h-6 bg-base-200 rounded-full animate-pulse" />
+                    )}
                     <span className="font-medium">USDC</span>
                   </div>
                 </div>
@@ -289,11 +319,27 @@ function SwapPageInner() {
                     {quote ? (Number(quote.outAmount) / 1_000_000).toFixed(6) : '0.000000'}
                   </div>
                   <div className="flex items-center gap-2 bg-base-300 rounded-xl px-3 py-2">
-                    <img 
-                      src="https://raw.githubusercontent.com/perena11/perena-app/main/public/usd-star.png" 
-                      alt="USD*" 
-                      className="w-6 h-6"
-                    />
+                    {usdStarToken?.logoURI ? (
+                      <img 
+                        src={usdStarToken.logoURI} 
+                        alt="USD*"
+                        className="w-6 h-6"
+                      />
+                    ) : (
+                      <img 
+                        src={USD_STAR_LOGO}
+                        alt="USD*"
+                        className="w-6 h-6"
+                        onError={(e) => {
+                          // If the image fails to load, show a fallback div
+                          const target = e.target as HTMLImageElement;
+                          const div = document.createElement('div');
+                          div.className = 'w-6 h-6 bg-base-200 rounded-full flex items-center justify-center text-xs font-medium';
+                          div.textContent = 'USD*';
+                          target.parentNode?.replaceChild(div, target);
+                        }}
+                      />
+                    )}
                     <span className="font-medium">USD*</span>
                   </div>
                 </div>
