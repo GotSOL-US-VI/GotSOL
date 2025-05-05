@@ -13,7 +13,7 @@ export default function OwnerYieldLayout({ children }: { children: React.ReactNo
   return (
     <ConnectionContext.Provider value={{ connection }}>
       <ParaProvider>
-        {children}
+      {children}
       </ParaProvider>
     </ConnectionContext.Provider>
   );

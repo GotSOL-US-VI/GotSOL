@@ -253,7 +253,7 @@ export function BalanceDisplay() {
   return (
     <div className="bg-base-100 rounded-3xl shadow-xl p-6">
       <MainnetConnectionProvider>
-        <BalanceDisplayInner />
+      <BalanceDisplayInner />
       </MainnetConnectionProvider>
     </div>
   );

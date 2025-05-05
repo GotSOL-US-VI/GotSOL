@@ -6,10 +6,9 @@ import { BalanceDisplay } from "@/components/swap/balance-display";
 import { useConnection } from '@/lib/connection-context';
 import { ArrowsUpDownIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import { useTokenBalance } from '@/hooks/useTokenBalance';
-import { env } from '@/utils/env';
 
-// Token addresses
-const USDC_MINT = env.usdcMint;
+// Token addresses - using mainnet addresses directly since this is a mainnet-only component
+const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
 const USD_STAR_MINT = 'BenJy1n3WTx9mTjEvy63e8Q1j4RqUc6E4VBMz3ir4Wo6';
 
 function SwapPageInner() {
