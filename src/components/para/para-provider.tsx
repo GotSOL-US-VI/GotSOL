@@ -1,6 +1,13 @@
 "use client";
 
-import { ParaProvider as ParaProviderV2, Environment, useWallet, ParaModal } from "@getpara/react-sdk";
+import {
+  ParaProvider as ParaProviderV2,
+  Environment,
+  useWallet,
+  ParaModal,
+  AuthLayout,
+  OAuthMethod
+} from "@getpara/react-sdk";
 import "@getpara/react-sdk/styles.css";
 import { useState, createContext, useContext, useMemo } from "react";
 import { useConnection } from '@/lib/connection-context';
@@ -11,39 +18,79 @@ import { PublicKey } from '@solana/web3.js';
 import { env } from '@/utils/env';
 
 const ParaContext = createContext({
-  openModal: () => {},
-  closeModal: () => {},
+  openModal: () => { },
+  closeModal: () => { },
   isOpen: false,
 });
 
 export const useParaModal = () => useContext(ParaContext);
 
 export function ParaProvider({ children }: { children: React.ReactNode }) {
-    const [isOpen, setIsOpen] = useState(false);
-    const { connection } = useConnection();
+  const [isOpen, setIsOpen] = useState(false);
+  const { connection } = useConnection();
 
-    const environment = useMemo(() => {
-        // Check if the connection is mainnet based on the RPC URL
-        const isMainnet = connection?.rpcEndpoint === env.mainnetHeliusRpcUrl;
-        return isMainnet ? Environment.PRODUCTION : Environment.DEVELOPMENT;
-    }, [connection]);
+  const environment = useMemo(() => {
+    // Check if the connection is mainnet based on the RPC URL
+    const isMainnet = connection?.rpcEndpoint === env.mainnetHeliusRpcUrl;
+    return isMainnet ? Environment.PRODUCTION : Environment.DEVELOPMENT;
+  }, [connection]);
 
-    const openModal = () => setIsOpen(true);
-    const closeModal = () => setIsOpen(false);
+  const paraApiKey = process.env.NEXT_PUBLIC_PARA_API_KEY;
 
-    return (
-        <ParaContext.Provider value={{ openModal, closeModal, isOpen }}>
-            <ParaProviderV2
-                paraClientConfig={{
-                    env: environment,
-                    apiKey: process.env.NEXT_PUBLIC_PARA_API_KEY || "",
-                }}
-            >
-                <ParaModal isOpen={isOpen} onClose={closeModal} />
-                {children}
-            </ParaProviderV2>
-        </ParaContext.Provider>
-    );
+  // Validate API key
+  if (!paraApiKey) {
+    console.error('Para API key is missing. Please check your environment variables.');
+    console.log('Available env variables:', {
+      NEXT_PUBLIC_PARA_API_KEY: process.env.NEXT_PUBLIC_PARA_API_KEY,
+      environment,
+      NODE_ENV: process.env.NODE_ENV
+    });
+    throw new Error('Para API key is required');
+  }
+
+  const openModal = () => setIsOpen(true);
+  const closeModal = () => setIsOpen(false);
+
+  return (
+    <ParaContext.Provider value={{ openModal, closeModal, isOpen }}>
+      <ParaProviderV2
+        paraClientConfig={{
+          env: environment,
+          apiKey: paraApiKey,
+        }}
+      >
+        <ParaModal
+          isOpen={isOpen}
+          onClose={closeModal}
+          disableEmailLogin={false}
+          disablePhoneLogin={false}
+          authLayout={[AuthLayout.AUTH_FULL]}
+          oAuthMethods={[
+            OAuthMethod.GOOGLE,
+            OAuthMethod.FACEBOOK,
+            OAuthMethod.APPLE,
+            OAuthMethod.DISCORD,
+            OAuthMethod.TWITTER,
+          ]}
+          theme={{
+            foregroundColor: "#2D3648",
+            backgroundColor: "#FFFFFF",
+            accentColor: "#0066CC",
+            darkForegroundColor: "#E8EBF2",
+            darkBackgroundColor: "#1A1F2B",
+            darkAccentColor: "#4D9FFF",
+            mode: "light",
+            borderRadius: "none",
+            font: "Inter",
+          }}
+          appName="GotSOL"
+          recoverySecretStepEnabled={true}
+          twoFactorAuthEnabled={true}
+        />
+        {children}
+      </ParaProviderV2>
+    </ParaContext.Provider>
+  );
 }
 
 export { useWallet };

@@ -208,13 +208,25 @@ function SwapPageInner() {
                 <div className="flex items-end justify-between">
                   <input
                     type="number"
+                    min="0"
+                    step="any"
                     className="text-4xl bg-transparent border-none focus:outline-none w-full"
                     placeholder="0.00"
                     value={amount}
                     onChange={(e) => {
-                      setAmount(e.target.value);
-                      if (Number(e.target.value) > 0) {
-                        getQuote(Number(e.target.value));
+                      const value = e.target.value;
+                      // Only update if the value is empty or positive
+                      if (value === '' || Number(value) >= 0) {
+                        setAmount(value);
+                        if (Number(value) > 0) {
+                          getQuote(Number(value));
+                        }
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      // Prevent minus sign
+                      if (e.key === '-' || e.key === 'e') {
+                        e.preventDefault();
                       }
                     }}
                   />
