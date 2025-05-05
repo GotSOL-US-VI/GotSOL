@@ -5,10 +5,12 @@ import { useWallet, useClient } from "@getpara/react-sdk";
 import { BalanceDisplay } from "@/components/swap/balance-display";
 import { useConnection } from '@/lib/connection-context';
 import { ArrowsUpDownIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
-import { useTokenBalance } from '@/hooks/useTokenBalance';
 import { PublicKey, VersionedTransaction } from '@solana/web3.js';
 import { ParaSolanaWeb3Signer } from "@getpara/solana-web3.js-v1-integration";
 import { useParaModal } from '@/components/para/para-provider';
+import { toast } from 'react-hot-toast';
+import { TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID } from '@solana/spl-token';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 // Token addresses - using mainnet addresses directly since this is a mainnet-only component
 const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
@@ -17,11 +19,27 @@ const USD_STAR_MINT = 'BenJy1n3WTx9mTjEvy63e8Q1j4RqUc6E4VBMz3ir4Wo6';
 // Add fallback image URL for USD*
 const USD_STAR_LOGO = 'https://ipfs.filebase.io/ipfs/QmPA375TeXunjaEQ5agLB7RQWgEpQaU59TD8RmUJxo17Ec';
 
+// Helper function for finding token ATA
+async function findAssociatedTokenAddress(
+  walletAddress: PublicKey,
+  tokenMintAddress: PublicKey
+): Promise<PublicKey> {
+  return (await PublicKey.findProgramAddress(
+    [
+      walletAddress.toBuffer(),
+      TOKEN_PROGRAM_ID.toBuffer(),
+      tokenMintAddress.toBuffer(),
+    ],
+    ASSOCIATED_TOKEN_PROGRAM_ID
+  ))[0];
+}
+
 function SwapPageInner() {
   const { data: wallet } = useWallet();
   const { connection } = useConnection();
   const para = useClient();
   const { openModal } = useParaModal();
+  const queryClient = useQueryClient();
   const [isConnected, setIsConnected] = useState(false);
   const [amount, setAmount] = useState('');
   const [quote, setQuote] = useState<any>(null);
@@ -30,13 +48,46 @@ function SwapPageInner() {
   const [solanaSigner, setSolanaSigner] = useState<ParaSolanaWeb3Signer | null>(null);
   const [tokenList, setTokenList] = useState<any>(null);
 
-  // Get USDC balance using our custom hook
-  const { balance: usdcBalance, isLoading: isBalanceLoading } = useTokenBalance(USDC_MINT);
-
   // Get wallet public key
   const publicKey = useMemo(() => {
     return wallet?.address ? new PublicKey(wallet.address) : null;
   }, [wallet?.address]);
+
+  // Query for USDC balance
+  const { data: usdcBalance, isLoading: isBalanceLoading } = useQuery({
+    queryKey: ['tokenBalance', USDC_MINT, publicKey?.toString()],
+    queryFn: async () => {
+      if (!publicKey || !connection) return null;
+      try {
+        const ata = await findAssociatedTokenAddress(publicKey, new PublicKey(USDC_MINT));
+        const balance = await connection.getTokenAccountBalance(ata);
+        return balance;
+      } catch (err) {
+        console.error('Error fetching USDC balance:', err);
+        return null;
+      }
+    },
+    enabled: !!publicKey && !!connection,
+    refetchInterval: 10000 // Refetch every 10 seconds
+  });
+
+  // Query for USD* balance
+  const { data: usdStarBalance } = useQuery({
+    queryKey: ['tokenBalance', USD_STAR_MINT, publicKey?.toString()],
+    queryFn: async () => {
+      if (!publicKey || !connection) return null;
+      try {
+        const ata = await findAssociatedTokenAddress(publicKey, new PublicKey(USD_STAR_MINT));
+        const balance = await connection.getTokenAccountBalance(ata);
+        return balance;
+      } catch (err) {
+        console.error('Error fetching USD* balance:', err);
+        return null;
+      }
+    },
+    enabled: !!publicKey && !!connection,
+    refetchInterval: 10000 // Refetch every 10 seconds
+  });
 
   // Fetch Jupiter token list
   useEffect(() => {
@@ -149,12 +200,18 @@ function SwapPageInner() {
         hasConnection: !!connection,
         walletId: wallet?.id
       });
+      setError('Please connect your wallet and get a quote first');
       return;
     }
 
     try {
       setIsLoading(true);
       setError(null);
+
+      // First verify USDC balance
+      if (!usdcBalance || Number(usdcBalance.value.uiAmount) < Number(amount)) {
+        throw new Error(`Insufficient USDC balance. You have ${usdcBalance?.value.uiAmount || 0} USDC but are trying to swap ${amount} USDC`);
+      }
 
       console.log('Executing swap with public key:', publicKey.toString());
 
@@ -170,7 +227,8 @@ function SwapPageInner() {
       });
 
       if (!swapResponse.ok) {
-        throw new Error('Failed to get swap transaction');
+        const errorData = await swapResponse.json().catch(() => null);
+        throw new Error(errorData?.error || 'Failed to get swap transaction');
       }
 
       const swapData = await swapResponse.json();
@@ -189,19 +247,45 @@ function SwapPageInner() {
       });
       console.log('Transaction sent:', txid);
       
-      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
-      await connection.confirmTransaction({
-        signature: txid,
-        blockhash,
-        lastValidBlockHeight
-      });
-      console.log('Transaction confirmed');
+      // Show pending toast
+      toast.loading('Transaction pending...', { id: txid });
+      
+      try {
+        const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
+        const confirmation = await connection.confirmTransaction({
+          signature: txid,
+          blockhash,
+          lastValidBlockHeight
+        });
 
-      setAmount('');
-      setQuote(null);
-      alert('Swap successful! Transaction ID: ' + txid);
+        if (confirmation.value.err) {
+          throw new Error('Transaction failed on-chain');
+        }
+
+        // Clear loading toast and show success
+        toast.dismiss(txid);
+        toast.success('Swap successful! 🎉', {
+          duration: 5000
+        });
+
+        // Open Solscan in new tab
+        window.open(`https://solscan.io/tx/${txid}`, '_blank');
+
+        setAmount('');
+        setQuote(null);
+
+        // Invalidate and refetch token balances
+        queryClient.invalidateQueries({ queryKey: ['tokenBalance'] });
+
+      } catch (confirmError) {
+        // Clear loading toast and show error
+        toast.dismiss(txid);
+        console.error('Transaction confirmation failed:', confirmError);
+        throw new Error('Transaction failed to confirm. Please check Solscan for status.');
+      }
     } catch (err) {
       console.error('Error executing swap:', err);
+      toast.error(err instanceof Error ? err.message : 'Failed to execute swap');
       setError(err instanceof Error ? err.message : 'Failed to execute swap');
     } finally {
       setIsLoading(false);
@@ -210,18 +294,20 @@ function SwapPageInner() {
 
   const handleMaxClick = () => {
     if (!publicKey || !usdcBalance) return;
-    const maxAmount = usdcBalance.toString();
-    console.log('Setting max amount:', maxAmount);
+    const maxAmount = usdcBalance.value.uiAmount?.toString() || '0';
     setAmount(maxAmount);
-    getQuote(usdcBalance);
+    if (Number(maxAmount) > 0) {
+      getQuote(Number(maxAmount));
+    }
   };
 
   const handleHalfClick = () => {
     if (!publicKey || !usdcBalance) return;
-    const halfAmount = (usdcBalance / 2).toString();
-    console.log('Setting half amount:', halfAmount);
+    const halfAmount = (Number(usdcBalance.value.uiAmount || 0) / 2).toString();
     setAmount(halfAmount);
-    getQuote(usdcBalance / 2);
+    if (Number(halfAmount) > 0) {
+      getQuote(Number(halfAmount));
+    }
   };
 
   return (
