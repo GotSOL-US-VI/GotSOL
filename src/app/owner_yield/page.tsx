@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useWallet, useClient } from "@getpara/react-sdk";
 import { BalanceDisplay } from "@/components/swap/balance-display";
 import { useConnection } from '@/lib/connection-context';
@@ -29,36 +29,48 @@ function SwapPageInner() {
   // Get USDC balance using our custom hook
   const { balance: usdcBalance, isLoading: isBalanceLoading } = useTokenBalance(USDC_MINT);
 
-  // Get wallet public key and signer
-  const publicKey = wallet?.address ? new PublicKey(wallet.address) : null;
+  // Get wallet public key
+  const publicKey = useMemo(() => {
+    return wallet?.address ? new PublicKey(wallet.address) : null;
+  }, [wallet?.address]);
 
+  // Setup signer function
+  const setupSigner = useCallback(async () => {
+    if (!publicKey || !para || !connection || !wallet?.id) {
+      setSolanaSigner(null);
+      return;
+    }
+
+    try {
+      const signer = new ParaSolanaWeb3Signer(para, connection, wallet.id);
+      setSolanaSigner(signer);
+    } catch (err) {
+      console.error('Error creating signer:', err);
+      setSolanaSigner(null);
+    }
+  }, [publicKey, para, connection, wallet?.id]);
+
+  // Handle connection status
   useEffect(() => {
     const connected = !!publicKey;
     setIsConnected(connected);
+    
+    if (connected) {
+      setupSigner();
+    } else {
+      setSolanaSigner(null);
+    }
+  }, [publicKey, setupSigner]);
 
-    const setupSigner = async () => {
-      if (connected && para && connection && wallet?.id) {
-        try {
-          const signer = new ParaSolanaWeb3Signer(para, connection, wallet.id);
-          setSolanaSigner(signer);
-        } catch (err) {
-          console.error('Error creating signer:', err);
-          setSolanaSigner(null);
-        }
-      } else {
-        setSolanaSigner(null);
-      }
-    };
-
-    setupSigner();
-
+  // Log connection status only when it changes
+  useEffect(() => {
     console.log('Wallet connection status:', {
       publicKey: publicKey?.toString(),
       walletId: wallet?.id,
-      connected,
+      connected: isConnected,
       hasSigner: !!solanaSigner
     });
-  }, [publicKey, para, connection, wallet?.id]);
+  }, [isConnected]); // Only depend on isConnected
 
   const getQuote = async (inputAmount: number) => {
     try {

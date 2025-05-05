@@ -29,11 +29,8 @@ export function ParaProvider({ children }: { children: React.ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
   const { connection } = useConnection();
 
-  const environment = useMemo(() => {
-    // Check if the connection is mainnet based on the RPC URL
-    const isMainnet = connection?.rpcEndpoint === env.mainnetHeliusRpcUrl;
-    return isMainnet ? Environment.PRODUCTION : Environment.DEVELOPMENT;
-  }, [connection]);
+  // Always use BETA environment since we're using a beta API key
+  const environment = Environment.BETA;
 
   const paraApiKey = process.env.NEXT_PUBLIC_PARA_API_KEY;
 
