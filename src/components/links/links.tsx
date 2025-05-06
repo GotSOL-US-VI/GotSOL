@@ -23,11 +23,6 @@ const links: Link[] = [
         description: 'Understand how to manage your accounts, withdrawals, and transactions'
     },
     { 
-        label: 'Team Management', 
-        href: 'https://youtube.com/',
-        description: 'Set up and manage accounts for your managers and employees'
-    },
-    { 
         label: 'Social Sign-on', 
         href: 'https://youtube.com/',
         description: 'Learn about our secure and convenient social authentication system'
