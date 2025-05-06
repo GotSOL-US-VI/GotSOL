@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { PublicKey } from '@solana/web3.js';
 import { BorshCoder, Idl } from '@coral-xyz/anchor';
 import idl from '@/utils/kumbaya.json';
@@ -21,114 +21,79 @@ export interface Merchant {
   account: MerchantAccount;
 }
 
-export function useMerchants(walletAddress?: string, connection?: any) {
-  const [merchants, setMerchants] = useState<Merchant[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const mountedRef = useRef(true);
+// Export the function so it can be used for prefetching
+export async function fetchMerchantData(walletAddress: string | undefined, connection: any) {
+  if (!walletAddress || !connection) {
+    return [];
+  }
   
-  // Store wallet and connection in refs to break dependency cycle
-  const walletRef = useRef(walletAddress);
-  const connectionRef = useRef(connection);
-  const idlAddressRef = useRef(idl.address);
+  const programId = new PublicKey(idl.address);
   
-  // Update refs when props change
-  useEffect(() => {
-    walletRef.current = walletAddress;
-    connectionRef.current = connection;
-  }, [walletAddress, connection]);
-
-  // Only fetch once per wallet/connection combination
-  const fetchMerchants = useCallback(async () => {
-    if (!walletRef.current || !connectionRef.current) {
-      setLoading(false);
-      return;
-    }
-    
-    try {
-      setLoading(true);
-      
-      const programId = new PublicKey(idlAddressRef.current);
-      
-      const allAccounts = await connectionRef.current.getProgramAccounts(
-        programId,
+  const allAccounts = await connection.getProgramAccounts(
+    programId,
+    {
+      filters: [
         {
-          filters: [
-            {
-              memcmp: {
-                offset: 0,
-                bytes: bs58.encode(Buffer.from([71, 235, 30, 40, 231, 21, 32, 64]))
-              }
-            },
-            {
-              memcmp: {
-                offset: 8,
-                bytes: walletRef.current
-              }
-            }
-          ]
-        }
-      );
-
-      if (!mountedRef.current) return;
-
-      const merchantAccounts = await Promise.all(
-        allAccounts.map(async ({ pubkey, account }: any) => {
-          try {
-            const coder = new BorshCoder(idl as Idl);
-            const decoded = coder.accounts.decode('Merchant', account.data);
-
-            return {
-              publicKey: new PublicKey(pubkey),
-              account: {
-                owner: decoded.owner,
-                entityName: decoded.entity_name,
-                total_withdrawn: decoded.total_withdrawn.toNumber(),
-                total_refunded: decoded.total_refunded.toNumber(),
-                merchant_bump: decoded.merchant_bump,
-                is_active: decoded.is_active,
-                refund_limit: decoded.refund_limit.toNumber()
-              },
-            };
-          } catch (decodeError) {
-            console.error(`Error decoding account ${pubkey.toString()}:`, decodeError);
-            return null;
+          memcmp: {
+            offset: 0,
+            bytes: bs58.encode(Buffer.from([71, 235, 30, 40, 231, 21, 32, 64]))
           }
-        })
-      );
-
-      if (!mountedRef.current) return;
-
-      const validMerchants = merchantAccounts
-        .filter((m: Merchant | null): m is Merchant => m !== null)
-        .filter((m: Merchant) => m.account.is_active); // Only show active merchants
-
-      const sortedMerchants = validMerchants.sort((a: Merchant, b: Merchant) =>
-        a.account.entityName.localeCompare(b.account.entityName)
-      );
-
-      setMerchants(sortedMerchants);
-      setError(null);
-    } catch (error) {
-      if (!mountedRef.current) return;
-      console.error('Error fetching merchants:', error);
-      setError('Failed to fetch merchants. Please try again later.');
-    } finally {
-      if (mountedRef.current) {
-        setLoading(false);
-      }
+        },
+        {
+          memcmp: {
+            offset: 8,
+            bytes: walletAddress
+          }
+        }
+      ]
     }
-  }, []); // Empty dependency array prevents recreation of this function
+  );
 
-  useEffect(() => {
-    mountedRef.current = true;
-    
-    fetchMerchants();
-    
-    return () => {
-      mountedRef.current = false;
-    };
-  }, [walletAddress, connection, fetchMerchants]); // Only re-run when wallet or connection changes
+  const merchantAccounts = await Promise.all(
+    allAccounts.map(async ({ pubkey, account }: any) => {
+      try {
+        const coder = new BorshCoder(idl as Idl);
+        const decoded = coder.accounts.decode('Merchant', account.data);
 
-  return { merchants, loading, error };
+        return {
+          publicKey: new PublicKey(pubkey),
+          account: {
+            owner: decoded.owner,
+            entityName: decoded.entity_name,
+            total_withdrawn: decoded.total_withdrawn.toNumber(),
+            total_refunded: decoded.total_refunded.toNumber(),
+            merchant_bump: decoded.merchant_bump,
+            is_active: decoded.is_active,
+            refund_limit: decoded.refund_limit.toNumber()
+          },
+        };
+      } catch (decodeError) {
+        console.error(`Error decoding account ${pubkey.toString()}:`, decodeError);
+        return null;
+      }
+    })
+  );
+
+  const validMerchants = merchantAccounts
+    .filter((m: Merchant | null): m is Merchant => m !== null);
+
+  return validMerchants.sort((a: Merchant, b: Merchant) =>
+    a.account.entityName.localeCompare(b.account.entityName)
+  );
+}
+
+export function useMerchants(walletAddress?: string, connection?: any) {
+  const { data: merchants = [], isLoading: loading, error } = useQuery({
+    queryKey: ['merchants', walletAddress],
+    queryFn: () => fetchMerchantData(walletAddress, connection),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+    enabled: !!walletAddress && !!connection,
+  });
+
+  return { 
+    merchants, 
+    loading, 
+    error: error ? (error as Error).message : null 
+  };
 } 

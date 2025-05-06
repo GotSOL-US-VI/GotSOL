@@ -54,13 +54,28 @@ export function DashboardLoading() {
   )
 }
 
+export function DashboardError({ message }: { message: string }) {
+  return (
+    <div className="text-center p-8">
+      <div className="alert alert-error shadow-lg max-w-xl mx-auto">
+        <div>
+          <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current flex-shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          <span>{message}</span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function DashboardContent({ 
   isLoading, 
   merchants, 
+  error = null,
   subtitle = "Your Gateway to Seamless Solana Payments" 
 }: { 
   isLoading: boolean
   merchants: Merchant[]
+  error?: string | null
   subtitle?: string
 }) {
   return (
@@ -70,6 +85,8 @@ export function DashboardContent({
       <div className="max-w-6xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
         {isLoading ? (
           <DashboardLoading />
+        ) : error ? (
+          <DashboardError message={error} />
         ) : (
           <div className="space-y-8">
             {merchants.length > 0 ? (
