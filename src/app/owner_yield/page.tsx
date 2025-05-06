@@ -11,6 +11,7 @@ import { useParaModal } from '@/components/para/para-provider';
 import { toast } from 'react-hot-toast';
 import { TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import Image from 'next/image';
 
 // Token addresses - using mainnet addresses directly since this is a mainnet-only component
 const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
@@ -63,15 +64,20 @@ function SwapPageInner() {
       if (!publicKey || !connection) return null;
       try {
         const ata = await findAssociatedTokenAddress(publicKey, new PublicKey(USDC_MINT));
+        const accountInfo = await connection.getAccountInfo(ata);
+        if (!accountInfo) {
+          return { value: { uiAmount: 0 } };
+        }
         const balance = await connection.getTokenAccountBalance(ata);
         return balance;
       } catch (err) {
         console.error('Error fetching USDC balance:', err);
-        return null;
+        return { value: { uiAmount: 0 } };
       }
     },
     enabled: !!publicKey && !!connection,
-    refetchInterval: 10000 // Refetch every 10 seconds
+    staleTime: Infinity, // Only refetch when explicitly invalidated
+    refetchOnWindowFocus: false
   });
 
   // Query for USD* balance
@@ -81,15 +87,20 @@ function SwapPageInner() {
       if (!publicKey || !connection) return null;
       try {
         const ata = await findAssociatedTokenAddress(publicKey, new PublicKey(USD_STAR_MINT));
+        const accountInfo = await connection.getAccountInfo(ata);
+        if (!accountInfo) {
+          return { value: { uiAmount: 0 } };
+        }
         const balance = await connection.getTokenAccountBalance(ata);
         return balance;
       } catch (err) {
         console.error('Error fetching USD* balance:', err);
-        return null;
+        return { value: { uiAmount: 0 } };
       }
     },
     enabled: !!publicKey && !!connection,
-    refetchInterval: 10000 // Refetch every 10 seconds
+    staleTime: Infinity, // Only refetch when explicitly invalidated
+    refetchOnWindowFocus: false
   });
 
   // Fetch Jupiter token list
@@ -130,27 +141,32 @@ function SwapPageInner() {
     }
   }, [publicKey, para, connection, wallet?.id]);
 
-  // Handle connection status
+  // Handle connection status and signer setup
   useEffect(() => {
     const connected = !!publicKey;
     setIsConnected(connected);
 
+    const logStatus = (hasSigner: boolean) => {
+      const status = {
+        publicKey: connected ? (publicKey as PublicKey).toString() : null,
+        walletId: wallet?.id,
+        connected,
+        hasSigner
+      };
+      console.log('Wallet connection status:', status);
+    };
+
     if (connected) {
-      setupSigner();
+      setupSigner().then(() => {
+        // Only log once after signer is set up
+        logStatus(true);
+      });
     } else {
       setSolanaSigner(null);
+      // Only log when disconnected
+      logStatus(false);
     }
-  }, [publicKey, setupSigner]);
-
-  // Log connection status only when it changes
-  useEffect(() => {
-    console.log('Wallet connection status:', {
-      publicKey: publicKey?.toString(),
-      walletId: wallet?.id,
-      connected: isConnected,
-      hasSigner: !!solanaSigner
-    });
-  }, [isConnected]); // Only depend on isConnected
+  }, [publicKey, wallet?.id, setupSigner]);
 
   const getQuote = async (inputAmount: number) => {
     try {
@@ -283,11 +299,15 @@ function SwapPageInner() {
         // Open Solscan in new tab
         window.open(`https://solscan.io/tx/${txid}`, '_blank');
 
+        // Reset form state
         setAmount('');
         setQuote(null);
 
         // Invalidate and refetch token balances
-        queryClient.invalidateQueries({ queryKey: ['tokenBalance'] });
+        queryClient.invalidateQueries({ 
+          queryKey: ['tokenBalance'],
+          refetchType: 'active'  // Only refetch queries that are currently being rendered
+        });
 
       } catch (confirmError) {
         // Clear loading toast and show error
@@ -389,10 +409,12 @@ function SwapPageInner() {
                   />
                   <div className="flex items-center gap-2 bg-base-300 rounded-xl px-3 py-2">
                     {usdcToken ? (
-                      <img
+                      <Image
                         src={usdcToken.logoURI}
                         alt={usdcToken.symbol}
-                        className="w-6 h-6"
+                        width={24}
+                        height={24}
+                        className="object-cover"
                       />
                     ) : (
                       <div className="w-6 h-6 bg-base-200 rounded-full animate-pulse" />
@@ -439,24 +461,20 @@ function SwapPageInner() {
                   </div>
                   <div className="flex items-center gap-2 bg-base-300 rounded-xl px-3 py-2">
                     {usdStarToken?.logoURI ? (
-                      <img
+                      <Image
                         src={usdStarToken.logoURI}
                         alt="USD*"
-                        className="w-6 h-6"
+                        width={24}
+                        height={24}
+                        className="object-cover"
                       />
                     ) : (
-                      <img
+                      <Image
                         src={USD_STAR_LOGO}
                         alt="USD*"
-                        className="w-6 h-6"
-                        onError={(e) => {
-                          // If the image fails to load, show a fallback div
-                          const target = e.target as HTMLImageElement;
-                          const div = document.createElement('div');
-                          div.className = 'w-6 h-6 bg-base-200 rounded-full flex items-center justify-center text-xs font-medium';
-                          div.textContent = 'USD*';
-                          target.parentNode?.replaceChild(div, target);
-                        }}
+                        width={24}
+                        height={24}
+                        className="object-cover"
                       />
                     )}
                     <span className="font-medium">USD*</span>

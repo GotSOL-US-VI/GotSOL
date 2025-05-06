@@ -196,7 +196,7 @@ export function WithdrawFunds({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <h2 className="text-xl">Withdraw Funds</h2>
-          <div className="opacity-60 cursor-help" title="1% platform fee on withdrawal amount. 99% to the Merchant's Owner.">ⓘ</div>
+          <div className="opacity-60 cursor-help" title="1% platform fee on withdrawal amount. 99% to the Merchant&apos;s Owner.">ⓘ</div>
         </div>
         <button
           onClick={() => setIsBalancesVisible(!isBalancesVisible)}
@@ -212,7 +212,7 @@ export function WithdrawFunds({
 
       <div className="space-y-4">
         <div className="flex justify-between items-center">
-          <span className="text-sm">Merchant's USDC Balance</span>
+          <span className="text-sm">Merchant&apos;s USDC Balance</span>
           {isLoadingBalances ? (
             <span className="loading loading-spinner loading-xs" />
           ) : (
@@ -226,7 +226,7 @@ export function WithdrawFunds({
         </div>
 
         <div className="flex justify-between items-center">
-          <span className="text-sm">Owner's USDC Balance</span>
+          <span className="text-sm">Owner&apos;s USDC Balance</span>
           {isLoadingBalances ? (
             <span className="loading loading-spinner loading-xs" />
           ) : (
