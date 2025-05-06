@@ -11,6 +11,7 @@ import { useWallet } from "@getpara/react-sdk";
 import type { Kumbaya } from '@/utils/kumbaya-exports';
 import { useQueryClient } from '@tanstack/react-query';
 import { findAssociatedTokenAddress, USDC_MINT, USDC_DEVNET_MINT } from '@/utils/token-utils';
+import { parseAnchorError, ErrorToastContent } from '@/utils/error-parser';
 
 export interface MerchantAccount {
     owner: PublicKey;
@@ -340,10 +341,51 @@ export function RefundButton({ program, merchantPubkey, payment, onSuccess, isDe
         } catch (error) {
             console.error('Refund error:', error);
 
-            if (error instanceof Error && error.message === 'REFUND_ALREADY_PROCESSED') {
-                toast.error('This refund has already been processed');
-            } else {
-                toast.error('Unable to process refund');
+            // Parse the error to get a more user-friendly message
+            const parsedError = parseAnchorError(error);
+
+            // Display appropriate error message based on the error code
+            switch (parsedError.code) {
+                case 'INSUFFICIENT_FUNDS':
+                    toast.error(
+                        <ErrorToastContent 
+                            title="Insufficient funds" 
+                            message="The merchant account doesn't have enough USDC to process this refund." 
+                        />
+                    );
+                    break;
+                case 'EXCEEDS_REFUND_LIMIT':
+                    toast.error(
+                        <ErrorToastContent 
+                            title="Refund exceeds limit" 
+                            message="This refund exceeds the Merchant&apos;s configured refund limit." 
+                        />
+                    );
+                    break;
+                case 'REFUND_ALREADY_PROCESSED':
+                    toast.error(
+                        <ErrorToastContent 
+                            title="Refund already processed" 
+                            message="This payment has already been refunded. This program prevents double refunds." 
+                        />
+                    );
+                    break;
+                case 'NOT_MERCHANT_OWNER':
+                    toast.error(
+                        <ErrorToastContent 
+                            title="Unauthorized" 
+                            message="Only the Merchant&apos;s owner can process refunds." 
+                        />
+                    );
+                    break;
+                default:
+                    // Generic error message with details if available
+                    toast.error(
+                        <ErrorToastContent 
+                            title="Unable to process refund" 
+                            message={parsedError.message} 
+                        />
+                    );
             }
         } finally {
             setIsLoading(false);

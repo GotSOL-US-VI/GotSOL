@@ -14,6 +14,7 @@ import { formatSolscanDevnetLink } from '@/utils/format-transaction-link';
 import { ParaSolanaWeb3Signer } from "@getpara/solana-web3.js-v1-integration";
 import { getKumbayaProgram } from '@/utils/kumbaya-exports';
 import { USDC_MINT, USDC_DEVNET_MINT, HOUSE, findAssociatedTokenAddress } from '@/utils/token-utils';
+import { parseAnchorError, ErrorToastContent } from '@/utils/error-parser';
 
 interface WithdrawFundsProps {
   merchantPubkey: PublicKey;
@@ -181,8 +182,46 @@ export function WithdrawFunds({
       }
     } catch (err) {
       console.error('Error withdrawing funds:', err);
-      setError(err instanceof Error ? err.message : 'Failed to withdraw funds');
-      toast.error('Failed to withdraw funds');
+      
+      // Parse the error to get a more user-friendly message
+      const parsedError = parseAnchorError(err);
+      setError(parsedError.message);
+
+      // Display appropriate error message based on the error code
+      switch (parsedError.code) {
+        case 'INSUFFICIENT_FUNDS':
+          toast.error(
+            <ErrorToastContent 
+              title="Insufficient funds" 
+              message="The merchant account doesn't have enough USDC for this withdrawal" 
+            />
+          );
+          break;
+        case 'NOT_MERCHANT_OWNER':
+          toast.error(
+            <ErrorToastContent 
+              title="Unauthorized" 
+              message="Only the merchant owner can withdraw funds" 
+            />
+          );
+          break;
+        case 'INACTIVE_MERCHANT':
+          toast.error(
+            <ErrorToastContent 
+              title="Inactive merchant" 
+              message="This merchant account is currently inactive" 
+            />
+          );
+          break;
+        default:
+          // Generic error message with details if available
+          toast.error(
+            <ErrorToastContent 
+              title="Failed to withdraw funds" 
+              message={parsedError.message} 
+            />
+          );
+      }
     } finally {
       setIsLoading(false);
     }
