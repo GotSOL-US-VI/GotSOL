@@ -12,6 +12,7 @@ import { RefundButton } from './refund-button';
 import type { Kumbaya } from '@/utils/kumbaya-exports';
 import { retryWithBackoff } from '@/utils/para';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { usePaymentCache } from '@/hooks/use-payment-cache';
 
 interface PaymentHistoryProps {
     program: Program<Kumbaya>;
@@ -58,6 +59,31 @@ const formatUSDCAmount = (amount: number): string => {
     return withDecimals.replace(/\.?0+$/, '');
 };
 
+// Utility to batch requests to avoid rate limiting
+const batchProcess = async <T, R>(
+    items: T[],
+    batchSize: number,
+    processFn: (item: T) => Promise<R>,
+    delayMs: number = 200
+): Promise<R[]> => {
+    const results: R[] = [];
+    
+    for (let i = 0; i < items.length; i += batchSize) {
+        const batch = items.slice(i, i + batchSize);
+        
+        // Process items in current batch concurrently
+        const batchResults = await Promise.all(batch.map(processFn));
+        results.push(...batchResults);
+        
+        // Add delay before next batch if not the last batch
+        if (i + batchSize < items.length) {
+            await new Promise(resolve => setTimeout(resolve, delayMs));
+        }
+    }
+    
+    return results;
+};
+
 // Function to fetch payment data that can be used with React Query
 async function fetchPaymentData(
     merchantPubkey: PublicKey, 
@@ -82,98 +108,100 @@ async function fetchPaymentData(
             limit: 250
         });
 
-        // Get the full transaction details for each signature
-        const transactions = await Promise.all(
-            signatures.map((sig: { signature: string }) => 
-                connection.getParsedTransaction(sig.signature, 'confirmed')
-            )
+        // Process signatures in batches to avoid rate limiting
+        const transactions = await batchProcess<{signature: string}, ParsedTransactionWithMeta | null>(
+            signatures,
+            5, // Process 5 transactions at a time
+            async (sig) => connection.getParsedTransaction(sig.signature, 'confirmed'),
+            300 // Wait 300ms between batches
         );
 
         // Process and filter the transactions
-        const processedPayments = await Promise.all(transactions
-            .filter((tx): tx is ParsedTransactionWithMeta => 
-                tx !== null && 
-                tx.meta !== null
-            )
-            .map(async tx => {
-                try {
-                    // Find the token transfer instruction
-                    const transferInstructions = tx.transaction.message.instructions.filter(
-                        (instruction: ParsedInstruction | PartiallyDecodedInstruction) => {
-                            if (!('parsed' in instruction)) return false;
-                            if (instruction.program !== 'spl-token') return false;
+        const validTransactions = transactions.filter((tx): tx is ParsedTransactionWithMeta => 
+            tx !== null && tx.meta !== null
+        );
 
-                            const parsedData = typeof instruction.parsed === 'string' 
-                                ? { type: instruction.parsed } 
-                                : instruction.parsed;
+        // Process transactions into payments (avoiding additional network calls)
+        const payments: Payment[] = [];
+        
+        for (const tx of validTransactions) {
+            try {
+                // Find the token transfer instruction
+                const transferInstructions = tx.transaction.message.instructions.filter(
+                    (instruction: ParsedInstruction | PartiallyDecodedInstruction) => {
+                        if (!('parsed' in instruction)) return false;
+                        if (instruction.program !== 'spl-token') return false;
 
-                            if (!('type' in parsedData)) return false;
+                        const parsedData = typeof instruction.parsed === 'string' 
+                            ? { type: instruction.parsed } 
+                            : instruction.parsed;
 
-                            const { type } = parsedData;
-                            const isTransferType = type === 'transfer' || type === 'transferChecked';
-                            if (!isTransferType) return false;
+                        if (!('type' in parsedData)) return false;
 
-                            let destination: string | undefined;
-                            if ('info' in parsedData && parsedData.info) {
-                                destination = parsedData.info.destination;
-                            }
+                        const { type } = parsedData;
+                        const isTransferType = type === 'transfer' || type === 'transferChecked';
+                        if (!isTransferType) return false;
 
-                            return destination === merchantUsdcAta.toString();
+                        let destination: string | undefined;
+                        if ('info' in parsedData && parsedData.info) {
+                            destination = parsedData.info.destination;
                         }
-                    );
 
-                    if (transferInstructions.length === 0) return null;
+                        return destination === merchantUsdcAta.toString();
+                    }
+                );
 
-                    // Use the first matching instruction
-                    const transferInstruction = transferInstructions[0] as ParsedInstruction;
+                if (transferInstructions.length === 0) continue;
+
+                // Use the first matching instruction
+                const transferInstruction = transferInstructions[0] as ParsedInstruction;
+                
+                const parsedData = typeof transferInstruction.parsed === 'string'
+                    ? { type: transferInstruction.parsed }
+                    : transferInstruction.parsed;
+
+                if (!('info' in parsedData)) continue;
+
+                const info = parsedData.info;
+                const authority = info.authority || info.multisigAuthority || info.source;
+                const amount = info.tokenAmount?.amount || info.amount;
+
+                if (!authority || !amount) continue;
+
+                // Extract memo from transaction logs
+                let memo = null;
+                if (tx.meta?.logMessages) {
+                    // Look for memo in transaction logs
+                    const memoLog = tx.meta.logMessages.find(log => {
+                        const lowerLog = log.toLowerCase();
+                        return lowerLog.includes('program log: memo (len') || 
+                               lowerLog.includes('memo program: memo');
+                    });
                     
-                    const parsedData = typeof transferInstruction.parsed === 'string'
-                        ? { type: transferInstruction.parsed }
-                        : transferInstruction.parsed;
-
-                    if (!('info' in parsedData)) return null;
-
-                    const info = parsedData.info;
-                    const authority = info.authority || info.multisigAuthority || info.source;
-                    const amount = info.tokenAmount?.amount || info.amount;
-
-                    if (!authority || !amount) return null;
-
-                    // Extract memo from transaction logs
-                    let memo = null;
-                    if (tx.meta?.logMessages) {
-                        // Look for memo in transaction logs
-                        const memoLog = tx.meta.logMessages.find(log => {
-                            const lowerLog = log.toLowerCase();
-                            return lowerLog.includes('program log: memo (len') || 
-                                   lowerLog.includes('memo program: memo');
-                        });
-                        
-                        if (memoLog) {
-                            // Extract memo content
-                            const matches = memoLog.match(/(?:Program log: Memo \(len \d+\): |Memo Program: Memo )(.+)/i);
-                            if (matches && matches[1]) {
-                                // Remove surrounding quotes if they exist
-                                memo = matches[1].trim().replace(/^"(.*)"$/, '$1');
-                            }
+                    if (memoLog) {
+                        // Extract memo content
+                        const matches = memoLog.match(/(?:Program log: Memo \(len \d+\): |Memo Program: Memo )(.+)/i);
+                        if (matches && matches[1]) {
+                            // Remove surrounding quotes if they exist
+                            memo = matches[1].trim().replace(/^"(.*)"$/, '$1');
                         }
                     }
-
-                    return {
-                        signature: tx.transaction.signatures[0],
-                        amount: Number(amount) / Math.pow(10, 6),
-                        memo,
-                        timestamp: tx.blockTime ? tx.blockTime * 1000 : Date.now(),
-                        sender: new PublicKey(authority)
-                    };
-                } catch (err) {
-                    console.error('Error processing transaction:', err);
-                    return null;
                 }
-            }));
 
-        const validPayments = processedPayments.filter((payment): payment is Payment => payment !== null);
-        return validPayments;
+                payments.push({
+                    signature: tx.transaction.signatures[0],
+                    amount: Number(amount) / Math.pow(10, 6),
+                    memo,
+                    timestamp: tx.blockTime ? tx.blockTime * 1000 : Date.now(),
+                    sender: new PublicKey(authority)
+                });
+            } catch (err) {
+                console.error('Error processing transaction:', err);
+                // Continue to next transaction on error
+            }
+        }
+
+        return payments;
     } catch (error) {
         console.error('Error fetching payments:', error);
         throw new Error('Failed to fetch payment history');
@@ -184,6 +212,9 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
     const { data: wallet } = useWallet();
     const { connection } = useConnection();
     const queryClient = useQueryClient();
+    
+    // Use our custom payment cache hook for localStorage persistence
+    const { savePaymentsToCache } = usePaymentCache(merchantPubkey, isDevnet);
 
     // Use React Query for payment data with caching
     const { 
@@ -194,11 +225,15 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
     } = useQuery({
         queryKey: ['payments', merchantPubkey.toString(), isDevnet],
         queryFn: () => retryWithBackoff(() => fetchPaymentData(merchantPubkey, connection, isDevnet), 3, 2000),
-        staleTime: 5 * 60 * 1000, // Data stays fresh for 5 minutes
-        gcTime: 30 * 60 * 1000, // Cache retained for 30 minutes
-        refetchOnWindowFocus: true, // Refetch when window regains focus
-        refetchOnMount: true, // Always refetch on mount to ensure fresh data
+        staleTime: 10 * 60 * 1000, // Data stays fresh for 10 minutes
+        gcTime: 60 * 60 * 1000, // Cache retained for 60 minutes
+        refetchOnWindowFocus: false, // Only refetch on explicit refresh
+        refetchOnMount: false, // Don't refetch automatically on mount
+        refetchOnReconnect: false, // Don't refetch automatically on reconnect
+        retry: 2, // Limit retries to reduce request load
+        retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 10000), // Exponential backoff with max 10s
         enabled: !!merchantPubkey && !!connection,
+        structuralSharing: true, // Enable structural sharing for better performance
     });
 
     // Use React Query for fetching balance
@@ -220,8 +255,11 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
     const { data: balance } = useQuery({
         queryKey: ['usdc-balance', merchantPubkey.toString(), isDevnet],
         queryFn: fetchBalance,
-        staleTime: 5 * 60 * 1000, // 5 minutes
-        gcTime: 10 * 60 * 1000, // 10 minutes
+        staleTime: 10 * 60 * 1000, // 10 minutes
+        gcTime: 30 * 60 * 1000, // 30 minutes
+        refetchOnWindowFocus: false, // Only refetch on explicit refresh
+        refetchOnMount: false, // Don't refetch automatically on mount
+        retry: 2, // Limit retries
         enabled: !!merchantPubkey && !!connection,
     });
 
@@ -232,9 +270,26 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
         }
     }, [balance, onBalanceUpdate]);
     
+    // Save payments to localStorage when they change
+    useEffect(() => {
+        if (payments && payments.length > 0) {
+            savePaymentsToCache(payments);
+        }
+    }, [payments, savePaymentsToCache]);
+    
     // Function to process a single transaction (for live updates)
     const processNewTransaction = useCallback(async (signature: string) => {
         try {
+            // Check if we already have this payment in the cache
+            const existingPayments = queryClient.getQueryData<Payment[]>(
+                ['payments', merchantPubkey.toString(), isDevnet]
+            ) || [];
+            
+            // Skip processing if we already have this signature
+            if (existingPayments.some(p => p.signature === signature)) {
+                return null;
+            }
+            
             const tx = await connection.getParsedTransaction(signature, 'confirmed');
             if (!tx || !tx.meta) return null;
 
@@ -317,21 +372,33 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
             console.error('Error processing new transaction:', err);
             return null;
         }
-    }, [connection, merchantPubkey, isDevnet]);
+    }, [connection, merchantPubkey, isDevnet, queryClient]);
 
     // Set up subscription to merchant's USDC ATA for real-time updates
     useEffect(() => {
         if (!merchantPubkey || !connection) return;
 
+        // Keep track of already processed signatures to avoid duplicates
+        const processedSignatures = new Set<string>();
+        
         const setupSubscription = async () => {
             try {
                 const usdcMint = isDevnet ? USDC_DEVNET_MINT : USDC_MINT;
                 const merchantUsdcAta = await findAssociatedTokenAddress(merchantPubkey, usdcMint);
 
+                // Prefill the processed signatures set with existing payment signatures
+                const existingPayments = queryClient.getQueryData<Payment[]>(
+                    ['payments', merchantPubkey.toString(), isDevnet]
+                ) || [];
+                existingPayments.forEach(p => processedSignatures.add(p.signature));
+
                 // Subscribe to account changes
                 const subscriptionId = connection.onAccountChange(
                     merchantUsdcAta,
                     async (_, context) => {
+                        // Add a small delay to avoid rate limiting
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                        
                         // Get the latest transaction signature
                         const signatures = await connection.getSignaturesForAddress(merchantUsdcAta, {
                             limit: 1
@@ -340,6 +407,15 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
                         if (signatures.length === 0) return;
 
                         const latestSignature = signatures[0].signature;
+                        
+                        // Skip if we already processed this signature
+                        if (processedSignatures.has(latestSignature)) {
+                            return;
+                        }
+                        
+                        // Add to processed list to avoid duplicates
+                        processedSignatures.add(latestSignature);
+                        
                         const newPayment = await processNewTransaction(latestSignature);
 
                         if (newPayment) {
@@ -347,12 +423,13 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
                             queryClient.setQueryData(
                                 ['payments', merchantPubkey.toString(), isDevnet],
                                 (oldData: Payment[] = []) => {
-                                    // Check if payment already exists
-                                    if (oldData.some(p => p.signature === newPayment.signature)) {
-                                        return oldData;
-                                    }
                                     // Add new payment to the top
-                                    return [newPayment, ...oldData];
+                                    const updatedPayments = [newPayment, ...oldData];
+                                    
+                                    // Also save to localStorage
+                                    savePaymentsToCache(updatedPayments);
+                                    
+                                    return updatedPayments;
                                 }
                             );
 
@@ -432,7 +509,7 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
                     Refresh
                 </button>
             </div>
-            {payments.length === 0 ? (
+            {!payments || payments.length === 0 ? (
                 <p className="text-gray-500">No payments received yet</p>
             ) : (
                 <div 
@@ -449,7 +526,7 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
                         scrollbarColor: "#333 #1C1C1C", 
                     }}
                 >
-                    {payments.map((payment) => (
+                    {payments.map((payment: Payment) => (
                         <div 
                             key={payment.signature} 
                             className="card bg-[#1C1C1C] shadow flex-shrink-0"
