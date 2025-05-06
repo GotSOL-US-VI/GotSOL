@@ -1,10 +1,11 @@
 import { AnchorProvider, Program, Idl } from '@coral-xyz/anchor'
 import { PublicKey } from '@solana/web3.js'
 import KumbayaIDL from './kumbaya.json'
-import type { Kumbaya } from '../../anchor/target/types/kumbaya'
 
-// Re-export the type and IDL
-export type { Kumbaya }
+// Define the Kumbaya type from the IDL
+export type Kumbaya = Idl & typeof KumbayaIDL
+
+// Re-export the IDL
 export { default as KumbayaIDL } from './kumbaya.json'
 
 // The programId is imported from the program IDL

@@ -10,7 +10,6 @@ import { useUsdcBalance } from '@/hooks/use-usdc-balance';
 import { useQueryClient } from '@tanstack/react-query';
 import { useWallet, useClient } from "@getpara/react-sdk";
 import * as anchor from "@coral-xyz/anchor";
-import { Program, Idl } from '@coral-xyz/anchor';
 import { formatSolscanDevnetLink } from '@/utils/format-transaction-link';
 import { ParaSolanaWeb3Signer } from "@getpara/solana-web3.js-v1-integration";
 import { getKumbayaProgram } from '@/utils/kumbaya-exports';

@@ -8,7 +8,7 @@ import toast from 'react-hot-toast';
 import { env } from '@/utils/env';
 import { formatSolscanDevnetLink } from '@/utils/format-transaction-link';
 import { useWallet } from "@getpara/react-sdk";
-import type { Kumbaya } from '../../../anchor/target/types/kumbaya';
+import type { Kumbaya } from '@/utils/kumbaya-exports';
 import { useQueryClient } from '@tanstack/react-query';
 
 // Helper function to get associated token address

@@ -9,7 +9,7 @@ import { TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID } from "@solana/spl-token
 import toast from 'react-hot-toast';
 import { Program } from '@coral-xyz/anchor';
 import { RefundButton } from './refund-button';
-import type { Kumbaya } from '../../../anchor/target/types/kumbaya';
+import type { Kumbaya } from '@/utils/kumbaya-exports';
 import { retryWithBackoff } from '@/utils/para';
 import { useQueryClient } from '@tanstack/react-query';
 
