@@ -80,7 +80,6 @@ export function AccountButtons({ address }: AccountProps) {
   const [showReceiveModal, setShowReceiveModal] = useState(false)
   const [showSendModal, setShowSendModal] = useState(false)
 
-  const handleShowAirdropModal = (): void => setShowAirdropModal(true);
   const handleShowSendModal = (): void => setShowSendModal(true);
   const handleShowReceiveModal = (): void => setShowReceiveModal(true);
 
@@ -90,13 +89,6 @@ export function AccountButtons({ address }: AccountProps) {
       <ModalReceive address={address} show={showReceiveModal} hide={() => setShowReceiveModal(false)} />
       <ModalSend address={address} show={showSendModal} hide={() => setShowSendModal(false)} />
       <div className="space-x-2">
-        {/* <button
-          disabled={cluster.network?.includes('mainnet')}
-          className="btn btn-xs lg:btn-md btn-outline"
-          onClick={handleShowAirdropModal}
-        >
-          Airdrop
-        </button> */}
         <button
           disabled={wallet?.address !== address.toString()}
           className="btn btn-xs lg:btn-md btn-outline"

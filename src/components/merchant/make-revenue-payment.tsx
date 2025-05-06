@@ -2,12 +2,11 @@
 
 import { useState, useMemo } from 'react';
 import { PublicKey } from '@solana/web3.js';
-import { TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { Program, Idl } from '@coral-xyz/anchor';
 import { useWallet } from "@getpara/react-sdk";
 import toast from 'react-hot-toast';
-import { Program, Idl } from '@coral-xyz/anchor';
+import { USDC_DEVNET_MINT, findAssociatedTokenAddress } from '@/utils/token-utils';
 
-const USDC_DEVNET_MINT = new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU');
 const GOV = new PublicKey('7WxjvbhBgAcWfTnL8yQy6iP1vF4n5fKPc7tL7fMYvSsc');
 
 interface MakeRevenuePaymentButtonProps {
@@ -15,21 +14,6 @@ interface MakeRevenuePaymentButtonProps {
     merchantPubkey: PublicKey;
     merchantName: string;
     onSuccess?: () => void;
-}
-
-// Helper function to get associated token address
-async function findAssociatedTokenAddress(
-    walletAddress: PublicKey,
-    tokenMintAddress: PublicKey
-): Promise<PublicKey> {
-    return (await PublicKey.findProgramAddress(
-        [
-            walletAddress.toBuffer(),
-            TOKEN_PROGRAM_ID.toBuffer(),
-            tokenMintAddress.toBuffer(),
-        ],
-        ASSOCIATED_TOKEN_PROGRAM_ID
-    ))[0];
 }
 
 export function MakeRevenuePaymentButton({ program, merchantPubkey, merchantName, onSuccess }: MakeRevenuePaymentButtonProps) {
@@ -56,11 +40,12 @@ export function MakeRevenuePaymentButton({ program, merchantPubkey, merchantName
             setIsLoading(true);
             setError('');
 
-            // TODO: Implement revenue payment using Para's native functionality
-            // This will need to be implemented based on your specific requirements
-            // and Para's available methods for making payments
-
-            toast.success('Revenue payment successful!');
+            // This is a placeholder for future implementation
+            // Revenue payment feature is currently under development
+            // When implemented, it will use the program, wallet, and merchant details
+            
+            toast.success('Revenue payment feature is coming soon');
+            
             if (onSuccess) onSuccess();
         } catch (err) {
             console.error('Error making revenue payment:', err);
@@ -93,9 +78,9 @@ export function MakeRevenuePaymentButton({ program, merchantPubkey, merchantName
                     <button
                         className={`btn btn-primary ${isLoading ? 'loading' : ''}`}
                         onClick={handleMakeRevenuePayment}
-                        disabled={isLoading || !wallet?.address}
+                        disabled={true} // Disabled until feature is implemented
                     >
-                        {isLoading ? 'Processing...' : 'Make Payment'}
+                        {isLoading ? 'Processing...' : 'Coming Soon'}
                     </button>
                 </div>
                 {error && <div className="text-error mt-2">{error}</div>}

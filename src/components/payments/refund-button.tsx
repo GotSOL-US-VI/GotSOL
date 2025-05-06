@@ -10,21 +10,7 @@ import { formatSolscanDevnetLink } from '@/utils/format-transaction-link';
 import { useWallet } from "@getpara/react-sdk";
 import type { Kumbaya } from '@/utils/kumbaya-exports';
 import { useQueryClient } from '@tanstack/react-query';
-
-// Helper function to get associated token address
-async function findAssociatedTokenAddress(
-  walletAddress: PublicKey,
-  tokenMintAddress: PublicKey
-): Promise<PublicKey> {
-  return (await PublicKey.findProgramAddress(
-    [
-      walletAddress.toBuffer(),
-      TOKEN_PROGRAM_ID.toBuffer(),
-      tokenMintAddress.toBuffer(),
-    ],
-    ASSOCIATED_TOKEN_PROGRAM_ID
-  ))[0];
-}
+import { findAssociatedTokenAddress, USDC_MINT, USDC_DEVNET_MINT } from '@/utils/token-utils';
 
 export interface MerchantAccount {
     owner: PublicKey;
@@ -46,9 +32,6 @@ interface RefundButtonProps {
     isDevnet?: boolean;
 }
 
-const USDC_MINT_DEVNET = new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU');
-const USDC_MINT_MAINNET = new PublicKey(env.usdcMint);
-
 export function RefundButton({ program, merchantPubkey, payment, onSuccess, isDevnet = true }: RefundButtonProps) {
     const { connection } = useConnection();
     const { data: wallet } = useWallet();
@@ -65,7 +48,7 @@ export function RefundButton({ program, merchantPubkey, payment, onSuccess, isDe
         try {
             setIsLoading(true);
 
-            const usdcMint = isDevnet ? USDC_MINT_DEVNET : USDC_MINT_MAINNET;
+            const usdcMint = isDevnet ? USDC_DEVNET_MINT : USDC_MINT;
 
             // Fetch merchant account data first
             console.log('Fetching merchant account from:', merchantPubkey.toString());
@@ -285,10 +268,52 @@ export function RefundButton({ program, merchantPubkey, payment, onSuccess, isDe
             // Wait for confirmation
             await connection.confirmTransaction(txid, 'confirmed');
             
-            // Invalidate the merchant's USDC balance query
-            await queryClient.invalidateQueries({
-                queryKey: ['usdc-balance', merchantPubkey.toString(), isDevnet]
-            });
+            // Invalidate relevant queries for both merchant and recipient balances
+            await Promise.all([
+                // Invalidate merchant balance
+                queryClient.invalidateQueries({ 
+                    queryKey: ['usdc-balance', merchantPubkey.toString(), isDevnet],
+                    refetchType: 'active' // Force immediate refetch
+                }),
+                // Invalidate recipient balance in case they're viewing it
+                queryClient.invalidateQueries({ 
+                    queryKey: ['usdc-balance', payment.recipient.toString(), isDevnet],
+                    refetchType: 'active' // Force immediate refetch
+                }),
+                // Also invalidate token balance queries
+                queryClient.invalidateQueries({
+                    queryKey: ['token-balance'],
+                    refetchType: 'active'
+                }),
+                // Invalidate payment history
+                queryClient.invalidateQueries({
+                    queryKey: ['payments', merchantPubkey.toString(), isDevnet],
+                    refetchType: 'active'
+                })
+            ]);
+            
+            // Additional fetch for immediate UI update
+            const refreshBalances = async () => {
+                try {
+                    // Wait a moment for blockchain to process the transaction
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    
+                    // Force immediate refetch of balances
+                    await queryClient.refetchQueries({ 
+                        queryKey: ['usdc-balance', merchantPubkey.toString(), isDevnet],
+                    });
+                    
+                    // Also refetch payments data
+                    await queryClient.refetchQueries({ 
+                        queryKey: ['payments', merchantPubkey.toString(), isDevnet],
+                    });
+                } catch (err) {
+                    console.error('Error refreshing data after refund:', err);
+                }
+            };
+            
+            // Start refreshing balances immediately
+            refreshBalances();
             
             toast.success(
                 <div>
@@ -306,6 +331,11 @@ export function RefundButton({ program, merchantPubkey, payment, onSuccess, isDe
                 </div>,
                 { duration: 8000 }
             );
+            
+            // Call onSuccess callback if provided
+            if (onSuccess) {
+                onSuccess();
+            }
 
         } catch (error) {
             console.error('Refund error:', error);

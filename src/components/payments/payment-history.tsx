@@ -13,6 +13,7 @@ import type { Kumbaya } from '@/utils/kumbaya-exports';
 import { retryWithBackoff } from '@/utils/para';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { usePaymentCache } from '@/hooks/use-payment-cache';
+import { USDC_MINT, USDC_DEVNET_MINT, findAssociatedTokenAddress, formatUSDCAmount } from '@/utils/token-utils';
 
 interface PaymentHistoryProps {
     program: Program<Kumbaya>;
@@ -50,36 +51,6 @@ interface ParsedInstructionWithInfo extends ParsedInstruction {
 interface TransactionSignatureResult {
     signature: string;
 }
-
-// USDC mint addresses
-const USDC_MINT = new PublicKey('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v');
-const USDC_DEVNET_MINT = new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU');
-
-// Helper function to get associated token address
-async function findAssociatedTokenAddress(
-    walletAddress: PublicKey,
-    tokenMintAddress: PublicKey
-): Promise<PublicKey> {
-    return (await PublicKey.findProgramAddress(
-        [
-            walletAddress.toBuffer(),
-            TOKEN_PROGRAM_ID.toBuffer(),
-            tokenMintAddress.toBuffer(),
-        ],
-        ASSOCIATED_TOKEN_PROGRAM_ID
-    ))[0];
-}
-
-// Utility function to format USDC amount
-const formatUSDCAmount = (amount: number): string => {
-    // For amounts between 0.10 and 0.90, always show 2 decimal places
-    if (amount >= 0.10 && amount < 1 && amount.toFixed(6).endsWith('000000')) {
-        return amount.toFixed(2);
-    }
-    // For all other amounts, show up to 6 decimals but trim trailing zeros
-    const withDecimals = amount.toFixed(6);
-    return withDecimals.replace(/\.?0+$/, '');
-};
 
 // Utility to batch requests to avoid rate limiting
 const batchProcess = async <T, R>(

@@ -13,32 +13,13 @@ import * as anchor from "@coral-xyz/anchor";
 import { formatSolscanDevnetLink } from '@/utils/format-transaction-link';
 import { ParaSolanaWeb3Signer } from "@getpara/solana-web3.js-v1-integration";
 import { getKumbayaProgram } from '@/utils/kumbaya-exports';
+import { USDC_MINT, USDC_DEVNET_MINT, HOUSE, findAssociatedTokenAddress } from '@/utils/token-utils';
 
 interface WithdrawFundsProps {
   merchantPubkey: PublicKey;
   ownerPubkey: PublicKey;
   isDevnet?: boolean;
   onSuccess?: () => void;
-}
-
-// USDC mint addresses
-const USDC_MINT = new PublicKey('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v');
-const USDC_DEVNET_MINT = new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU');
-const HOUSE = new PublicKey('Hth4EBxLWJSoRWj7raCKoniuzcvXt8MUFgGKty3B66ih');
-
-// Helper function to get associated token address
-async function findAssociatedTokenAddress(
-  walletAddress: PublicKey,
-  tokenMintAddress: PublicKey
-): Promise<PublicKey> {
-  return (await PublicKey.findProgramAddress(
-    [
-      walletAddress.toBuffer(),
-      TOKEN_PROGRAM_ID.toBuffer(),
-      tokenMintAddress.toBuffer(),
-    ],
-    ASSOCIATED_TOKEN_PROGRAM_ID
-  ))[0];
 }
 
 export function WithdrawFunds({ 
@@ -140,9 +121,41 @@ export function WithdrawFunds({
 
       // Invalidate the balance queries to trigger a refresh
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['usdc-balance', merchantPubkey.toString(), isDevnet] }),
-        queryClient.invalidateQueries({ queryKey: ['usdc-balance', ownerPubkey.toString(), isDevnet] })
+        queryClient.invalidateQueries({ 
+          queryKey: ['usdc-balance', merchantPubkey.toString(), isDevnet],
+          refetchType: 'active'  // Force immediate refetch
+        }),
+        queryClient.invalidateQueries({ 
+          queryKey: ['usdc-balance', ownerPubkey.toString(), isDevnet],
+          refetchType: 'active'  // Force immediate refetch
+        }),
+        // Also invalidate the more general token balance queries
+        queryClient.invalidateQueries({
+          queryKey: ['token-balance'],
+          refetchType: 'active'
+        })
       ]);
+
+      // Additional fetch for immediate UI update
+      const refreshBalances = async () => {
+        try {
+          // Wait a moment for blockchain to process the transaction
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          // Force immediate refetch of both balances
+          await queryClient.refetchQueries({ 
+            queryKey: ['usdc-balance', merchantPubkey.toString(), isDevnet],
+          });
+          await queryClient.refetchQueries({ 
+            queryKey: ['usdc-balance', ownerPubkey.toString(), isDevnet],
+          });
+        } catch (err) {
+          console.error('Error refreshing balances:', err);
+        }
+      };
+      
+      // Start refreshing balances immediately
+      refreshBalances();
 
       toast.success(
         <div>
