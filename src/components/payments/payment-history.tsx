@@ -403,7 +403,7 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
                             <div className="card-body p-4">
                                 <div className="flex justify-between items-start">
                                     <div className="space-y-1">
-                                        <p className="text-[#00b5ff] font-medium">
+                                        <p className="text-gray font-medium">
                                             +{formatUSDCAmount(payment.amount)} USDC
                                         </p>
                                         <p className="text-gray-400 text-sm">
