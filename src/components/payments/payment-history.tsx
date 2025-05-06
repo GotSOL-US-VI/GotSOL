@@ -364,7 +364,7 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
                                 </div>
                             );
                             toast.success(toastMessage, {
-                                duration: 5000,
+                                duration: 8000,
                                 position: 'bottom-right'
                             });
 
