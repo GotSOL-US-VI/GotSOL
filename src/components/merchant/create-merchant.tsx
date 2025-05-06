@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { Program, Idl } from '@coral-xyz/anchor';
 import { PublicKey } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
-import { usePara } from "../para/para-provider";
+import { useWallet } from "@getpara/react-sdk";
 import { executeTransactionWithFeePayer } from '@/utils/execute-transaction';
 
 interface CreateMerchantProps {
@@ -17,10 +17,24 @@ export function CreateMerchant({ program, onSuccess }: CreateMerchantProps) {
     const [name, setName] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string>('');
-    const {address, signer} = usePara();
-    if (!address || !signer)
-        return null;
-    const publicKey = new PublicKey(address);
+    const { data: wallet } = useWallet();
+    
+    // Debug log to see wallet data
+    console.log('Para wallet data:', wallet);
+    
+    // Get the public key from Para wallet's address field
+    const publicKey = wallet?.address ? new PublicKey(wallet.address) : null;
+    
+    console.log('Derived public key:', publicKey?.toString());
+
+    if (!publicKey) {
+        return (
+            <div className="max-w-md mx-auto p-6">
+                <p className="text-center text-lg">Please connect your wallet to create a merchant account</p>
+            </div>
+        );
+    }
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!publicKey) {
@@ -45,24 +59,20 @@ export function CreateMerchant({ program, onSuccess }: CreateMerchantProps) {
             // Get the USDC mint (using devnet for now)
             const usdcMint = new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU');
 
-            // main net USDC address
-            const USDC_MINT = new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
-            
-            // Create the merchant using the fee payer
-            const methodBuilder = program.methods.createMerchant(name);
-            const accounts = {
-                feePayer: null,
-                owner: publicKey,
-                merchant: merchantPda,
-                usdcMint, // devnet USDC mint for now
-                tokenProgram: TOKEN_PROGRAM_ID,
-                associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
-            };
-            
-            // Execute the transaction with the fee payer
-            const tx = await executeTransactionWithFeePayer(program, methodBuilder, accounts, signer);
+            // Create the merchant using standard transaction
+            const tx = await program.methods
+                .createMerchant(name)
+                .accounts({
+                    owner: publicKey,
+                    merchant: merchantPda,
+                    usdcMint,
+                    tokenProgram: TOKEN_PROGRAM_ID,
+                    associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
+                    systemProgram: anchor.web3.SystemProgram.programId,
+                })
+                .rpc();
 
-            console.log('Created merchant:', tx);
+            console.log('Created merchant:', merchantPda);
             onSuccess?.(merchantPda);
         } catch (err) {
             console.error('Failed to create merchant:', err);
@@ -105,12 +115,6 @@ export function CreateMerchant({ program, onSuccess }: CreateMerchantProps) {
                 >
                     {isLoading ? 'Creating...' : 'Create Merchant'}
                 </button>
-
-                {!publicKey && (
-                    <p className="text-sm text-center opacity-60">
-                        Please connect your wallet to create a merchant account
-                    </p>
-                )}
             </form>
         </div>
     );

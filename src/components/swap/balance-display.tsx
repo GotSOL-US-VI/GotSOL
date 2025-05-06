@@ -2,17 +2,16 @@
 
 import { useEffect, useState, useCallback, memo, useRef } from 'react';
 import { PublicKey } from '@solana/web3.js';
-import { usePara } from '../para/para-provider';
+import { useWallet } from "@getpara/react-sdk";
 import { 
   TOKEN_PROGRAM_ID, 
   ASSOCIATED_TOKEN_PROGRAM_ID,
 } from '@solana/spl-token';
-
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 import { useConnection } from '@/lib/connection-context';
 import { MainnetConnectionProvider } from '@/lib/mainnet-connection-provider';
 
-// Token addresses
+// Token addresses - using mainnet addresses directly since this is a mainnet-only component
 const USDC_MINT = new PublicKey('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v');
 const USD_STAR_MINT = new PublicKey('BenJy1n3WTx9mTjEvy63e8Q1j4RqUc6E4VBMz3ir4Wo6');
 
@@ -53,8 +52,8 @@ const BalanceDisplayContent = memo(({
   };
 
   return (
-    <div className="space-y-4 rounded-lg border border-base-content/10 p-4">
-      <div className="text-sm opacity-90 mb-2">
+    <div className="space-y-5 rounded-lg border border-base-content/10 p-5">
+      <div className="text-base opacity-90 mb-3">
         Owner: <a 
           href={`https://solscan.io/account/${publicKey.toString()}`}
           target="_blank"
@@ -65,9 +64,9 @@ const BalanceDisplayContent = memo(({
         </a>
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-3">
         <div className="flex justify-between items-center">
-          <span className="text-sm">USDC Balance</span>
+          <span className="text-base">USDC Balance</span>
           <span>
             {isBalancesVisible 
               ? `${usdcBalance?.toFixed(6) ?? '0.000000'} USDC`
@@ -77,7 +76,7 @@ const BalanceDisplayContent = memo(({
         </div>
 
         <div className="flex justify-between items-center">
-          <span className="text-sm">
+          <span className="text-base">
             <a 
               href="https://app.perena.org/"
               target="_blank"
@@ -103,7 +102,7 @@ BalanceDisplayContent.displayName = 'BalanceDisplayContent';
 
 // Inner component that uses the connection
 function BalanceDisplayInner() {
-  const { address } = usePara();
+  const { data: wallet } = useWallet();
   const { connection } = useConnection();
   const [usdcBalance, setUsdcBalance] = useState<number | null>(null);
   const [usdStarBalance, setUsdStarBalance] = useState<number | null>(null);
@@ -116,7 +115,12 @@ function BalanceDisplayInner() {
   const timeoutRef = useRef<NodeJS.Timeout>();
   const mountedRef = useRef(true);
 
-  const publicKey = address ? new PublicKey(address) : null;
+  // Get the public key from Para wallet's address field
+  const publicKey = wallet?.address ? new PublicKey(wallet.address) : null;
+
+  // Debug logs
+  console.log('Para wallet data:', wallet);
+  console.log('Derived public key:', publicKey?.toString());
 
   const fetchBalances = useCallback(async () => {
     // Prevent concurrent fetches
@@ -202,7 +206,7 @@ function BalanceDisplayInner() {
   if (!publicKey) {
     return (
       <div className="text-center py-4">
-        <p className="text-sm opacity-70">Please connect your wallet to view balances</p>
+        <p className="text-base opacity-70">Please connect your wallet to view balances</p>
       </div>
     );
   }
@@ -226,7 +230,7 @@ function BalanceDisplayInner() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Your Balances</h2>
+        <h2 className="text-xl font-semibold">Your Token Balances</h2>
         <button
           onClick={toggleVisibility}
           className="btn btn-ghost btn-sm btn-circle"
@@ -252,8 +256,10 @@ function BalanceDisplayInner() {
 // Wrapper component that provides the mainnet connection
 export function BalanceDisplay() {
   return (
-    <MainnetConnectionProvider>
-      <BalanceDisplayInner />
-    </MainnetConnectionProvider>
+    <div className="bg-base-100 rounded-3xl shadow-xl">
+      <MainnetConnectionProvider>
+        <BalanceDisplayInner />
+      </MainnetConnectionProvider>
+    </div>
   );
 }

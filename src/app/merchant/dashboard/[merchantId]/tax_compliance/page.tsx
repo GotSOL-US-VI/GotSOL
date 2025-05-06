@@ -2,13 +2,13 @@
 
 import { PublicKey } from '@solana/web3.js'
 import { useEffect, useState } from 'react'
-import { useAnchorProvider } from '@/components/para/para-provider'
+import { useAnchorProvider, ParaAnchorProvider } from '@/components/para/para-provider'
 import { Program, Idl } from '@coral-xyz/anchor'
 import * as kumbayaIdl from '@/utils/kumbaya.json'
 import { MakeRevenuePaymentButton } from '@/components/merchant/make-revenue-payment'
 import { useConnection } from '@solana/wallet-adapter-react'
 
-export default function TaxCompliancePage({ params }: { params: { merchantId: string } }) {
+function TaxComplianceContent({ params }: { params: { merchantId: string } }) {
   const [mounted, setMounted] = useState(false)
   const [merchantName, setMerchantName] = useState<string>('')
   const [program, setProgram] = useState<Program<Idl> | null>(null)
@@ -58,7 +58,7 @@ export default function TaxCompliancePage({ params }: { params: { merchantId: st
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Automate Tax Payments and Compliance for your Business (in development)</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Automate Tax Payments and Compliance for your Business (in development, currently non-functional)</h1>
           <br></br>
           <p>
           This Product Offering will be built in Phase 3, after Inventory Management is feature-complete, and we have more specifics on exactly what features and customization are required here.
@@ -75,7 +75,7 @@ export default function TaxCompliancePage({ params }: { params: { merchantId: st
               When the Owner withdraws USDC from the Merchant&apos;s account, 5% of the withdrawal amount is deposited into a separate escrow dedicated to tax/compliance payments.
             </li>
             <li>
-              The other 93.5% goes to the Merchant&apos;s Owner&apos;s USDC account, and 1.5% goes to the House&apos;s platform fee (the House&apos;s share is not currently imposed on devnet).
+              The other 93.5% goes to the Merchant&apos;s Owner&apos;s USDC account, and 1.5% goes to the House&apos;s platform fee.
             </li>
             <li>The Merchant&apos;s compliance escrow continues to accrue USDC each time the Merchant&apos;s Owner withdraws from the Merchant&apos;s USDC account.</li>
             <li>
@@ -99,4 +99,12 @@ export default function TaxCompliancePage({ params }: { params: { merchantId: st
       </div>
     </div>
   )
+}
+
+export default function TaxCompliancePage({ params }: { params: { merchantId: string } }) {
+  return (
+    <ParaAnchorProvider>
+      <TaxComplianceContent params={params} />
+    </ParaAnchorProvider>
+  );
 } 

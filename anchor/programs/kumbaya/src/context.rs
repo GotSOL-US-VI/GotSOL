@@ -275,8 +275,8 @@ impl<'info> RefundPayment<'info> {
 #[derive(Accounts)]
 pub struct SetMerchantStatus<'info> {
     /// CHECK: This is the HOUSE Squads multi-sig that must sign
-    #[account(mut, constraint = house.key() == Pubkey::from_str(HOUSE).unwrap() @ CustomError::UnauthorizedStatusChange)]
-    pub house: Signer<'info>,
+    #[account(mut, constraint = auth.key() == Pubkey::from_str(AUTH).unwrap() @ CustomError::UnauthorizedStatusChange)]
+    pub auth: Signer<'info>,
 
     #[account(mut)]
     pub merchant: Box<Account<'info, Merchant>>,

@@ -1,57 +1,95 @@
 'use client';
 
-import { useAnchorProvider } from '@/components/para/para-provider';
+import { useWallet } from '@getpara/react-sdk';
 import { PaymentQR } from '@/components/payments/payment-qr';
 import { PaymentHistory } from '@/components/payments/payment-history';
 import { WithdrawFunds } from '@/components/payments/withdraw-funds';
-import * as anchor from '@coral-xyz/anchor';
-import { useMemo, useState, useEffect, useCallback } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { PublicKey } from '@solana/web3.js';
-import idl from '../../../../utils/kumbaya.json';
-import type { MerchantAccount } from '@/components/payments/refund-button';
+import { useConnection } from '@/lib/connection-context';
+import { getKumbayaProgram } from '../../../../../anchor/src/kumbaya-exports';
+import { useAnchorProvider, ParaAnchorProvider } from '@/components/para/para-provider';
 
-export default function MerchantDashboardPage({ params }: { params: { merchantId: string } }) {
+const USDC_DEVNET_MINT = new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU');
+
+function getAssociatedTokenAddress(walletAddress: PublicKey, mint: PublicKey) {
+  return PublicKey.findProgramAddressSync(
+    [walletAddress.toBuffer(),
+      new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA').toBuffer(),
+      mint.toBuffer()
+    ],
+    new PublicKey('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL')
+  )[0];
+}
+
+function DashboardContent({ params }: { params: { merchantId: string } }) {
+  const { data: wallet } = useWallet();
+  const { connection } = useConnection();
   const provider = useAnchorProvider();
   const [merchantName, setMerchantName] = useState<string>('');
   const [merchantBalance, setMerchantBalance] = useState<number>(0);
   const [ownerBalance, setOwnerBalance] = useState<number>(0);
-
-  const program = useMemo(() =>
-    provider ? new anchor.Program(idl as anchor.Idl, provider) : null
-    , [provider]);
+  const [owner, setOwner] = useState<PublicKey | null>(null);
+  const isDevnet = true; // TODO: Make this dynamic if needed
 
   const merchantPubkey = useMemo(() => {
     try {
+      // Validate that merchantId is a valid base58 string
+      if (!/^[1-9A-HJ-NP-Za-km-z]+$/.test(params.merchantId)) {
+        console.error('Invalid merchant ID format:', params.merchantId);
+        return null;
+      }
       return new PublicKey(params.merchantId);
     } catch (e) {
+      console.error('Error creating PublicKey:', e);
       return null;
     }
   }, [params.merchantId]);
 
+  // Initialize program
+  const program = useMemo(() => {
+    if (!provider) return null;
+    return getKumbayaProgram(provider);
+  }, [provider]);
+
   useEffect(() => {
-    const fetchMerchantName = async () => {
-      if (program && merchantPubkey) {
-        try {
-          const merchantAccount = await (program.account as any).merchant.fetch(merchantPubkey) as MerchantAccount;
+    const fetchMerchantData = async () => {
+      if (!program || !merchantPubkey) return;
+      
+      try {
+        const merchantAccount = await (program.account as any).merchant.fetch(merchantPubkey);
+        if (merchantAccount) {
           setMerchantName(merchantAccount.entityName);
-        } catch (err) {
-          console.error('Error fetching merchant name:', err);
+          setOwner(merchantAccount.owner);
         }
+      } catch (err) {
+        console.error('Error fetching merchant data:', err);
       }
     };
-
-    fetchMerchantName();
+    
+    fetchMerchantData();
   }, [program, merchantPubkey]);
 
-  const handleBalanceUpdate = useCallback((balance: number) => {
-    setMerchantBalance(balance);
-  }, []);
+  useEffect(() => {
+    const fetchBalances = async () => {
+      if (!merchantPubkey || !owner || !connection) return;
+      try {
+        // Merchant USDC ATA
+        const merchantUsdcAta = getAssociatedTokenAddress(merchantPubkey, USDC_DEVNET_MINT);
+        const merchantAtaInfo = await connection.getTokenAccountBalance(merchantUsdcAta).catch(() => null);
+        setMerchantBalance(merchantAtaInfo ? Number(merchantAtaInfo.value.uiAmountString) : 0);
+        // Owner USDC ATA
+        const ownerUsdcAta = getAssociatedTokenAddress(owner, USDC_DEVNET_MINT);
+        const ownerAtaInfo = await connection.getTokenAccountBalance(ownerUsdcAta).catch(() => null);
+        setOwnerBalance(ownerAtaInfo ? Number(ownerAtaInfo.value.uiAmountString) : 0);
+      } catch (err) {
+        console.error('Error fetching balances:', err);
+      }
+    };
+    fetchBalances();
+  }, [merchantPubkey, owner, connection]);
 
-  const handleOwnerBalanceUpdate = useCallback((balance: number) => {
-    setOwnerBalance(balance);
-  }, []);
-
-  if (!program || !merchantPubkey) {
+  if (!wallet?.address || !merchantPubkey || !program) {
     return (
       <div className="container mx-auto py-8 text-center">
         <p className="text-lg">Please connect your wallet to continue</p>
@@ -72,7 +110,6 @@ export default function MerchantDashboardPage({ params }: { params: { merchantId
               )}
               <div className="flex-1 flex items-center justify-center">
                 <PaymentQR
-                  program={program}
                   merchantPubkey={merchantPubkey}
                   isDevnet={true}
                 />
@@ -87,15 +124,13 @@ export default function MerchantDashboardPage({ params }: { params: { merchantId
           <div>
             <div className="card bg-base-300 shadow-xl">
               <div className="card-body p-4">
-                <WithdrawFunds
-                  program={program}
-                  merchantPubkey={merchantPubkey}
-                  isDevnet={true}
-                  onBalanceUpdate={handleBalanceUpdate}
-                  onOwnerBalanceUpdate={handleOwnerBalanceUpdate}
-                  merchantBalance={merchantBalance}
-                  ownerBalance={ownerBalance}
-                />
+                {owner && merchantPubkey && (
+                  <WithdrawFunds
+                    merchantPubkey={merchantPubkey}
+                    ownerPubkey={owner}
+                    isDevnet={true}
+                  />
+                )}
               </div>
             </div>
           </div>
@@ -108,7 +143,7 @@ export default function MerchantDashboardPage({ params }: { params: { merchantId
                   program={program}
                   merchantPubkey={merchantPubkey}
                   isDevnet={true}
-                  onBalanceUpdate={handleBalanceUpdate}
+                  onBalanceUpdate={setMerchantBalance}
                 />
               </div>
             </div>
@@ -116,5 +151,13 @@ export default function MerchantDashboardPage({ params }: { params: { merchantId
         </div>
       </div>
     </div>
+  );
+}
+
+export default function DashboardPage({ params }: { params: { merchantId: string } }) {
+  return (
+    <ParaAnchorProvider>
+      <DashboardContent params={params} />
+    </ParaAnchorProvider>
   );
 } 

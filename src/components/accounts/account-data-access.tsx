@@ -2,7 +2,6 @@
 
 import { TOKEN_PROGRAM_ID} from '@solana/spl-token'
 import { useConnection } from '@/lib/connection-context'
-import { useWalletAdapterCompat } from '@/hooks/useWalletAdapterCompat'
 import {
   Connection,
   LAMPORTS_PER_SOL,
@@ -16,6 +15,7 @@ import {useMutation, useQuery, useQueryClient} from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import {useTransactionToast} from '../ui/ui-layout'
 import { formatSolscanDevnetLink } from '@/utils/format-transaction-link'
+import { useWallet } from "@getpara/react-sdk"
 
 export function useGetBalance({ address }: { address: PublicKey }) {
   const { connection } = useConnection()
@@ -56,7 +56,7 @@ export function useGetTokenAccounts({ address }: { address: PublicKey }) {
 export function useTransferSol({ address }: { address: PublicKey }) {
   const { connection } = useConnection()
   const transactionToast = useTransactionToast()
-  const wallet = useWalletAdapterCompat()
+  const { data: wallet } = useWallet()
   const client = useQueryClient()
 
   return useMutation({
@@ -71,11 +71,9 @@ export function useTransferSol({ address }: { address: PublicKey }) {
           connection,
         })
 
-        if (!wallet.sendTransaction) {
-          throw new Error("sendTransaction is not available. Please connect your wallet.");
-        }
+        if (!wallet) throw new Error("Wallet not connected.");
         // Send transaction and await for signature
-        signature = await wallet.sendTransaction(transaction);
+        signature = await (wallet as any).sendTransaction(transaction);
 
         // Send transaction and await for signature
         await connection.confirmTransaction({ signature, ...latestBlockhash }, 'confirmed')
