@@ -16,6 +16,9 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
 const USD_STAR_MINT = 'BenJy1n3WTx9mTjEvy63e8Q1j4RqUc6E4VBMz3ir4Wo6';
 
+// Platform fee configuration
+const PLATFORM_FEE_BPS = 0.1; // 0.001% in basis points
+
 // Add fallback image URL for USD*
 const USD_STAR_LOGO = 'https://ipfs.filebase.io/ipfs/QmPA375TeXunjaEQ5agLB7RQWgEpQaU59TD8RmUJxo17Ec';
 
@@ -160,7 +163,8 @@ function SwapPageInner() {
         amountInDecimals,
         inputMint: USDC_MINT,
         outputMint: USD_STAR_MINT,
-        userPublicKey: publicKey?.toString()
+        userPublicKey: publicKey?.toString(),
+        platformFeeBps: PLATFORM_FEE_BPS
       });
 
       const response = await fetch('/api/jupiter/quote', {
@@ -172,7 +176,8 @@ function SwapPageInner() {
           inputMint: USDC_MINT,
           outputMint: USD_STAR_MINT,
           amount: amountInDecimals,
-          slippageBps: 50
+          slippageBps: 50,
+          platformFeeBps: PLATFORM_FEE_BPS
         })
       });
 
@@ -215,6 +220,12 @@ function SwapPageInner() {
 
       console.log('Executing swap with public key:', publicKey.toString());
 
+      // Get your fee account for USDC (since we're taking fees in USDC)
+      // const feeAccount = await findAssociatedTokenAddress(
+      //   publicKey, // Your wallet address that will receive fees
+      //   new PublicKey(USDC_MINT)
+      // );
+
       const swapResponse = await fetch('/api/jupiter/swap', {
         method: 'POST',
         headers: {
@@ -222,7 +233,8 @@ function SwapPageInner() {
         },
         body: JSON.stringify({
           quoteResponse: quote,
-          userPublicKey: publicKey.toString()
+          userPublicKey: publicKey.toString(),
+          // feeAccount: feeAccount.toString()
         })
       });
 
