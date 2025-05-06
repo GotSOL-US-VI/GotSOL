@@ -12,6 +12,14 @@ interface Payment {
   sender: PublicKey;
 }
 
+interface SerializedPayment {
+  signature: string;
+  amount: number;
+  memo: string | null;
+  timestamp: number;
+  sender: string; // PublicKey as string
+}
+
 /**
  * Custom hook to handle payment data persistence in localStorage
  * This provides an additional layer of persistence beyond React Query caching
@@ -27,10 +35,10 @@ export function usePaymentCache(merchantPubkey: PublicKey | null, isDevnet: bool
     try {
       const cachedData = localStorage.getItem(cacheKey);
       if (cachedData) {
-        const parsedData = JSON.parse(cachedData);
+        const parsedData = JSON.parse(cachedData) as SerializedPayment[];
         
         // Convert serialized PublicKey back to PublicKey objects
-        const payments = parsedData.map((payment: any) => ({
+        const payments = parsedData.map((payment: SerializedPayment) => ({
           ...payment,
           sender: new PublicKey(payment.sender)
         }));
@@ -44,12 +52,12 @@ export function usePaymentCache(merchantPubkey: PublicKey | null, isDevnet: bool
   }, [cacheKey, queryClient, merchantPubkey, isDevnet]);
   
   // Save payments to localStorage when data changes
-  const savePaymentsToCache = useCallback((payments: Payment[]) => {
+  const savePaymentsToCache = useCallback((payments: Payment[]): void => {
     if (!cacheKey) return;
     
     try {
       // Prepare data for serialization (convert PublicKey to string)
-      const serializedData = payments.map(payment => ({
+      const serializedData: SerializedPayment[] = payments.map(payment => ({
         ...payment,
         sender: payment.sender.toString()
       }));

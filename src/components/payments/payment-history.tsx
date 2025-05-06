@@ -1,7 +1,7 @@
 'use client';
 
 import { useWallet } from '@getpara/react-sdk';
-import { PublicKey, ParsedTransactionWithMeta, ParsedInstruction, PartiallyDecodedInstruction } from '@solana/web3.js';
+import { PublicKey, ParsedTransactionWithMeta, ParsedInstruction, PartiallyDecodedInstruction, Connection } from '@solana/web3.js';
 import { useEffect, useCallback } from 'react';
 import { useConnection } from '@/lib/connection-context';
 import { formatSolscanDevnetLink } from '@/utils/format-transaction-link';
@@ -27,6 +27,28 @@ interface Payment {
     memo: string | null;
     timestamp: number;
     sender: PublicKey;
+}
+
+interface ParsedInstructionWithInfo extends ParsedInstruction {
+    parsed: {
+        type: string;
+        info: {
+            authority?: string;
+            multisigAuthority?: string;
+            source?: string;
+            destination?: string;
+            amount?: string;
+            tokenAmount?: {
+                amount: string;
+                decimals: number;
+                uiAmount: number;
+            };
+        };
+    };
+}
+
+interface TransactionSignatureResult {
+    signature: string;
 }
 
 // USDC mint addresses
@@ -87,7 +109,7 @@ const batchProcess = async <T, R>(
 // Function to fetch payment data that can be used with React Query
 async function fetchPaymentData(
     merchantPubkey: PublicKey, 
-    connection: any, 
+    connection: Connection, 
     isDevnet: boolean = true
 ): Promise<Payment[]> {
     if (!merchantPubkey || !connection) return [];
@@ -277,8 +299,8 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
         }
     }, [payments, savePaymentsToCache]);
     
-    // Function to process a single transaction (for live updates)
-    const processNewTransaction = useCallback(async (signature: string) => {
+    // Process a single transaction (for live updates)
+    const processNewTransaction = useCallback(async (signature: string): Promise<Payment | null> => {
         try {
             // Check if we already have this payment in the cache
             const existingPayments = queryClient.getQueryData<Payment[]>(
@@ -395,14 +417,15 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
                 // Subscribe to account changes
                 const subscriptionId = connection.onAccountChange(
                     merchantUsdcAta,
-                    async (_, context) => {
+                    // Add explicit types to callback parameters
+                    async (_accountInfo, _context) => {
                         // Add a small delay to avoid rate limiting
-                        await new Promise(resolve => setTimeout(resolve, 100));
+                        await new Promise<void>(resolve => setTimeout(resolve, 100));
                         
                         // Get the latest transaction signature
                         const signatures = await connection.getSignaturesForAddress(merchantUsdcAta, {
                             limit: 1
-                        });
+                        }) as TransactionSignatureResult[];
 
                         if (signatures.length === 0) return;
 
@@ -463,6 +486,7 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
             } catch (err) {
                 console.error('Error setting up USDC ATA subscription:', err);
                 toast.error('Failed to set up real-time updates');
+                return () => {}; // Return empty cleanup function
             }
         };
 
@@ -470,10 +494,10 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
         return () => {
             cleanup.then(cleanupFn => cleanupFn?.());
         };
-    }, [connection, merchantPubkey, isDevnet, processNewTransaction, queryClient]);
+    }, [connection, merchantPubkey, isDevnet, processNewTransaction, queryClient, savePaymentsToCache]);
 
     // Style for scrollbar to ensure it's visible and usable
-    const scrollbarStyle = {
+    const scrollbarStyle: React.CSSProperties = {
         scrollbarWidth: "thin",
         scrollbarColor: "#333 #1C1C1C",
         msOverflowStyle: "auto",

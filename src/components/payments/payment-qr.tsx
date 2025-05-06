@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, ChangeEvent } from 'react';
 import { PublicKey } from '@solana/web3.js';
 import { useWallet } from '@getpara/react-sdk';
 import Image from 'next/image';
@@ -10,6 +10,8 @@ interface PaymentQRProps {
   merchantPubkey: PublicKey;
   isDevnet?: boolean;
 }
+
+type NumberPadInput = string | 'backspace' | 'clear';
 
 export function PaymentQR({ merchantPubkey, isDevnet = true }: PaymentQRProps) {
   const { data: wallet } = useWallet();
@@ -40,7 +42,7 @@ export function PaymentQR({ merchantPubkey, isDevnet = true }: PaymentQRProps) {
     return true;
   };
 
-  const handleNumberPadInput = (value: string) => {
+  const handleNumberPadInput = (value: NumberPadInput): void => {
     if (value === 'backspace') {
       setAmount(prev => prev.slice(0, -1));
       return;
@@ -64,7 +66,7 @@ export function PaymentQR({ merchantPubkey, isDevnet = true }: PaymentQRProps) {
     setAmount(newAmount);
   };
 
-  const handleKeyboardInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleKeyboardInput = (e: ChangeEvent<HTMLInputElement>): void => {
     const value = e.target.value;
     if (!isValidAmount(value)) {
       return;
@@ -72,13 +74,13 @@ export function PaymentQR({ merchantPubkey, isDevnet = true }: PaymentQRProps) {
     setAmount(value);
   };
 
-  const handleMemoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleMemoChange = (e: ChangeEvent<HTMLInputElement>): void => {
     setMemo(e.target.value);
   };
 
   const { generatePaymentQR } = usePaymentQR();
 
-  const generateQR = useCallback(async () => {
+  const generateQR = useCallback(async (): Promise<void> => {
     try {
       setError('');
       const numAmount = parseFloat(amount);
@@ -117,7 +119,7 @@ export function PaymentQR({ merchantPubkey, isDevnet = true }: PaymentQRProps) {
     return () => clearTimeout(debounceTimer);
   }, [amount, memo, generateQR]);
 
-  const renderNumberPad = () => (
+  const renderNumberPad = (): JSX.Element => (
     <div className="grid grid-cols-3 gap-2 w-full mt-2">
       {[7, 8, 9, 4, 5, 6, 1, 2, 3].map((num) => (
         <button
