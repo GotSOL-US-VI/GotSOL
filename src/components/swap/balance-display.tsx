@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, memo, useRef } from 'react';
+import { useEffect, useState, useCallback, memo, useRef, useMemo } from 'react';
 import { PublicKey } from '@solana/web3.js';
 import { useWallet } from "@getpara/react-sdk";
 import { 
@@ -10,6 +10,7 @@ import {
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 import { useConnection } from '@/lib/connection-context';
 import { MainnetConnectionProvider } from '@/lib/mainnet-connection-provider';
+import { toast } from 'react-hot-toast';
 
 // Token addresses - using mainnet addresses directly since this is a mainnet-only component
 const USDC_MINT = new PublicKey('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v');
@@ -107,20 +108,26 @@ function BalanceDisplayInner() {
   const [usdcBalance, setUsdcBalance] = useState<number | null>(null);
   const [usdStarBalance, setUsdStarBalance] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isBalancesVisible, setIsBalancesVisible] = useState(true);
   
   // Add refs to track fetch state
   const isFetching = useRef(false);
-  const timeoutRef = useRef<NodeJS.Timeout>();
   const mountedRef = useRef(true);
 
   // Get the public key from Para wallet's address field
-  const publicKey = wallet?.address ? new PublicKey(wallet.address) : null;
+  const publicKey = useMemo(() => 
+    wallet?.address ? new PublicKey(wallet.address) : null
+  , [wallet?.address]);
 
-  // Debug logs
-  console.log('Para wallet data:', wallet);
-  console.log('Derived public key:', publicKey?.toString());
+  // Log wallet changes only when they happen
+  useEffect(() => {
+    if (wallet?.address) {
+      console.log('Para wallet data:', wallet);
+      console.log('Derived public key:', publicKey?.toString());
+    }
+  }, [wallet?.address, publicKey]);
 
   const fetchBalances = useCallback(async () => {
     // Prevent concurrent fetches
@@ -129,6 +136,7 @@ function BalanceDisplayInner() {
     try {
       isFetching.current = true;
       setError(null);
+      console.log('Fetching balances for address:', publicKey.toString());
 
       // Get ATAs
       const [usdcAta, usdStarAta] = await Promise.all([
@@ -142,6 +150,11 @@ function BalanceDisplayInner() {
         )
       ]);
 
+      console.log('Found ATAs:', {
+        USDC: usdcAta.toString(),
+        'USD*': usdStarAta.toString()
+      });
+
       // Get account infos in parallel
       const [usdcInfo, usdStarInfo] = await Promise.all([
         connection.getAccountInfo(usdcAta).catch(() => null),
@@ -154,10 +167,18 @@ function BalanceDisplayInner() {
         usdStarInfo ? connection.getTokenAccountBalance(usdStarAta).catch(() => null) : Promise.resolve(null)
       ]);
 
+      console.log('Fetched balances:', {
+        USDC: usdcBalance?.value.uiAmount ?? 0,
+        'USD*': usdStarBalance?.value.uiAmount ?? 0
+      });
+
       // Only update state if component is still mounted
       if (mountedRef.current) {
-        setUsdcBalance(usdcBalance ? Number(usdcBalance.value.uiAmount) : 0);
-        setUsdStarBalance(usdStarBalance ? Number(usdStarBalance.value.uiAmount) : 0);
+        const newUsdcBalance = usdcBalance ? Number(usdcBalance.value.uiAmount) : 0;
+        const newUsdStarBalance = usdStarBalance ? Number(usdStarBalance.value.uiAmount) : 0;
+        
+        setUsdcBalance(newUsdcBalance);
+        setUsdStarBalance(newUsdStarBalance);
         setIsLoading(false);
       }
 
@@ -169,32 +190,23 @@ function BalanceDisplayInner() {
       }
     } finally {
       isFetching.current = false;
+      if (mountedRef.current) {
+        setIsRefreshing(false);
+        if (isRefreshing) {
+          toast.success('Balances updated successfully');
+        }
+      }
     }
-  }, [publicKey, connection]);
+  }, [publicKey, connection, isRefreshing]);
 
   useEffect(() => {
     mountedRef.current = true;
     
-    // Clear any existing timeout
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
-
-    // Initial fetch
+    // Initial fetch only
     fetchBalances();
-
-    // Set up polling with debounce
-    timeoutRef.current = setInterval(() => {
-      if (!isFetching.current) {
-        fetchBalances();
-      }
-    }, 30000); // Poll every 30 seconds
 
     return () => {
       mountedRef.current = false;
-      if (timeoutRef.current) {
-        clearInterval(timeoutRef.current);
-      }
     };
   }, [fetchBalances]);
 
@@ -202,6 +214,17 @@ function BalanceDisplayInner() {
   const toggleVisibility = useCallback(() => {
     setIsBalancesVisible(prev => !prev);
   }, []);
+
+  // Add a manual refresh function
+  const handleRefresh = useCallback(() => {
+    if (!isFetching.current) {
+      console.log('Manual refresh triggered');
+      setIsRefreshing(true);
+      fetchBalances();
+    } else {
+      console.log('Refresh skipped - already fetching');
+    }
+  }, [fetchBalances]);
 
   if (!publicKey) {
     return (
@@ -211,7 +234,7 @@ function BalanceDisplayInner() {
     );
   }
 
-  if (isLoading) {
+  if (isLoading && !isRefreshing) {
     return (
       <div className="text-center py-4">
         <span className="loading loading-spinner loading-sm"></span>
@@ -231,16 +254,34 @@ function BalanceDisplayInner() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold">Your Token Balances</h2>
-        <button
-          onClick={toggleVisibility}
-          className="btn btn-ghost btn-sm btn-circle"
-        >
-          {isBalancesVisible ? (
-            <EyeIcon className="h-5 w-5" />
-          ) : (
-            <EyeSlashIcon className="h-5 w-5" />
-          )}
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={handleRefresh}
+            className="btn btn-ghost btn-sm btn-circle"
+            disabled={isFetching.current}
+          >
+            <svg 
+              xmlns="http://www.w3.org/2000/svg" 
+              fill="none" 
+              viewBox="0 0 24 24" 
+              strokeWidth={1.5} 
+              stroke="currentColor" 
+              className={`w-5 h-5 transition-transform ${isRefreshing ? 'animate-spin' : ''}`}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+            </svg>
+          </button>
+          <button
+            onClick={toggleVisibility}
+            className="btn btn-ghost btn-sm btn-circle"
+          >
+            {isBalancesVisible ? (
+              <EyeIcon className="h-5 w-5" />
+            ) : (
+              <EyeSlashIcon className="h-5 w-5" />
+            )}
+          </button>
+        </div>
       </div>
 
       <BalanceDisplayContent 

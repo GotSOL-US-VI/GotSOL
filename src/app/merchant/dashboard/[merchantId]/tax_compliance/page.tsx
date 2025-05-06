@@ -6,7 +6,7 @@ import { useAnchorProvider, ParaAnchorProvider } from '@/components/para/para-pr
 import { Program, Idl } from '@coral-xyz/anchor'
 import * as kumbayaIdl from '@/utils/kumbaya.json'
 import { MakeRevenuePaymentButton } from '@/components/merchant/make-revenue-payment'
-import { useConnection } from '@solana/wallet-adapter-react'
+import { useConnection } from '@/lib/connection-context'
 
 function TaxComplianceContent({ params }: { params: { merchantId: string } }) {
   const [mounted, setMounted] = useState(false)

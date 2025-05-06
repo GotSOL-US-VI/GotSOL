@@ -2,12 +2,13 @@
 
 import { useEffect, useMemo, useState, useRef, useCallback } from 'react'
 import { useWallet } from "@getpara/react-sdk";
-import { PublicKey, Connection } from '@solana/web3.js'
+import { PublicKey } from '@solana/web3.js'
 import { AppHero } from '../ui/ui-layout'
 import { BorshCoder, Idl } from '@coral-xyz/anchor'
 import idl from '../../utils/kumbaya.json'
 import bs58 from 'bs58'
 import Image from 'next/image'
+import { useConnection } from '@/lib/connection-context'
 
 interface MerchantAccount {
   owner: PublicKey
@@ -26,6 +27,7 @@ interface Merchant {
 
 export default function DashboardFeature() {
   const { data: wallet } = useWallet()
+  const { connection } = useConnection()
   const [merchants, setMerchants] = useState<Merchant[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -33,25 +35,22 @@ export default function DashboardFeature() {
   const lastFetchRef = useRef<number>(0)
   const FETCH_COOLDOWN = 5000 // 5 seconds between fetches
 
-  const connection = new Connection("https://api.devnet.solana.com")
-  const programId = new PublicKey(idl.address)
+  const programId = useMemo(() => new PublicKey(idl.address), [])
 
   const fetchMerchants = useCallback(async () => {
-    if (!wallet?.address || !mountedRef.current) {
-      setMerchants([])
-      setLoading(false)
-      return
-    }
+    if (!wallet?.address || !connection) return;
 
-    // Check if we should fetch again
+    // Check cooldown
     const now = Date.now()
     if (now - lastFetchRef.current < FETCH_COOLDOWN) {
-      return
+      return;
     }
-    lastFetchRef.current = now
+    lastFetchRef.current = now;
 
     try {
-      // Get all program accounts with the merchant discriminator
+      setLoading(true);
+      setError(null);
+
       const allAccounts = await connection.getProgramAccounts(
         programId,
         {
@@ -120,7 +119,7 @@ export default function DashboardFeature() {
         setLoading(false)
       }
     }
-  }, [wallet?.address]);
+  }, [wallet?.address, connection, programId]);
 
   // Single effect to handle both initial fetch and polling
   useEffect(() => {
