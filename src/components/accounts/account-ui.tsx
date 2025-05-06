@@ -4,9 +4,9 @@ import { LAMPORTS_PER_SOL, PublicKey } from '@solana/web3.js'
 import { IconRefresh } from '@tabler/icons-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
-import { ellipsify } from '../ui/ui-layout'
-import { useCluster } from '../cluster/cluster-data-access'
 import { ExplorerLink } from '../cluster/cluster-ui'
+import { ellipsify } from '@/utils/string-utils'
+import { useCluster } from '../cluster/cluster-data-access'
 import {
   useGetBalance,
   useGetSignatures,
