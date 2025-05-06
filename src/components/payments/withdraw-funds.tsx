@@ -13,7 +13,7 @@ import * as anchor from "@coral-xyz/anchor";
 import { Program, Idl } from '@coral-xyz/anchor';
 import { formatSolscanDevnetLink } from '@/utils/format-transaction-link';
 import { ParaSolanaWeb3Signer } from "@getpara/solana-web3.js-v1-integration";
-import { getKumbayaProgram } from '../../../anchor/src/kumbaya-exports';
+import { getKumbayaProgram } from '@/utils/kumbaya-exports';
 
 interface WithdrawFundsProps {
   merchantPubkey: PublicKey;
