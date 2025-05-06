@@ -277,10 +277,36 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
 
             if (!authority || !amount) return null;
 
+            // Extract memo from transaction logs properly
+            let memo = null;
+            if (tx.meta?.logMessages) {
+                console.log('Transaction logs for', signature, ':', tx.meta.logMessages);
+                
+                // Look for memo in transaction logs
+                const memoLog = tx.meta.logMessages.find(log => {
+                    const lowerLog = log.toLowerCase();
+                    return lowerLog.includes('program log: memo (len') || lowerLog.includes('memo program: memo');
+                });
+                
+                if (memoLog) {
+                    // Extract memo content
+                    const matches = memoLog.match(/(?:Program log: Memo \(len \d+\): |Memo Program: Memo )(.+)/i);
+                    if (matches && matches[1]) {
+                        // Remove surrounding quotes if they exist
+                        memo = matches[1].trim().replace(/^"(.*)"$/, '$1');
+                        console.log('Found memo:', memo);
+                    } else {
+                        console.log('Could not extract memo from log:', memoLog);
+                    }
+                } else {
+                    console.log('No memo found in logs');
+                }
+            }
+
             const payment: Payment = {
                 signature,
                 amount: Number(amount) / Math.pow(10, 6),
-                memo: tx.meta.logMessages?.find(log => log.includes('Memo:'))?.replace('Program log: Memo:', '').trim() || null,
+                memo,
                 timestamp: tx.blockTime ? tx.blockTime * 1000 : Date.now(),
                 sender: new PublicKey(authority)
             };
@@ -329,7 +355,14 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
                             });
 
                             // Show toast notification for new payment
-                            const toastMessage = `${formatUSDCAmount(newPayment.amount)} USDC payment to Merchant ${merchantPubkey.toString()}`;
+                            const toastMessage = (
+                                <div>
+                                    <p>{formatUSDCAmount(newPayment.amount)} USDC payment received!</p>
+                                    {newPayment.memo && (
+                                        <p className="text-sm mt-1 opacity-90">{newPayment.memo}</p>
+                                    )}
+                                </div>
+                            );
                             toast.success(toastMessage, {
                                 duration: 5000,
                                 position: 'bottom-right'

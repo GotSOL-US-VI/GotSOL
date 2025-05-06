@@ -57,7 +57,7 @@ export function usePaymentQR() {
         reference: [merchantPubkey],
         label: "GotSOL Payment",
         message: `Payment to ${merchantPubkey.toString().slice(0, 4)}...${merchantPubkey.toString().slice(-4)}`,
-        memo: memo?.trim() || `$${amount} USDC Payment to merchant ${merchantPubkey.toString()}`
+        memo: memo?.trim() || `$${amount} USDC Payment to Merchant ${merchantPubkey.toString()}`
       });
 
       const urlString = url.toString();

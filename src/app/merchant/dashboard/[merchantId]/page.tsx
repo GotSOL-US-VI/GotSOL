@@ -6,10 +6,8 @@ import { PaymentHistory } from '@/components/payments/payment-history';
 import { WithdrawFunds } from '@/components/payments/withdraw-funds';
 import { useMemo, useState, useEffect } from 'react';
 import { PublicKey } from '@solana/web3.js';
-import { Program } from '@coral-xyz/anchor';
 import { useConnection } from '@/lib/connection-context';
 import { getKumbayaProgram } from '../../../../../anchor/src/kumbaya-exports';
-import type { Kumbaya } from '../../../../../anchor/target/types/kumbaya';
 import { useAnchorProvider, ParaAnchorProvider } from '@/components/para/para-provider';
 
 const USDC_DEVNET_MINT = new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU');
