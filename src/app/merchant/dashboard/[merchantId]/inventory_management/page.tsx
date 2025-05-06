@@ -2,8 +2,7 @@
 
 import { PublicKey } from '@solana/web3.js'
 import { useEffect, useState } from 'react'
-import { EmployeeList } from '@/components/employees/employee-ui'
-import { IconReceipt } from '@tabler/icons-react'
+
 
 export default function ManageAccountsPage({ params }: { params: { merchantId: string } }) {
   const [mounted, setMounted] = useState(false)
