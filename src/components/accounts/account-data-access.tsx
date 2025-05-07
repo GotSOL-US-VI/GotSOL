@@ -13,7 +13,7 @@ import {
 } from '@solana/web3.js'
 import {useMutation, useQuery, useQueryClient} from '@tanstack/react-query'
 import toast from 'react-hot-toast'
-import {useTransactionToast} from '../ui/ui-layout'
+import { useTransactionToast } from '@/hooks/use-transaction-toast'
 import { formatSolscanDevnetLink } from '@/utils/format-transaction-link'
 import { useWallet } from "@getpara/react-sdk"
 

@@ -4,11 +4,12 @@ import { useWallet } from '@getpara/react-sdk';
 import { PaymentQR } from '@/components/payments/payment-qr';
 import { PaymentHistory } from '@/components/payments/payment-history';
 import { WithdrawFunds } from '@/components/payments/withdraw-funds';
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState } from 'react';
 import { PublicKey } from '@solana/web3.js';
 import { useConnection } from '@/lib/connection-context';
 import { getKumbayaProgram } from '@/utils/kumbaya-exports';
 import { useAnchorProvider, ParaAnchorProvider } from '@/components/para/para-provider';
+import { useQuery } from '@tanstack/react-query';
 
 const USDC_DEVNET_MINT = new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU');
 
@@ -26,10 +27,7 @@ function DashboardContent({ params }: { params: { merchantId: string } }) {
   const { data: wallet } = useWallet();
   const { connection } = useConnection();
   const provider = useAnchorProvider();
-  const [merchantName, setMerchantName] = useState<string>('');
   const [merchantBalance, setMerchantBalance] = useState<number>(0);
-  const [ownerBalance, setOwnerBalance] = useState<number>(0);
-  const [owner, setOwner] = useState<PublicKey | null>(null);
   const isDevnet = true; // TODO: Make this dynamic if needed
 
   const merchantPubkey = useMemo(() => {
@@ -52,42 +50,60 @@ function DashboardContent({ params }: { params: { merchantId: string } }) {
     return getKumbayaProgram(provider);
   }, [provider]);
 
-  useEffect(() => {
-    const fetchMerchantData = async () => {
-      if (!program || !merchantPubkey) return;
-      
+  // Use React Query to fetch merchant data
+  const { data: merchantData } = useQuery({
+    queryKey: ['merchant', merchantPubkey?.toString()],
+    queryFn: async () => {
+      if (!program || !merchantPubkey) return null;
       try {
         const merchantAccount = await (program.account as any).merchant.fetch(merchantPubkey);
-        if (merchantAccount) {
-          setMerchantName(merchantAccount.entityName);
-          setOwner(merchantAccount.owner);
-        }
+        return merchantAccount;
       } catch (err) {
         console.error('Error fetching merchant data:', err);
+        return null;
       }
-    };
-    
-    fetchMerchantData();
-  }, [program, merchantPubkey]);
+    },
+    enabled: !!program && !!merchantPubkey,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    gcTime: 30 * 60 * 1000, // Keep in cache for 30 minutes
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+  });
 
-  useEffect(() => {
-    const fetchBalances = async () => {
-      if (!merchantPubkey || !owner || !connection) return;
+  // Access merchant data with fallback
+  const merchantName = merchantData?.entityName || '';
+  const owner = merchantData?.owner || null;
+
+  // Use React Query to fetch balances
+  const { data: balanceData } = useQuery({
+    queryKey: ['balances', merchantPubkey?.toString(), owner?.toString()],
+    queryFn: async () => {
+      if (!merchantPubkey || !owner || !connection) return { merchantBalance: 0, ownerBalance: 0 };
       try {
         // Merchant USDC ATA
         const merchantUsdcAta = getAssociatedTokenAddress(merchantPubkey, USDC_DEVNET_MINT);
         const merchantAtaInfo = await connection.getTokenAccountBalance(merchantUsdcAta).catch(() => null);
-        setMerchantBalance(merchantAtaInfo ? Number(merchantAtaInfo.value.uiAmountString) : 0);
+        const mBalance = merchantAtaInfo ? Number(merchantAtaInfo.value.uiAmountString) : 0;
+        
         // Owner USDC ATA
-        const ownerUsdcAta = getAssociatedTokenAddress(owner, USDC_DEVNET_MINT);
+        const ownerUsdcAta = getAssociatedTokenAddress(new PublicKey(owner), USDC_DEVNET_MINT);
         const ownerAtaInfo = await connection.getTokenAccountBalance(ownerUsdcAta).catch(() => null);
-        setOwnerBalance(ownerAtaInfo ? Number(ownerAtaInfo.value.uiAmountString) : 0);
+        const oBalance = ownerAtaInfo ? Number(ownerAtaInfo.value.uiAmountString) : 0;
+        
+        return { merchantBalance: mBalance, ownerBalance: oBalance };
       } catch (err) {
         console.error('Error fetching balances:', err);
+        return { merchantBalance: 0, ownerBalance: 0 };
       }
-    };
-    fetchBalances();
-  }, [merchantPubkey, owner, connection]);
+    },
+    enabled: !!merchantPubkey && !!owner && !!connection,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+  });
+
+  // Use balance data if available
+  const ownerBalance = balanceData?.ownerBalance || 0;
 
   if (!wallet?.address || !merchantPubkey || !program) {
     return (
@@ -127,7 +143,7 @@ function DashboardContent({ params }: { params: { merchantId: string } }) {
                 {owner && merchantPubkey && (
                   <WithdrawFunds
                     merchantPubkey={merchantPubkey}
-                    ownerPubkey={owner}
+                    ownerPubkey={new PublicKey(owner)}
                     isDevnet={true}
                   />
                 )}

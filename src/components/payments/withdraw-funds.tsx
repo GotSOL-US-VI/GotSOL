@@ -13,32 +13,14 @@ import * as anchor from "@coral-xyz/anchor";
 import { formatSolscanDevnetLink } from '@/utils/format-transaction-link';
 import { ParaSolanaWeb3Signer } from "@getpara/solana-web3.js-v1-integration";
 import { getKumbayaProgram } from '@/utils/kumbaya-exports';
+import { USDC_MINT, USDC_DEVNET_MINT, HOUSE, findAssociatedTokenAddress } from '@/utils/token-utils';
+import { parseAnchorError, ErrorToastContent } from '@/utils/error-parser';
 
 interface WithdrawFundsProps {
   merchantPubkey: PublicKey;
   ownerPubkey: PublicKey;
   isDevnet?: boolean;
   onSuccess?: () => void;
-}
-
-// USDC mint addresses
-const USDC_MINT = new PublicKey('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v');
-const USDC_DEVNET_MINT = new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU');
-const HOUSE = new PublicKey('Hth4EBxLWJSoRWj7raCKoniuzcvXt8MUFgGKty3B66ih');
-
-// Helper function to get associated token address
-async function findAssociatedTokenAddress(
-  walletAddress: PublicKey,
-  tokenMintAddress: PublicKey
-): Promise<PublicKey> {
-  return (await PublicKey.findProgramAddress(
-    [
-      walletAddress.toBuffer(),
-      TOKEN_PROGRAM_ID.toBuffer(),
-      tokenMintAddress.toBuffer(),
-    ],
-    ASSOCIATED_TOKEN_PROGRAM_ID
-  ))[0];
 }
 
 export function WithdrawFunds({ 
@@ -56,16 +38,52 @@ export function WithdrawFunds({
   const [isLoading, setIsLoading] = useState(false);
   const [isBalancesVisible, setIsBalancesVisible] = useState(true);
 
-  // Use the new hook for both merchant and owner balances
-  const { data: merchantBalance = 0, isLoading: isMerchantBalanceLoading } = useUsdcBalance({
+  // Use the TanStack Query hooks with refetch capabilities
+  const { 
+    data: merchantBalance = 0, 
+    isLoading: isMerchantBalanceLoading, 
+    refetch: refetchMerchantBalance 
+  } = useUsdcBalance({
     address: merchantPubkey,
-    isDevnet
+    isDevnet,
+    staleTime: 5000 // Consider data stale after 5s
   });
 
-  const { data: ownerBalance = 0, isLoading: isOwnerBalanceLoading } = useUsdcBalance({
+  const { 
+    data: ownerBalance = 0, 
+    isLoading: isOwnerBalanceLoading,
+    refetch: refetchOwnerBalance
+  } = useUsdcBalance({
     address: ownerPubkey,
-    isDevnet
+    isDevnet,
+    staleTime: 5000
   });
+
+  // Function to trigger an immediate balance refresh
+  const refreshBalances = async () => {
+    try {
+      // Invalidate queries to force fresh fetches
+      await queryClient.invalidateQueries({ 
+        queryKey: ['usdc-balance', merchantPubkey.toString(), isDevnet]
+      });
+      await queryClient.invalidateQueries({ 
+        queryKey: ['usdc-balance', ownerPubkey.toString(), isDevnet]
+      });
+      
+      // Also invalidate the general token balance queries
+      await queryClient.invalidateQueries({
+        queryKey: ['token-balance']
+      });
+      
+      // Execute direct refetches
+      await Promise.all([
+        refetchMerchantBalance(),
+        refetchOwnerBalance()
+      ]);
+    } catch (err) {
+      console.error('Error refreshing balances:', err);
+    }
+  };
 
   const handleWithdraw = async () => {
     if (!wallet?.address || !connection || !para) {
@@ -138,11 +156,14 @@ export function WithdrawFunds({
         })
         .rpc();
 
-      // Invalidate the balance queries to trigger a refresh
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['usdc-balance', merchantPubkey.toString(), isDevnet] }),
-        queryClient.invalidateQueries({ queryKey: ['usdc-balance', ownerPubkey.toString(), isDevnet] })
-      ]);
+      // Trigger immediate balance refresh
+      await refreshBalances();
+      
+      // Set a short timeout and refresh again to ensure balances are updated
+      // as blockchain transactions might take a moment to finalize
+      setTimeout(async () => {
+        await refreshBalances();
+      }, 2000);
 
       toast.success(
         <div>
@@ -168,8 +189,49 @@ export function WithdrawFunds({
       }
     } catch (err) {
       console.error('Error withdrawing funds:', err);
-      setError(err instanceof Error ? err.message : 'Failed to withdraw funds');
-      toast.error('Failed to withdraw funds');
+      
+      // Parse the error to get a more user-friendly message
+      const parsedError = parseAnchorError(err);
+      setError(parsedError.message);
+
+      // Display appropriate error message based on the error code
+      switch (parsedError.code) {
+        case 'INSUFFICIENT_FUNDS':
+          toast.error(
+            <ErrorToastContent 
+              title="Insufficient funds" 
+              message="The merchant account doesn't have enough USDC for this withdrawal" 
+            />
+          );
+          break;
+        case 'NOT_MERCHANT_OWNER':
+          toast.error(
+            <ErrorToastContent 
+              title="Unauthorized" 
+              message="Only the merchant owner can withdraw funds" 
+            />
+          );
+          break;
+        case 'INACTIVE_MERCHANT':
+          toast.error(
+            <ErrorToastContent 
+              title="Inactive merchant" 
+              message="This merchant account is currently inactive" 
+            />
+          );
+          break;
+        default:
+          // Generic error message with details if available
+          toast.error(
+            <ErrorToastContent 
+              title="Failed to withdraw funds" 
+              message={parsedError.message} 
+            />
+          );
+      }
+      
+      // Still refresh balances in case of partial success
+      refreshBalances();
     } finally {
       setIsLoading(false);
     }
