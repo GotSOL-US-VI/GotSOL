@@ -1,6 +1,5 @@
-import { Transaction, PublicKey, TransactionInstruction, Keypair } from '@solana/web3.js';
+import { Transaction, PublicKey, Keypair } from '@solana/web3.js';
 import { Program, Idl } from '@coral-xyz/anchor';
-import { serializeExistingTransaction } from './transaction-serializer';
 import { ParaSolanaWeb3Signer } from "@getpara/solana-web3.js-v1-integration";
 
 // Use the specific fee payer public key provided by the user
