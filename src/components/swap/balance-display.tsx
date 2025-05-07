@@ -127,7 +127,7 @@ function BalanceDisplayInner() {
       console.log('Para wallet data:', wallet);
       console.log('Derived public key:', publicKey?.toString());
     }
-  }, [wallet?.address, publicKey]);
+  }, [wallet, wallet?.address, publicKey]);
 
   const fetchBalances = useCallback(async () => {
     // Prevent concurrent fetches

@@ -302,13 +302,15 @@ function ModalReceive({ hide, show, address }: ModalProps) {
 }
 
 function ModalAirdrop({ hide, show, address }: ModalProps) {
-  if (!show) return null
   const mutation = useRequestAirdrop({ address })
+  
+  if (!show) return null
   return <div className="modal modal-open">...</div>
 }
 
 function ModalSend({ hide, show, address }: ModalProps) {
-  if (!show) return null
   const mutation = useTransferSol({ address })
+  
+  if (!show) return null
   return <div className="modal modal-open">...</div>
 }
