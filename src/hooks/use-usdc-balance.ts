@@ -14,13 +14,14 @@ interface UseUsdcBalanceProps {
 
 /**
  * Specialized hook for USDC balances that utilizes the more general token balance hook
+ * Optimized for quick updates when new payments are received
  */
 export function useUsdcBalance({
   address,
   isDevnet = true,
   enabled = true,
-  staleTime = 5000,
-  refetchInterval = 15000,
+  staleTime = 2000, // Consider data stale after 2s (lowered from 5s)
+  refetchInterval = false, // Disable automatic polling by default
   refetchOnMount = true,
   refetchOnWindowFocus = true
 }: UseUsdcBalanceProps) {

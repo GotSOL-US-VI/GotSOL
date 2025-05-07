@@ -9,7 +9,7 @@ import { DisclaimerProvider } from '@/components/ui/disclaimer-provider';
 import { DisclaimerButton } from '@/components/ui/disclaimer-button';
 import Link from 'next/link';
 import Image from 'next/image';
-import { usePathname } from 'next/navigation';
+import { useParams, usePathname, useRouter } from 'next/navigation';
 import { useAccount, useModal } from '@getpara/react-sdk';
 import { Toaster } from 'react-hot-toast';
 import { AccountChecker } from '@/components/accounts/account-ui';
@@ -59,6 +59,8 @@ function ClientSideStateHandler({
   merchantLinks 
 }: ClientSideStateHandlerProps) {
   const pathname = usePathname();
+  const params = useParams();
+  const router = useRouter();
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
   const [activeMerchant, setActiveMerchant] = useState<string | null>(null);
   const { data: account } = useAccount();
@@ -82,13 +84,14 @@ function ClientSideStateHandler({
     }
   }, []);
 
-  // Update active merchant when entering a merchant dashboard
+  // Update active merchant based on route parameters
   useEffect(() => {
-    if (!pathname) return;
+    if (!mounted) return;
     
-    const merchantMatch = pathname.match(/\/merchant\/dashboard\/([^/]+)/);
-    if (merchantMatch) {
-      const merchantId = merchantMatch[1];
+    // Get merchantId from route parameters
+    const merchantId = params?.merchantId as string;
+    
+    if (merchantId) {
       setActiveMerchant(merchantId);
       localStorage.setItem('activeMerchant', merchantId);
     } else if (pathname === '/') {
@@ -96,7 +99,7 @@ function ClientSideStateHandler({
       setActiveMerchant(null);
       localStorage.removeItem('activeMerchant');
     }
-  }, [pathname]);
+  }, [pathname, params, mounted]);
 
   const toggleTheme = () => {
     const newTheme = theme === 'light' ? 'dark' : 'light';
@@ -105,13 +108,16 @@ function ClientSideStateHandler({
     document.documentElement.setAttribute('data-theme', newTheme);
   };
 
-  // Handle logo click to clear merchant state
+  // Handle logo click to clear merchant state and navigate home
   const handleLogoClick = () => {
     setActiveMerchant(null);
     localStorage.removeItem('activeMerchant');
+    router.push('/');
   };
 
-  const currentLinks = activeMerchant ? merchantLinks : defaultLinks;
+  // Determine which links to use based on whether we're in a merchant context
+  const isMerchantRoute = !!params?.merchantId;
+  const currentLinks = isMerchantRoute || activeMerchant ? merchantLinks : defaultLinks;
 
   if (!mounted) return null;
 

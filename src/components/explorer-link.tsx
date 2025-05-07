@@ -1,21 +1,17 @@
 "use client";
 
-import { usePathname } from 'next/navigation';
+import { useParams } from 'next/navigation';
 
 export function ExplorerLink() {
-  const pathname = usePathname();
+  const params = useParams();
   
-  // Extract merchant ID from the URL
-  if (!pathname) {
-    return null;
-  }
+  // Extract merchant ID from the route parameters
+  const merchantId = params?.merchantId as string;
   
-  const merchantMatch = pathname.match(/\/merchant\/dashboard\/([^/]+)/);
-  if (!merchantMatch) {
+  if (!merchantId) {
     return null;
   }
 
-  const merchantId = merchantMatch[1];
   const solscanUrl = `https://solscan.io/account/${merchantId}?cluster=devnet`;
 
   return (

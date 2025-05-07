@@ -38,16 +38,52 @@ export function WithdrawFunds({
   const [isLoading, setIsLoading] = useState(false);
   const [isBalancesVisible, setIsBalancesVisible] = useState(true);
 
-  // Use the new hook for both merchant and owner balances
-  const { data: merchantBalance = 0, isLoading: isMerchantBalanceLoading } = useUsdcBalance({
+  // Use the TanStack Query hooks with refetch capabilities
+  const { 
+    data: merchantBalance = 0, 
+    isLoading: isMerchantBalanceLoading, 
+    refetch: refetchMerchantBalance 
+  } = useUsdcBalance({
     address: merchantPubkey,
-    isDevnet
+    isDevnet,
+    staleTime: 5000 // Consider data stale after 5s
   });
 
-  const { data: ownerBalance = 0, isLoading: isOwnerBalanceLoading } = useUsdcBalance({
+  const { 
+    data: ownerBalance = 0, 
+    isLoading: isOwnerBalanceLoading,
+    refetch: refetchOwnerBalance
+  } = useUsdcBalance({
     address: ownerPubkey,
-    isDevnet
+    isDevnet,
+    staleTime: 5000
   });
+
+  // Function to trigger an immediate balance refresh
+  const refreshBalances = async () => {
+    try {
+      // Invalidate queries to force fresh fetches
+      await queryClient.invalidateQueries({ 
+        queryKey: ['usdc-balance', merchantPubkey.toString(), isDevnet]
+      });
+      await queryClient.invalidateQueries({ 
+        queryKey: ['usdc-balance', ownerPubkey.toString(), isDevnet]
+      });
+      
+      // Also invalidate the general token balance queries
+      await queryClient.invalidateQueries({
+        queryKey: ['token-balance']
+      });
+      
+      // Execute direct refetches
+      await Promise.all([
+        refetchMerchantBalance(),
+        refetchOwnerBalance()
+      ]);
+    } catch (err) {
+      console.error('Error refreshing balances:', err);
+    }
+  };
 
   const handleWithdraw = async () => {
     if (!wallet?.address || !connection || !para) {
@@ -120,43 +156,14 @@ export function WithdrawFunds({
         })
         .rpc();
 
-      // Invalidate the balance queries to trigger a refresh
-      await Promise.all([
-        queryClient.invalidateQueries({ 
-          queryKey: ['usdc-balance', merchantPubkey.toString(), isDevnet],
-          refetchType: 'active'  // Force immediate refetch
-        }),
-        queryClient.invalidateQueries({ 
-          queryKey: ['usdc-balance', ownerPubkey.toString(), isDevnet],
-          refetchType: 'active'  // Force immediate refetch
-        }),
-        // Also invalidate the more general token balance queries
-        queryClient.invalidateQueries({
-          queryKey: ['token-balance'],
-          refetchType: 'active'
-        })
-      ]);
-
-      // Additional fetch for immediate UI update
-      const refreshBalances = async () => {
-        try {
-          // Wait a moment for blockchain to process the transaction
-          await new Promise(resolve => setTimeout(resolve, 500));
-          
-          // Force immediate refetch of both balances
-          await queryClient.refetchQueries({ 
-            queryKey: ['usdc-balance', merchantPubkey.toString(), isDevnet],
-          });
-          await queryClient.refetchQueries({ 
-            queryKey: ['usdc-balance', ownerPubkey.toString(), isDevnet],
-          });
-        } catch (err) {
-          console.error('Error refreshing balances:', err);
-        }
-      };
+      // Trigger immediate balance refresh
+      await refreshBalances();
       
-      // Start refreshing balances immediately
-      refreshBalances();
+      // Set a short timeout and refresh again to ensure balances are updated
+      // as blockchain transactions might take a moment to finalize
+      setTimeout(async () => {
+        await refreshBalances();
+      }, 2000);
 
       toast.success(
         <div>
@@ -222,6 +229,9 @@ export function WithdrawFunds({
             />
           );
       }
+      
+      // Still refresh balances in case of partial success
+      refreshBalances();
     } finally {
       setIsLoading(false);
     }

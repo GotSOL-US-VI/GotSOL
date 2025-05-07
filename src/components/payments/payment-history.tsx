@@ -441,10 +441,25 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
                                 position: 'bottom-right'
                             });
 
-                            // Invalidate the merchant's USDC balance query
-                            queryClient.invalidateQueries({
-                                queryKey: ['usdc-balance', merchantPubkey.toString(), isDevnet]
-                            });
+                            // Invalidate all balance-related queries to ensure UI updates everywhere
+                            await Promise.all([
+                                // Invalidate specific USDC balance for the merchant
+                                queryClient.invalidateQueries({
+                                    queryKey: ['usdc-balance', merchantPubkey.toString(), isDevnet],
+                                    refetchType: 'active' // Force immediate refetch
+                                }),
+                                
+                                // Invalidate general token balances
+                                queryClient.invalidateQueries({
+                                    queryKey: ['token-balance'],
+                                    refetchType: 'active'
+                                }),
+                                
+                                // Ensure we refetch the data
+                                queryClient.refetchQueries({
+                                    queryKey: ['usdc-balance', merchantPubkey.toString(), isDevnet]
+                                })
+                            ]);
                         }
                     },
                     'confirmed'

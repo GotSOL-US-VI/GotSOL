@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { usePathname } from 'next/navigation';
+import { useParams, usePathname, useRouter } from 'next/navigation';
 import { ReactNode, useEffect, useState } from 'react';
 import { useAccount, useModal } from '@getpara/react-sdk';
 import { useTheme } from '@/hooks/use-theme';
@@ -15,6 +15,8 @@ interface NavBarProps {
 
 export function NavBar({ defaultLinks, merchantLinks }: NavBarProps) {
   const pathname = usePathname();
+  const params = useParams();
+  const router = useRouter();
   const { theme, toggleTheme } = useTheme();
   const { activeMerchant, handleLogoClick } = useMerchant();
   const { data: account } = useAccount();
@@ -25,7 +27,9 @@ export function NavBar({ defaultLinks, merchantLinks }: NavBarProps) {
     setMounted(true);
   }, []);
 
-  const currentLinks = activeMerchant ? merchantLinks : defaultLinks;
+  // Determine which links to use based on whether we're in a merchant context
+  const isMerchantRoute = !!params?.merchantId;
+  const currentLinks = isMerchantRoute || activeMerchant ? merchantLinks : defaultLinks;
 
   // Early return during SSR to prevent hydration mismatch
   if (!mounted) {

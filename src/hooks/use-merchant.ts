@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { usePathname } from 'next/navigation';
+import { useParams, usePathname, useRouter } from 'next/navigation';
 import { useMounted } from './use-mounted';
 
 interface UseMerchantReturn {
@@ -15,7 +15,9 @@ interface UseMerchantReturn {
  */
 export function useMerchant(): UseMerchantReturn {
   const [activeMerchant, setActiveMerchantState] = useState<string | null>(null);
+  const params = useParams();
   const pathname = usePathname();
+  const router = useRouter();
   const mounted = useMounted();
 
   // Initialize from localStorage and update based on URL
@@ -29,19 +31,20 @@ export function useMerchant(): UseMerchantReturn {
     }
   }, [mounted]);
 
-  // Update active merchant when entering a merchant dashboard
+  // Update active merchant based on the route parameter
   useEffect(() => {
-    if (!pathname || !mounted) return;
+    if (!mounted) return;
     
-    const merchantMatch = pathname.match(/\/merchant\/dashboard\/([^/]+)/);
-    if (merchantMatch) {
-      const merchantId = merchantMatch[1];
+    // Use proper path parameter extraction
+    const merchantId = params?.merchantId as string;
+    
+    if (merchantId) {
       setActiveMerchant(merchantId);
     } else if (pathname === '/') {
       // Clear active merchant when returning to home
       setActiveMerchant(null);
     }
-  }, [pathname, mounted]);
+  }, [params, pathname, mounted]);
 
   // Function to set merchant with persistence
   const setActiveMerchant = (merchantId: string | null) => {
@@ -53,9 +56,10 @@ export function useMerchant(): UseMerchantReturn {
     }
   };
 
-  // Handle logo click to clear merchant state
+  // Handle logo click to clear merchant state and redirect to home
   const handleLogoClick = () => {
     setActiveMerchant(null);
+    router.push('/');
   };
 
   return { activeMerchant, setActiveMerchant, handleLogoClick };
