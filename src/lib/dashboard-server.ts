@@ -51,7 +51,7 @@ export const getInitialServerMerchants = cache(async (walletAddress?: string) =>
               total_withdrawn: decoded.total_withdrawn.toNumber(),
               total_refunded: decoded.total_refunded.toNumber(),
               merchant_bump: decoded.merchant_bump,
-              is_active: decoded.is_active,
+              fee_eligible: decoded.fee_eligible,
               refund_limit: decoded.refund_limit.toNumber()
             },
           }

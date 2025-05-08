@@ -2,25 +2,22 @@ use anchor_lang::prelude::*;
 
 #[error_code]
 pub enum CustomError {
-    #[msg("Insufficient funds for withdrawal; input amount is greater than available balance.")]
+    #[msg("Insufficient funds for withdrawal; input amount is greater than available balance!")]
     InsufficientFunds,
 
-    #[msg("Only the Merchant's Owner can call this instruction.")]
+    #[msg("Only the Merchant's Owner can call this instruction!")]
     NotMerchantOwner,
 
-    #[msg("Withdrawal amount must be greater than 0")]
+    #[msg("Withdrawal amount must be greater than 0!")]
     ZeroAmountWithdrawal,
 
-    #[msg("Invalid merchant name: cannot be empty")]
+    #[msg("Invalid merchant name: cannot be empty!")]
     InvalidMerchantName,
 
-    #[msg("This merchant account is currently inactive. Do not pass the fee payer account in your transaction, and the Owner will pay for the transaction instead.")]
+    #[msg("This merchant account is currently not eligible for our fee-paying service. You can still operate your Merchant accounts, but you will have to pay your own fees.")]
     InactiveMerchant,
 
-    #[msg("Refund amount exceeds the merchant's configured limit")]
-    ExceedsRefundLimit,
-
-    #[msg("Only the HOUSE account can change merchant status")]
+    #[msg("Only the AUTH can change a Merchant fee eligibility status!")]
     UnauthorizedStatusChange,
     
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

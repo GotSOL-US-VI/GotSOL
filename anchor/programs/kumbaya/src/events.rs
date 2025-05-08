@@ -8,10 +8,8 @@ pub struct RefundProcessed {
 }
 
 #[event]
-pub struct MerchantStatusChanged {
+pub struct MerchantClosed {
     pub merchant: Pubkey,
-    pub is_active: bool,
-    pub timestamp: i64,
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -11,9 +11,9 @@ pub const USDC_MAINNET_MINT: &str = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1
 // devnet USDC address
 pub const USDC_DEVNET_MINT: &str = "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU";
 
-pub const OWNER_SHARE: u64 = 990; // 99.0%
-                                  // pub const GOV_SHARE: u64 = 50; // 5.0% - Commented out for now
-pub const HOUSE_SHARE: u64 = 10; // 1.0%
+pub const OWNER_SHARE: u64 = 9875; // 98.75%
+// pub const GOV_SHARE: u64 = 50; // 5.0% - Commented out for now
+pub const HOUSE_SHARE: u64 = 125; // 1.25%
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////// LEAVING THIS CODE HERE FOR A LATER UPGRADE, SAVING SPACE ON-CHAIN FOR NOW ///////////////////////////////

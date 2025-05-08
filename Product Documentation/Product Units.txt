@@ -84,5 +84,5 @@ Gasless transactions within our app and program
     - Customers, or end non-merchant users that pay a merchant for goods, or use defi and other functions within our app or invoking our anchor program
 
 
-In this current set up, we, the House, take a 1% fee on USDC withdrawals from the Merchant's account, 0.01% routing fees on jupiter swaps flow, Perena's Petals points for airdrop via referral.  
+In this current set up, we, the House, take a 1.25% fee on USDC withdrawals from the Merchant's account, 0.01% routing fees on jupiter swaps flow, Perena's Petals points for airdrop via referral.  
 We may possibly be able to hold idle SOL for gas payments in a LST or LRT form such as JitoSOL, INF or ezSOL, and earn a little on the difference in gas-demand there.

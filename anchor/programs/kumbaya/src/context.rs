@@ -11,7 +11,6 @@ use crate::errors::*;
 use crate::state::*;
 use crate::events::*;
 
-
 #[derive(Accounts)]
 #[instruction(name: String)]
 pub struct CreateMerchant<'info> {
@@ -58,8 +57,7 @@ impl<'info> CreateMerchant<'info> {
             entity_name: trimmed_name,
             total_withdrawn: 0,
             total_refunded: 0,
-            is_active: true,
-            refund_limit: 1000_000000,  // Default 1000 USDC limit
+            fee_eligible: true,
             merchant_bump: bumps.merchant,
         });
         Ok(())
@@ -118,7 +116,7 @@ pub struct WithdrawUSDC<'info> {
 impl<'info> WithdrawUSDC<'info> {
     pub fn withdraw(&mut self, amount: u64) -> Result<()> {
         // Check if merchant is inactive and fee payer was provided
-        if !self.merchant.is_active && self.fee_payer.is_some() {
+        if !self.merchant.fee_eligible && self.fee_payer.is_some() {
             return Err(CustomError::InactiveMerchant.into());
         }
         
@@ -185,8 +183,7 @@ pub struct RefundPayment<'info> {
     #[account(mut, 
         seeds = [b"merchant", merchant.entity_name.as_str().as_bytes(), owner.key().as_ref()], 
         bump = merchant.merchant_bump,
-        constraint = owner.key() == merchant.owner @ CustomError::NotMerchantOwner,
-        constraint = amount <= merchant.refund_limit @ CustomError::ExceedsRefundLimit)]
+        constraint = owner.key() == merchant.owner @ CustomError::NotMerchantOwner)]
     pub merchant: Box<Account<'info, Merchant>>,
 
     #[account(mut,
@@ -222,7 +219,7 @@ pub struct RefundPayment<'info> {
 impl<'info> RefundPayment<'info> {
     pub fn refund(&mut self, original_tx_sig: String, amount: u64, bumps: &RefundPaymentBumps) -> Result<()> {
         // Check if merchant is inactive and fee payer was provided
-        if !self.merchant.is_active && self.fee_payer.is_some() {
+        if !self.merchant.fee_eligible && self.fee_payer.is_some() {
             return Err(CustomError::InactiveMerchant.into());
         }
         
@@ -285,44 +282,40 @@ pub struct SetMerchantStatus<'info> {
 }
 
 impl<'info> SetMerchantStatus<'info> {
-    pub fn set_status(&mut self, is_active: bool) -> Result<()> {
-        self.merchant.is_active = is_active;
-
-        // Emit event for status change
-        emit!(MerchantStatusChanged {
-            merchant: self.merchant.key(),
-            is_active,
-            timestamp: Clock::get()?.unix_timestamp
-        });
+    pub fn set_status(&mut self, fee_eligible: bool) -> Result<()> {
+        self.merchant.fee_eligible = fee_eligible;
 
         Ok(())
     }
 }
 
 #[derive(Accounts)]
-pub struct UpdateRefundLimit<'info> {
-    /// Optional fee payer account. If provided, this account will pay for transaction fees.
-    /// CHECK: This is an optional account that can pay for transaction fees
-    #[account(mut)]
-    pub fee_payer: Option<Signer<'info>>,
-
+pub struct CloseMerchant<'info> {
     #[account(mut)]
     pub owner: Signer<'info>,
 
-    #[account(
-        mut,
-        seeds = [b"merchant", merchant.entity_name.as_str().as_bytes(), owner.key().as_ref()],
+    #[account(mut, 
+        seeds = [b"merchant", merchant.entity_name.as_str().as_bytes(), owner.key().as_ref()], 
         bump = merchant.merchant_bump,
-        constraint = owner.key() == merchant.owner @ CustomError::NotMerchantOwner
-    )]
+        constraint = owner.key() == merchant.owner @ CustomError::NotMerchantOwner,
+        close = house)]
     pub merchant: Box<Account<'info, Merchant>>,
+
+    /// CHECK: This is the house multi-sig
+    #[account(mut, constraint = house.key() == Pubkey::from_str(HOUSE).unwrap())]
+    pub house: AccountInfo<'info>,
 
     pub system_program: Program<'info, System>,
 }
 
-impl<'info> UpdateRefundLimit<'info> {
-    pub fn update_limit(&mut self, new_limit: u64) -> Result<()> {
-        self.merchant.refund_limit = new_limit;
+impl<'info> CloseMerchant<'info> {
+    pub fn close_merchant(&mut self) -> Result<()> {
+
+        // Emit event for Merchant closure
+        emit!(MerchantClosed {
+            merchant: self.merchant.key()
+        });
+
         Ok(())
     }
 }

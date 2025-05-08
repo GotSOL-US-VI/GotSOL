@@ -7,8 +7,7 @@ pub struct Merchant {
     pub entity_name: String,
     pub total_withdrawn: u64,
     pub total_refunded: u64,
-    pub is_active: bool,
-    pub refund_limit: u64,  // Maximum amount that can be refunded in a single transaction
+    pub fee_eligible: bool,
     pub merchant_bump: u8,
 }
 

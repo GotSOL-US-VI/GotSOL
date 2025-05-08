@@ -33,13 +33,13 @@ pub mod kumbaya {
         Ok(())
     }
 
-    pub fn set_merchant_status(ctx: Context<SetMerchantStatus>, is_active: bool) -> Result<()> {
-        ctx.accounts.set_status(is_active)?;
+    pub fn set_merchant_status(ctx: Context<SetMerchantStatus>, fee_eligible: bool) -> Result<()> {
+        ctx.accounts.set_status(fee_eligible)?;
         Ok(())
     }
 
-    pub fn update_refund_limit(ctx: Context<UpdateRefundLimit>, new_limit: u64) -> Result<()> {
-        ctx.accounts.update_limit(new_limit)?;
+    pub fn close_merchant(ctx: Context<CloseMerchant>) -> Result<()> {
+        ctx.accounts.close_merchant()?;
         Ok(())
     }
 }
