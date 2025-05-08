@@ -23,6 +23,7 @@ const phases: Phase[] = [
       { text: 'Integrate Para MPC wallet provider for key-less user wallets via social sign-on', completed: true },
       { text: 'Integrate gas fee-payer accounts for Merchants and their customers on devnet', completed: false },
       { text: 'Create video and text resources for Merchants and users on how to use the application', completed: false },
+      { text: 'Conduct User Experience Surveys and solicit user feedback', completed: true}
     ],
     active: true,
   },
