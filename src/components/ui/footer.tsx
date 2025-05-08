@@ -12,7 +12,7 @@ export function Footer() {
                 <DisclaimerButton />
                 <FeedbackLink />
             </div>
-            <div className="flex gap-4">
+            <div className="flex gap-4 px-2">
                 <GitHubLink />
                 <TwitterLink />
             </div>
