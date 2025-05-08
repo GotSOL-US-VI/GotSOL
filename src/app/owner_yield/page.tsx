@@ -345,7 +345,7 @@ function SwapPageInner() {
   return (
     <div className="container mx-auto p-4">
       <div className="text-center">
-        <h1 className="text-2xl font-bold text-warning">ATTENTION! This feature is under construction! It is connected to MAIN NET and you are using REAL MONEY if you use it!</h1>
+        <h1 className="text-2xl font-bold text-warning">ATTENTION! This feature is under construction! It is connected to MAIN NET and you are using REAL MONEY if you use it! Unknown bugs may still exist!</h1>
       </div>
       <div className="flex gap-8">
         {/* Balance Display Section - 30% width */}

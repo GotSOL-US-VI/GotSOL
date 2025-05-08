@@ -14,6 +14,9 @@
   },
   "dependencies": {
     "@coral-xyz/anchor": "0.30.1",
+    "@fortawesome/fontawesome-svg-core": "^6.7.2",
+    "@fortawesome/free-brands-svg-icons": "^6.7.2",
+    "@fortawesome/react-fontawesome": "^0.2.2",
     "@getpara/core-sdk": "^1.13.0",
     "@getpara/react-sdk": "^1.13.0",
     "@getpara/server-sdk": "^1.13.0",
