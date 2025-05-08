@@ -8,7 +8,7 @@ export function DisclaimerButton() {
   return (
     <button 
       onClick={openModal}
-      className="text-sm text-white hover:text-gray-700"
+      className="text-sm transition-opacity"
     >
       Disclaimer
     </button>

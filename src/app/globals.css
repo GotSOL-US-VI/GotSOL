@@ -177,3 +177,28 @@ body {
   border-color: var(--color-mint) !important;
   border-right-color: transparent !important;
 }
+
+/* Footer styling for both themes */
+footer {
+  pointer-events: none !important; /* Make footer transparent to clicks by default */
+}
+
+footer svg,
+footer a, 
+footer button {
+  fill: #000000 !important;
+  color: #000000 !important;
+  pointer-events: auto !important; /* Restore pointer events for interactive elements */
+}
+
+[data-theme="dark"] footer svg,
+[data-theme="dark"] footer a,
+[data-theme="dark"] footer button {
+  fill: #FFFFFF !important;
+  color: #FFFFFF !important;
+}
+
+footer a:hover,
+footer button:hover {
+  opacity: 0.7;
+}

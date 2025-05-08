@@ -7,7 +7,7 @@ import { TwitterLink } from './twitter-link';
 
 export function Footer() {
     return (
-        <footer className="fixed bottom-0 left-0 w-full px-4 py-3 flex justify-between items-center bg-base-100/90 backdrop-blur-sm z-50 border-t border-gray-800/20">
+        <footer className="fixed bottom-0 left-0 w-full px-4 py-4 flex justify-between items-center bg-transparent z-50">
             <div className="flex gap-4">
                 <DisclaimerButton />
                 <FeedbackLink />
