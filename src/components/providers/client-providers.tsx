@@ -6,7 +6,6 @@ import { ClusterProvider } from '@/components/cluster/cluster-data-access';
 import { ConnectionProvider } from '@/lib/devnet-connection-provider';
 import { ParaProvider } from '@/components/para/para-provider';
 import { DisclaimerProvider } from '@/components/ui/disclaimer-provider';
-import { DisclaimerButton } from '@/components/ui/disclaimer-button';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useParams, usePathname, useRouter } from 'next/navigation';
@@ -14,6 +13,7 @@ import { useAccount, useModal } from '@getpara/react-sdk';
 import { Toaster } from 'react-hot-toast';
 import { AccountChecker } from '@/components/accounts/account-ui';
 import { ClusterChecker } from '@/components/cluster/cluster-ui';
+import { Footer } from '@/components/ui/footer';
 
 // Define proper types for links
 export interface NavigationLink {
@@ -33,12 +33,11 @@ export function ClientProviders({ children, defaultLinks, merchantLinks }: Clien
       <ClusterProvider>
         <ConnectionProvider>
           <ParaProvider>
-            <ClientSideStateHandler defaultLinks={defaultLinks} merchantLinks={merchantLinks}>
-              <DisclaimerProvider>
+            <DisclaimerProvider>
+              <ClientSideStateHandler defaultLinks={defaultLinks} merchantLinks={merchantLinks}>
                 {children}
-                <DisclaimerButton />
-              </DisclaimerProvider>
-            </ClientSideStateHandler>
+              </ClientSideStateHandler>
+            </DisclaimerProvider>
           </ParaProvider>
         </ConnectionProvider>
       </ClusterProvider>
@@ -189,11 +188,12 @@ function ClientSideStateHandler({
         <AccountChecker />
       </ClusterChecker>
 
-      <div className="flex-grow container mx-auto px-4 py-8">
+      <div className="flex-grow container mx-auto px-4 py-8 mb-16">
         {children}
       </div>
       
       {mounted && <Toaster position="bottom-right" />}
+      <Footer />
     </div>
   );
 } 
