@@ -14,7 +14,6 @@ use crate::events::*;
 #[derive(Accounts)]
 #[instruction(name: String)]
 pub struct CreateMerchant<'info> {
-    /// Optional fee payer account. If provided, this account will pay for transaction fees.
     /// CHECK: This is an optional account that can pay for transaction fees
     #[account(mut)]
     pub fee_payer: Option<Signer<'info>>,
@@ -65,7 +64,7 @@ pub struct Withdraw<'info> {
     )]
     pub merchant: Box<Account<'info, Merchant>>,
 
-    #[account(constraint = is_accepted_stablecoin_mint(&stablecoin_mint.key()) @ CustomError::UnsupportedStablecoin)]
+    #[account()]
     pub stablecoin_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(mut,
@@ -108,7 +107,6 @@ impl<'info> Withdraw<'info> {
         let owner_amount = (amount * OWNER_SHARE) / 1000;
         let house_amount = amount - owner_amount;
 
-        // Optimized seeds creation with proper lifetime handling
         let owner_key = self.owner.key();
         let seeds = &[
             b"merchant".as_ref(),
@@ -171,7 +169,7 @@ pub struct RefundPayment<'info> {
         constraint = owner.key() == merchant.owner @ CustomError::NotMerchantOwner)]
     pub merchant: Box<Account<'info, Merchant>>,
 
-    #[account(constraint = is_accepted_stablecoin_mint(&stablecoin_mint.key()) @ CustomError::UnsupportedStablecoin)]
+    #[account()]
     pub stablecoin_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(mut,
@@ -217,7 +215,6 @@ impl<'info> RefundPayment<'info> {
             bump: bumps.refund_record
         });
 
-        // Optimized seeds creation with proper lifetime handling
         let owner_key = self.owner.key();
         let seeds = &[
             b"merchant".as_ref(),

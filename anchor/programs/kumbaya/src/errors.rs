@@ -19,9 +19,6 @@ pub enum CustomError {
 
     #[msg("Only the AUTH can change a Merchant fee eligibility status!")]
     UnauthorizedStatusChange,
-
-    #[msg("Unsupported stablecoin mint. This program only accepts approved stablecoins.")]
-    UnsupportedStablecoin,
     
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////// LEAVING THIS CODE HERE FOR A LATER UPGRADE, SAVING SPACE ON-CHAIN FOR NOW ///////////////////////////////
