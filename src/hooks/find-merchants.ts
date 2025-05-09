@@ -11,9 +11,8 @@ export interface MerchantAccount {
   entityName: string;
   total_withdrawn: number;
   total_refunded: number;
-  merchant_bump: number;
   fee_eligible: boolean;
-  refund_limit: number;
+  merchant_bump: number;
 }
 
 export interface Merchant {
@@ -62,9 +61,8 @@ export async function fetchMerchantData(walletAddress: string | undefined, conne
             entityName: decoded.entity_name,
             total_withdrawn: decoded.total_withdrawn.toNumber(),
             total_refunded: decoded.total_refunded.toNumber(),
-            merchant_bump: decoded.merchant_bump,
             fee_eligible: decoded.fee_eligible,
-            refund_limit: decoded.refund_limit.toNumber()
+            merchant_bump: decoded.merchant_bump,
           },
         };
       } catch (decodeError) {
