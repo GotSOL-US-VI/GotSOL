@@ -25,17 +25,6 @@ pub struct CreateMerchant<'info> {
     #[account(init, payer = fee_payer.as_ref().unwrap_or(&owner), seeds = [b"merchant", name.as_str().as_bytes(), owner.key().as_ref()], space = Merchant::LEN, bump)]
     pub merchant: Box<Account<'info, Merchant>>,
 
-    #[account(constraint = is_accepted_stablecoin_mint(&stablecoin_mint.key()) @ CustomError::UnsupportedStablecoin)]
-    pub stablecoin_mint: Box<InterfaceAccount<'info, Mint>>,
-
-    #[account(
-        init,
-        payer = fee_payer.as_ref().unwrap_or(&owner),
-        associated_token::mint = stablecoin_mint,
-        associated_token::authority = merchant
-    )]
-    pub merchant_stablecoin_ata: Box<InterfaceAccount<'info, TokenAccount>>,
-
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub token_program: Interface<'info, TokenInterface>,
     pub system_program: Program<'info, System>,
@@ -69,7 +58,7 @@ pub struct Withdraw<'info> {
     constraint = amount > 0 @ CustomError::ZeroAmountWithdrawal)]
     pub owner: Signer<'info>,
 
-    #[account(
+    #[account(mut,
         seeds = [b"merchant", merchant.entity_name.as_str().as_bytes(), owner.key().as_ref()], 
         bump = merchant.merchant_bump,
         constraint = owner.key() == merchant.owner @ CustomError::NotMerchantOwner
@@ -97,7 +86,8 @@ pub struct Withdraw<'info> {
     #[account(mut, constraint = house.key() == Pubkey::from_str(HOUSE).unwrap())]
     pub house: AccountInfo<'info>,
 
-    #[account(mut,
+    #[account(init_if_needed, 
+        payer = fee_payer.as_ref().unwrap_or(&owner),
         associated_token::mint = stablecoin_mint,
         associated_token::authority = house
     )]
@@ -190,7 +180,8 @@ pub struct RefundPayment<'info> {
         constraint = merchant_stablecoin_ata.amount >= amount @ CustomError::InsufficientFunds)]
     pub merchant_stablecoin_ata: Box<InterfaceAccount<'info, TokenAccount>>,
 
-    #[account(mut,
+    #[account(init_if_needed, 
+        payer = fee_payer.as_ref().unwrap_or(&owner),
         associated_token::mint = stablecoin_mint,
         associated_token::authority = recipient)]
     pub recipient_stablecoin_ata: Box<InterfaceAccount<'info, TokenAccount>>,
@@ -207,6 +198,7 @@ pub struct RefundPayment<'info> {
     /// CHECK: this is the public key of address you are refunding, to derive their stablecoin ata
     pub recipient: AccountInfo<'info>,
     
+    pub associated_token_program: Program<'info, AssociatedToken>,
     pub token_program: Interface<'info, TokenInterface>,
     pub system_program: Program<'info, System>,
 }
