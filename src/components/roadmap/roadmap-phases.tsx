@@ -37,7 +37,6 @@ const phases: Phase[] = [
       { text: 'Integrate Coinflow or Sphere for direct USD On & Off-ramps for Merchants', completed: false },
       { text: 'Integrate Jupiter Swap API for USDC to Perena USD* swap on main net (our first in-app DeFi yield opportunity, front-end integration only)', completed: true },
       { text: 'Onboard interested Merchants in-person in the US Virgin Islands', completed: false },
-      { text: 'Consistently seek Merchant and end-customer feedback and ideate solutions to problems and requests (on-going)', completed: true },
     ],
     active: true,
   },
