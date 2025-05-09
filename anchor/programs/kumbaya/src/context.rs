@@ -14,7 +14,6 @@ use crate::events::*;
 #[derive(Accounts)]
 #[instruction(name: String)]
 pub struct CreateMerchant<'info> {
-    /// CHECK: This is an optional account that can pay for transaction fees
     #[account(mut)]
     pub fee_payer: Option<Signer<'info>>,
 
@@ -64,7 +63,6 @@ pub struct Withdraw<'info> {
     )]
     pub merchant: Box<Account<'info, Merchant>>,
 
-    #[account()]
     pub stablecoin_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(mut,
@@ -99,7 +97,7 @@ pub struct Withdraw<'info> {
 
 impl<'info> Withdraw<'info> {
     pub fn withdraw(&mut self, amount: u64) -> Result<()> {
-        // Check if merchant is inactive and fee payer was provided
+        // Check if merchant is fee_eligible and fee payer was provided
         if !self.merchant.fee_eligible && self.fee_payer.is_some() {
             return Err(CustomError::FeeIneligibleMerchant.into());
         }
@@ -169,7 +167,6 @@ pub struct RefundPayment<'info> {
         constraint = owner.key() == merchant.owner @ CustomError::NotMerchantOwner)]
     pub merchant: Box<Account<'info, Merchant>>,
 
-    #[account()]
     pub stablecoin_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(mut,
@@ -203,7 +200,7 @@ pub struct RefundPayment<'info> {
 
 impl<'info> RefundPayment<'info> {
     pub fn refund(&mut self, original_tx_sig: String, amount: u64, bumps: &RefundPaymentBumps) -> Result<()> {
-        // Check if merchant is inactive and fee payer was provided
+        // Check if merchant is fee_eligible and fee payer was provided
         if !self.merchant.fee_eligible && self.fee_payer.is_some() {
             return Err(CustomError::FeeIneligibleMerchant.into());
         }
