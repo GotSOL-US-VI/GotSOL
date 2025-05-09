@@ -23,7 +23,7 @@ pub mod kumbaya {
         Ok(())
     }
 
-    pub fn withdraw_usdc(ctx: Context<WithdrawUSDC>, amount: u64) -> Result<()> {
+    pub fn withdraw(ctx: Context<Withdraw>, amount: u64) -> Result<()> {
         ctx.accounts.withdraw(amount)?;
         Ok(())
     }

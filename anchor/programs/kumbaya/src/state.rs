@@ -12,7 +12,7 @@ pub struct Merchant {
 }
 
 impl Merchant {
-    pub const LEN: usize = 8 + 32 + 24 + 8 + 8 + 1 + 8 + 1;
+    pub const LEN: usize = 8 + 32 + (4 + 32) + 8 + 8 + 1 + 1;
 }
 
 #[account]
@@ -23,7 +23,7 @@ pub struct RefundRecord {
 }
 
 impl RefundRecord {
-    pub const LEN: usize = 8 + 8 + 32 + 1;
+    pub const LEN: usize = 8 + 8 + (4 + 32) + 1;
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -14,6 +14,65 @@ export type Kumbaya = {
   },
   "instructions": [
     {
+      "name": "closeMerchant",
+      "discriminator": [
+        138,
+        96,
+        102,
+        11,
+        220,
+        136,
+        154,
+        11
+      ],
+      "accounts": [
+        {
+          "name": "owner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "merchant",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  101,
+                  114,
+                  99,
+                  104,
+                  97,
+                  110,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "merchant.entity_name",
+                "account": "merchant"
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "house",
+          "writable": true
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "createMerchant",
       "discriminator": [
         249,
@@ -70,10 +129,10 @@ export type Kumbaya = {
           }
         },
         {
-          "name": "usdcMint"
+          "name": "stablecoinMint"
         },
         {
-          "name": "merchantUsdcAta",
+          "name": "merchantStablecoinAta",
           "writable": true,
           "pda": {
             "seeds": [
@@ -120,7 +179,7 @@ export type Kumbaya = {
               },
               {
                 "kind": "account",
-                "path": "usdcMint"
+                "path": "stablecoinMint"
               }
             ],
             "program": {
@@ -236,7 +295,10 @@ export type Kumbaya = {
           }
         },
         {
-          "name": "merchantUsdcAta",
+          "name": "stablecoinMint"
+        },
+        {
+          "name": "merchantStablecoinAta",
           "writable": true,
           "pda": {
             "seeds": [
@@ -283,7 +345,7 @@ export type Kumbaya = {
               },
               {
                 "kind": "account",
-                "path": "usdcMint"
+                "path": "stablecoinMint"
               }
             ],
             "program": {
@@ -326,7 +388,7 @@ export type Kumbaya = {
           }
         },
         {
-          "name": "recipientUsdcAta",
+          "name": "recipientStablecoinAta",
           "writable": true,
           "pda": {
             "seeds": [
@@ -373,7 +435,7 @@ export type Kumbaya = {
               },
               {
                 "kind": "account",
-                "path": "usdcMint"
+                "path": "stablecoinMint"
               }
             ],
             "program": {
@@ -439,9 +501,6 @@ export type Kumbaya = {
           }
         },
         {
-          "name": "usdcMint"
-        },
-        {
           "name": "recipient"
         },
         {
@@ -477,7 +536,7 @@ export type Kumbaya = {
       ],
       "accounts": [
         {
-          "name": "house",
+          "name": "auth",
           "writable": true,
           "signer": true
         },
@@ -492,91 +551,22 @@ export type Kumbaya = {
       ],
       "args": [
         {
-          "name": "isActive",
+          "name": "feeEligible",
           "type": "bool"
         }
       ]
     },
     {
-      "name": "updateRefundLimit",
+      "name": "withdraw",
       "discriminator": [
-        212,
-        77,
-        145,
-        232,
-        91,
-        187,
+        183,
+        18,
+        70,
         156,
-        100
-      ],
-      "accounts": [
-        {
-          "name": "feePayer",
-          "docs": [
-            "Optional fee payer account. If provided, this account will pay for transaction fees."
-          ],
-          "writable": true,
-          "signer": true,
-          "optional": true
-        },
-        {
-          "name": "owner",
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "merchant",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  109,
-                  101,
-                  114,
-                  99,
-                  104,
-                  97,
-                  110,
-                  116
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "merchant.entity_name",
-                "account": "merchant"
-              },
-              {
-                "kind": "account",
-                "path": "owner"
-              }
-            ]
-          }
-        },
-        {
-          "name": "systemProgram",
-          "address": "11111111111111111111111111111111"
-        }
-      ],
-      "args": [
-        {
-          "name": "newLimit",
-          "type": "u64"
-        }
-      ]
-    },
-    {
-      "name": "withdrawUsdc",
-      "discriminator": [
-        114,
-        49,
-        72,
-        184,
-        27,
-        156,
-        243,
-        155
+        148,
+        109,
+        161,
+        34
       ],
       "accounts": [
         {
@@ -620,10 +610,10 @@ export type Kumbaya = {
           }
         },
         {
-          "name": "usdcMint"
+          "name": "stablecoinMint"
         },
         {
-          "name": "merchantUsdcAta",
+          "name": "merchantStablecoinAta",
           "writable": true,
           "pda": {
             "seeds": [
@@ -670,7 +660,7 @@ export type Kumbaya = {
               },
               {
                 "kind": "account",
-                "path": "usdcMint"
+                "path": "stablecoinMint"
               }
             ],
             "program": {
@@ -713,7 +703,7 @@ export type Kumbaya = {
           }
         },
         {
-          "name": "ownerUsdcAta",
+          "name": "ownerStablecoinAta",
           "writable": true,
           "pda": {
             "seeds": [
@@ -760,7 +750,7 @@ export type Kumbaya = {
               },
               {
                 "kind": "account",
-                "path": "usdcMint"
+                "path": "stablecoinMint"
               }
             ],
             "program": {
@@ -807,7 +797,7 @@ export type Kumbaya = {
           "writable": true
         },
         {
-          "name": "houseUsdcAta",
+          "name": "houseStablecoinAta",
           "writable": true,
           "pda": {
             "seeds": [
@@ -854,7 +844,7 @@ export type Kumbaya = {
               },
               {
                 "kind": "account",
-                "path": "usdcMint"
+                "path": "stablecoinMint"
               }
             ],
             "program": {
@@ -946,16 +936,16 @@ export type Kumbaya = {
   ],
   "events": [
     {
-      "name": "merchantStatusChanged",
+      "name": "merchantClosed",
       "discriminator": [
-        17,
-        58,
-        131,
-        180,
-        84,
-        58,
-        244,
-        14
+        78,
+        240,
+        184,
+        6,
+        54,
+        79,
+        53,
+        89
       ]
     },
     {
@@ -976,37 +966,37 @@ export type Kumbaya = {
     {
       "code": 6000,
       "name": "insufficientFunds",
-      "msg": "Insufficient funds for withdrawal; input amount is greater than available balance."
+      "msg": "Insufficient funds for withdrawal; input amount is greater than available balance!"
     },
     {
       "code": 6001,
       "name": "notMerchantOwner",
-      "msg": "Only the Merchant's Owner can call this instruction."
+      "msg": "Only the Merchant's Owner can call this instruction!"
     },
     {
       "code": 6002,
       "name": "zeroAmountWithdrawal",
-      "msg": "Withdrawal amount must be greater than 0"
+      "msg": "Withdrawal amount must be greater than 0!"
     },
     {
       "code": 6003,
       "name": "invalidMerchantName",
-      "msg": "Invalid merchant name: cannot be empty"
+      "msg": "Invalid merchant name: cannot be empty!"
     },
     {
       "code": 6004,
-      "name": "inactiveMerchant",
-      "msg": "This merchant account is currently inactive. Do not pass the fee payer account in your transaction, and the Owner will pay for the transaction instead."
+      "name": "feeIneligibleMerchant",
+      "msg": "This merchant account is currently not eligible for our fee-paying service. You can still operate your Merchant accounts, but you will have to pay your own fees."
     },
     {
       "code": 6005,
-      "name": "exceedsRefundLimit",
-      "msg": "Refund amount exceeds the merchant's configured limit"
+      "name": "unauthorizedStatusChange",
+      "msg": "Only the AUTH can change a Merchant fee eligibility status!"
     },
     {
       "code": 6006,
-      "name": "unauthorizedStatusChange",
-      "msg": "Only the HOUSE account can change merchant status"
+      "name": "unsupportedStablecoin",
+      "msg": "Unsupported stablecoin mint. This program only accepts approved stablecoins."
     }
   ],
   "types": [
@@ -1032,12 +1022,8 @@ export type Kumbaya = {
             "type": "u64"
           },
           {
-            "name": "isActive",
+            "name": "feeEligible",
             "type": "bool"
-          },
-          {
-            "name": "refundLimit",
-            "type": "u64"
           },
           {
             "name": "merchantBump",
@@ -1047,21 +1033,13 @@ export type Kumbaya = {
       }
     },
     {
-      "name": "merchantStatusChanged",
+      "name": "merchantClosed",
       "type": {
         "kind": "struct",
         "fields": [
           {
             "name": "merchant",
             "type": "pubkey"
-          },
-          {
-            "name": "isActive",
-            "type": "bool"
-          },
-          {
-            "name": "timestamp",
-            "type": "i64"
           }
         ]
       }

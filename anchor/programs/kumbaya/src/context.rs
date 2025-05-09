@@ -25,21 +25,16 @@ pub struct CreateMerchant<'info> {
     #[account(init, payer = fee_payer.as_ref().unwrap_or(&owner), seeds = [b"merchant", name.as_str().as_bytes(), owner.key().as_ref()], space = Merchant::LEN, bump)]
     pub merchant: Box<Account<'info, Merchant>>,
 
-    // main net USDC mint account
-    // #[account(constraint = usdc_mint.key() == Pubkey::from_str(USDC_MAINNET_MINT).unwrap())]
-    // pub usdc_mint: InterfaceAccount<'info, Mint>,
-
-    // devnet USDC mint account
-    #[account(constraint = usdc_mint.key() == Pubkey::from_str(USDC_DEVNET_MINT).unwrap())]
-    pub usdc_mint: Box<InterfaceAccount<'info, Mint>>,
+    #[account(constraint = is_accepted_stablecoin_mint(&stablecoin_mint.key()) @ CustomError::UnsupportedStablecoin)]
+    pub stablecoin_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(
         init,
         payer = fee_payer.as_ref().unwrap_or(&owner),
-        associated_token::mint = usdc_mint,
+        associated_token::mint = stablecoin_mint,
         associated_token::authority = merchant
     )]
-    pub merchant_usdc_ata: Box<InterfaceAccount<'info, TokenAccount>>,
+    pub merchant_stablecoin_ata: Box<InterfaceAccount<'info, TokenAccount>>,
 
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub token_program: Interface<'info, TokenInterface>,
@@ -66,7 +61,7 @@ impl<'info> CreateMerchant<'info> {
 
 #[derive(Accounts)]
 #[instruction(amount: u64)]
-pub struct WithdrawUSDC<'info> {
+pub struct Withdraw<'info> {
     #[account(mut)]
     pub fee_payer: Option<Signer<'info>>,
 
@@ -81,43 +76,43 @@ pub struct WithdrawUSDC<'info> {
     )]
     pub merchant: Box<Account<'info, Merchant>>,
 
-    #[account(constraint = usdc_mint.key() == Pubkey::from_str(USDC_DEVNET_MINT).unwrap())]
-    pub usdc_mint: Box<InterfaceAccount<'info, Mint>>,
+    #[account(constraint = is_accepted_stablecoin_mint(&stablecoin_mint.key()) @ CustomError::UnsupportedStablecoin)]
+    pub stablecoin_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(mut,
-        associated_token::mint = usdc_mint,
+        associated_token::mint = stablecoin_mint,
         associated_token::authority = merchant,
-        constraint = merchant_usdc_ata.amount >= amount @ CustomError::InsufficientFunds,
+        constraint = merchant_stablecoin_ata.amount >= amount @ CustomError::InsufficientFunds,
     )]
-    pub merchant_usdc_ata: Box<InterfaceAccount<'info, TokenAccount>>,
+    pub merchant_stablecoin_ata: Box<InterfaceAccount<'info, TokenAccount>>,
 
     #[account(init_if_needed, 
         payer = fee_payer.as_ref().unwrap_or(&owner),
-        associated_token::mint = usdc_mint,
+        associated_token::mint = stablecoin_mint,
         associated_token::authority = owner
     )]
-    pub owner_usdc_ata: Box<InterfaceAccount<'info, TokenAccount>>,
+    pub owner_stablecoin_ata: Box<InterfaceAccount<'info, TokenAccount>>,
 
     /// CHECK: This is the HOUSE Squads multi-sig
     #[account(mut, constraint = house.key() == Pubkey::from_str(HOUSE).unwrap())]
     pub house: AccountInfo<'info>,
 
     #[account(mut,
-        associated_token::mint = usdc_mint,
+        associated_token::mint = stablecoin_mint,
         associated_token::authority = house
     )]
-    pub house_usdc_ata: Box<InterfaceAccount<'info, TokenAccount>>,
+    pub house_stablecoin_ata: Box<InterfaceAccount<'info, TokenAccount>>,
 
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub token_program: Interface<'info, TokenInterface>,
     pub system_program: Program<'info, System>,
 }
 
-impl<'info> WithdrawUSDC<'info> {
+impl<'info> Withdraw<'info> {
     pub fn withdraw(&mut self, amount: u64) -> Result<()> {
         // Check if merchant is inactive and fee payer was provided
         if !self.merchant.fee_eligible && self.fee_payer.is_some() {
-            return Err(CustomError::InactiveMerchant.into());
+            return Err(CustomError::FeeIneligibleMerchant.into());
         }
         
         let owner_amount = (amount * OWNER_SHARE) / 1000;
@@ -137,15 +132,15 @@ impl<'info> WithdrawUSDC<'info> {
             CpiContext::new_with_signer(
                 self.token_program.to_account_info(),
                 anchor_spl::token_interface::TransferChecked {
-                    from: self.merchant_usdc_ata.to_account_info(),
-                    mint: self.usdc_mint.to_account_info(),
-                    to: self.owner_usdc_ata.to_account_info(),
+                    from: self.merchant_stablecoin_ata.to_account_info(),
+                    mint: self.stablecoin_mint.to_account_info(),
+                    to: self.owner_stablecoin_ata.to_account_info(),
                     authority: self.merchant.to_account_info(),
                 },
                 &[seeds],
             ),
             owner_amount,
-            self.usdc_mint.decimals,
+            self.stablecoin_mint.decimals,
         )?;
 
         // Transfer house's share
@@ -153,15 +148,15 @@ impl<'info> WithdrawUSDC<'info> {
             CpiContext::new_with_signer(
                 self.token_program.to_account_info(),
                 anchor_spl::token_interface::TransferChecked {
-                    from: self.merchant_usdc_ata.to_account_info(),
-                    mint: self.usdc_mint.to_account_info(),
-                    to: self.house_usdc_ata.to_account_info(),
+                    from: self.merchant_stablecoin_ata.to_account_info(),
+                    mint: self.stablecoin_mint.to_account_info(),
+                    to: self.house_stablecoin_ata.to_account_info(),
                     authority: self.merchant.to_account_info(),
                 },
                 &[seeds],
             ),
             house_amount,
-            self.usdc_mint.decimals,
+            self.stablecoin_mint.decimals,
         )?;
 
         self.merchant.total_withdrawn += amount;
@@ -186,16 +181,19 @@ pub struct RefundPayment<'info> {
         constraint = owner.key() == merchant.owner @ CustomError::NotMerchantOwner)]
     pub merchant: Box<Account<'info, Merchant>>,
 
-    #[account(mut,
-        associated_token::mint = usdc_mint,
-        associated_token::authority = merchant,
-        constraint = merchant_usdc_ata.amount >= amount @ CustomError::InsufficientFunds)]
-    pub merchant_usdc_ata: Box<InterfaceAccount<'info, TokenAccount>>,
+    #[account(constraint = is_accepted_stablecoin_mint(&stablecoin_mint.key()) @ CustomError::UnsupportedStablecoin)]
+    pub stablecoin_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(mut,
-        associated_token::mint = usdc_mint,
+        associated_token::mint = stablecoin_mint,
+        associated_token::authority = merchant,
+        constraint = merchant_stablecoin_ata.amount >= amount @ CustomError::InsufficientFunds)]
+    pub merchant_stablecoin_ata: Box<InterfaceAccount<'info, TokenAccount>>,
+
+    #[account(mut,
+        associated_token::mint = stablecoin_mint,
         associated_token::authority = recipient)]
-    pub recipient_usdc_ata: Box<InterfaceAccount<'info, TokenAccount>>,
+    pub recipient_stablecoin_ata: Box<InterfaceAccount<'info, TokenAccount>>,
 
     #[account(
         init,
@@ -206,10 +204,7 @@ pub struct RefundPayment<'info> {
     )]
     pub refund_record: Box<Account<'info, RefundRecord>>,
 
-    #[account(constraint = usdc_mint.key() == Pubkey::from_str(USDC_DEVNET_MINT).unwrap())]
-    pub usdc_mint: Box<InterfaceAccount<'info, Mint>>,
-
-    /// CHECK: this is the public key of address you are refunding, to derive their USDC ata
+    /// CHECK: this is the public key of address you are refunding, to derive their stablecoin ata
     pub recipient: AccountInfo<'info>,
     
     pub token_program: Interface<'info, TokenInterface>,
@@ -220,7 +215,7 @@ impl<'info> RefundPayment<'info> {
     pub fn refund(&mut self, original_tx_sig: String, amount: u64, bumps: &RefundPaymentBumps) -> Result<()> {
         // Check if merchant is inactive and fee payer was provided
         if !self.merchant.fee_eligible && self.fee_payer.is_some() {
-            return Err(CustomError::InactiveMerchant.into());
+            return Err(CustomError::FeeIneligibleMerchant.into());
         }
         
         // Initialize refund record
@@ -244,15 +239,15 @@ impl<'info> RefundPayment<'info> {
             CpiContext::new_with_signer(
                 self.token_program.to_account_info(),
                 anchor_spl::token_interface::TransferChecked {
-                    from: self.merchant_usdc_ata.to_account_info(),
-                    mint: self.usdc_mint.to_account_info(),
-                    to: self.recipient_usdc_ata.to_account_info(),
+                    from: self.merchant_stablecoin_ata.to_account_info(),
+                    mint: self.stablecoin_mint.to_account_info(),
+                    to: self.recipient_stablecoin_ata.to_account_info(),
                     authority: self.merchant.to_account_info(),
                 },
                 &[seeds],
             ),
             amount,
-            self.usdc_mint.decimals,
+            self.stablecoin_mint.decimals,
         )?;
 
         // Update merchant state

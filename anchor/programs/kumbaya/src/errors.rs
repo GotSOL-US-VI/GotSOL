@@ -15,10 +15,13 @@ pub enum CustomError {
     InvalidMerchantName,
 
     #[msg("This merchant account is currently not eligible for our fee-paying service. You can still operate your Merchant accounts, but you will have to pay your own fees.")]
-    InactiveMerchant,
+    FeeIneligibleMerchant,
 
     #[msg("Only the AUTH can change a Merchant fee eligibility status!")]
     UnauthorizedStatusChange,
+
+    #[msg("Unsupported stablecoin mint. This program only accepts approved stablecoins.")]
+    UnsupportedStablecoin,
     
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////// LEAVING THIS CODE HERE FOR A LATER UPGRADE, SAVING SPACE ON-CHAIN FOR NOW ///////////////////////////////
