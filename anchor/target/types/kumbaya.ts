@@ -87,9 +87,6 @@ export type Kumbaya = {
       "accounts": [
         {
           "name": "feePayer",
-          "docs": [
-            "Optional fee payer account. If provided, this account will pay for transaction fees."
-          ],
           "writable": true,
           "signer": true,
           "optional": true
@@ -126,99 +123,6 @@ export type Kumbaya = {
                 "path": "owner"
               }
             ]
-          }
-        },
-        {
-          "name": "stablecoinMint"
-        },
-        {
-          "name": "merchantStablecoinAta",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "account",
-                "path": "merchant"
-              },
-              {
-                "kind": "const",
-                "value": [
-                  6,
-                  221,
-                  246,
-                  225,
-                  215,
-                  101,
-                  161,
-                  147,
-                  217,
-                  203,
-                  225,
-                  70,
-                  206,
-                  235,
-                  121,
-                  172,
-                  28,
-                  180,
-                  133,
-                  237,
-                  95,
-                  91,
-                  55,
-                  145,
-                  58,
-                  140,
-                  245,
-                  133,
-                  126,
-                  255,
-                  0,
-                  169
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "stablecoinMint"
-              }
-            ],
-            "program": {
-              "kind": "const",
-              "value": [
-                140,
-                151,
-                37,
-                143,
-                78,
-                36,
-                137,
-                241,
-                187,
-                61,
-                16,
-                41,
-                20,
-                142,
-                13,
-                131,
-                11,
-                90,
-                19,
-                153,
-                218,
-                255,
-                16,
-                132,
-                4,
-                142,
-                123,
-                216,
-                219,
-                233,
-                248,
-                89
-              ]
-            }
           }
         },
         {
@@ -504,6 +408,10 @@ export type Kumbaya = {
           "name": "recipient"
         },
         {
+          "name": "associatedTokenProgram",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        },
+        {
           "name": "tokenProgram"
         },
         {
@@ -582,6 +490,7 @@ export type Kumbaya = {
         },
         {
           "name": "merchant",
+          "writable": true,
           "pda": {
             "seeds": [
               {
@@ -992,11 +901,6 @@ export type Kumbaya = {
       "code": 6005,
       "name": "unauthorizedStatusChange",
       "msg": "Only the AUTH can change a Merchant fee eligibility status!"
-    },
-    {
-      "code": 6006,
-      "name": "unsupportedStablecoin",
-      "msg": "Unsupported stablecoin mint. This program only accepts approved stablecoins."
     }
   ],
   "types": [
