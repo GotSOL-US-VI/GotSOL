@@ -1,6 +1,6 @@
-<mxfile host="Electron" agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/26.2.15 Chrome/134.0.6998.205 Electron/35.2.1 Safari/537.36" version="26.2.15">
+<mxfile host="Electron" agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/27.0.2 Chrome/134.0.6998.205 Electron/35.3.0 Safari/537.36" version="27.0.2">
   <diagram name="Page-1" id="ixEnn9pW8xHnraaHGQjy">
-    <mxGraphModel dx="383" dy="180" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+    <mxGraphModel dx="679" dy="374" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -173,8 +173,8 @@
         <mxCell id="qp32YkYb4Xcl16sfedbd-57" value="&lt;span style=&quot;background-color: light-dark(#ffffff, var(--ge-dark-color, #121212));&quot;&gt;Customer&lt;/span&gt;" style="shape=actor;whiteSpace=wrap;html=1;" parent="1" vertex="1">
           <mxGeometry x="700" y="580" width="40" height="60" as="geometry" />
         </mxCell>
-        <mxCell id="qp32YkYb4Xcl16sfedbd-62" value="&lt;font style=&quot;font-size: 10px;&quot;&gt;Pays with USDC&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="1" vertex="1">
-          <mxGeometry x="612.5" y="580" width="100" height="30" as="geometry" />
+        <mxCell id="qp32YkYb4Xcl16sfedbd-62" value="&lt;font&gt;Pays with USDC&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="612.5" y="585" width="100" height="30" as="geometry" />
         </mxCell>
         <mxCell id="qp32YkYb4Xcl16sfedbd-64" value="" style="rhombus;whiteSpace=wrap;html=1;strokeWidth=2;fillWeight=-1;hachureGap=8;fillStyle=cross-hatch;fillColor=#006600;sketch=1;" parent="1" vertex="1">
           <mxGeometry x="672.5" y="660" width="27.5" height="20" as="geometry" />
@@ -274,7 +274,7 @@
             <mxRectangle x="10" y="390" width="130" height="30" as="alternateBounds" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="texffEij4Fj4lZX1Nn7l-5" value="Para MPC? or Squads Multi-sig?&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;Separate Key from program Auth&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;Company Treasury&lt;/div&gt;" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" parent="texffEij4Fj4lZX1Nn7l-2" vertex="1">
+        <mxCell id="texffEij4Fj4lZX1Nn7l-5" value="Para MPC or Squads Multi-sig&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;Separate Key from program Auth&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;Company Treasury&lt;/div&gt;" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" parent="texffEij4Fj4lZX1Nn7l-2" vertex="1">
           <mxGeometry y="26" width="120" height="114" as="geometry" />
         </mxCell>
         <mxCell id="texffEij4Fj4lZX1Nn7l-6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" parent="texffEij4Fj4lZX1Nn7l-2" source="texffEij4Fj4lZX1Nn7l-5" target="texffEij4Fj4lZX1Nn7l-5" edge="1">
@@ -285,7 +285,7 @@
             <mxRectangle x="10" y="390" width="130" height="30" as="alternateBounds" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="Rp_giCWCLn5uCZoskcnE-6" value="Squads Multi-sig&lt;br&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;Upgradable&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;Program Treasury?&lt;/div&gt;" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" parent="Rp_giCWCLn5uCZoskcnE-5" vertex="1">
+        <mxCell id="Rp_giCWCLn5uCZoskcnE-6" value="Squads Multi-sig&lt;br&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;Upgradable&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;Program Treasury&lt;/div&gt;" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" parent="Rp_giCWCLn5uCZoskcnE-5" vertex="1">
           <mxGeometry y="26" width="120" height="84" as="geometry" />
         </mxCell>
         <mxCell id="Rp_giCWCLn5uCZoskcnE-7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" parent="Rp_giCWCLn5uCZoskcnE-5" source="Rp_giCWCLn5uCZoskcnE-6" target="Rp_giCWCLn5uCZoskcnE-6" edge="1">
@@ -308,7 +308,7 @@
             <mxPoint x="623" y="680" as="sourcePoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="HAL3IzY6lfe6OjQ-e14p-1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.987;exitY=0.876;exitDx=0;exitDy=0;entryX=0.035;entryY=0.531;entryDx=0;entryDy=0;entryPerimeter=0;exitPerimeter=0;" edge="1" parent="1" source="qp32YkYb4Xcl16sfedbd-57" target="qp32YkYb4Xcl16sfedbd-82">
+        <mxCell id="HAL3IzY6lfe6OjQ-e14p-1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.987;exitY=0.876;exitDx=0;exitDy=0;entryX=0.035;entryY=0.531;entryDx=0;entryDy=0;entryPerimeter=0;exitPerimeter=0;" parent="1" source="qp32YkYb4Xcl16sfedbd-57" target="qp32YkYb4Xcl16sfedbd-82" edge="1">
           <mxGeometry relative="1" as="geometry">
             <mxPoint x="760" y="600" as="targetPoint" />
             <Array as="points">
@@ -316,6 +316,9 @@
               <mxPoint x="750" y="633" />
             </Array>
           </mxGeometry>
+        </mxCell>
+        <mxCell id="EklaRGrPl-ZAmGngduVJ-2" value="init_if_needed Merchant token ATA&#39;s" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="552.5" y="570" width="170" height="20" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>
