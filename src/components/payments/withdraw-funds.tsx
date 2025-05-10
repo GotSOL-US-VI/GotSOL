@@ -141,7 +141,7 @@ export function WithdrawFunds({
 
       // Send the withdraw transaction
       const txid = await program.methods
-        .withdrawUsdc(new anchor.BN(withdrawAmountU64))
+        .withdraw(new anchor.BN(withdrawAmountU64))
         .accountsPartial({
           owner: ownerPubkey,
           merchant: merchantPubkey,
