@@ -471,7 +471,7 @@
       ],
       "accounts": [
         {
-          "name": "house",
+          "name": "auth",
           "writable": true,
           "signer": true
         },

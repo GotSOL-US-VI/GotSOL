@@ -477,7 +477,7 @@ export type Kumbaya = {
       ],
       "accounts": [
         {
-          "name": "house",
+          "name": "auth",
           "writable": true,
           "signer": true
         },
