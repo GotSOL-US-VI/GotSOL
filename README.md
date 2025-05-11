@@ -1,4 +1,4 @@
-# kumbaya
+# GotSOL
 
 * Create a Merchant Point of Sale store front using your Para wallet social sign-on.
 * Merchants can accept stablecoin payments on Solana using payment-request QR codes.
