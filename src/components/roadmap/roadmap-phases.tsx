@@ -23,7 +23,7 @@ const phases: Phase[] = [
       { text: 'Integrate Para MPC wallet provider for key-less user wallets via social sign-on', completed: true },
       { text: 'Integrate gas fee-payer accounts for Merchants and their customers on devnet', completed: false },
       { text: 'Create video and text resources for Merchants and users on how to use the application', completed: false },
-      { text: 'Conduct User Experience Surveys and solicit user feedback', completed: true}
+      { text: 'Conduct User Experience Surveys and solicit user feedback', completed: true }
     ],
     active: true,
   },
@@ -36,7 +36,7 @@ const phases: Phase[] = [
       { text: 'Security audit front-end web app', completed: false },
       { text: 'Integrate Coinflow or Sphere for direct USD On & Off-ramps for Merchants', completed: false },
       { text: 'Integrate Jupiter Swap API for USDC to Perena USD* swap on main net (our first in-app DeFi yield opportunity, front-end integration only)', completed: true },
-      { text: 'Onboard interested Merchants in-person in the US Virgin Islands', completed: false },
+      { text: 'Onboard interested Merchants in-person in the US Virgin Islands (Verbal commitments)', completed: true },
     ],
     active: true,
   },
@@ -49,7 +49,6 @@ const phases: Phase[] = [
       { text: 'Integrate Bookkeeping services for Merchants (Quickbooks, Xero)', completed: false },
       { text: 'Build in-app Payroll Services for Merchants', completed: false },
       { text: 'Continuous auditing backend and front-end integrations', completed: false },
-
     ],
     active: true,
   },
@@ -84,9 +83,8 @@ export function RoadmapPhases() {
         {phases.map((phase) => (
           <div
             key={phase.number}
-            className={`card flex-1 p-6 ${
-              phase.active ? 'border-mint/50' : 'opacity-50'
-            }`}
+            className={`card flex-1 p-6 ${phase.active ? 'border-mint/50' : 'opacity-50'
+              }`}
           >
             <div className="mb-4">
               <div className="h-1 w-full bg-mint mb-4"></div>
