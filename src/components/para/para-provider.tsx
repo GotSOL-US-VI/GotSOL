@@ -66,8 +66,9 @@ export function ParaProvider({ children }: { children: React.ReactNode }) {
             OAuthMethod.GOOGLE,
             OAuthMethod.FACEBOOK,
             OAuthMethod.APPLE,
-            OAuthMethod.DISCORD,
             OAuthMethod.TWITTER,
+            OAuthMethod.TELEGRAM,
+            OAuthMethod.DISCORD,
           ]}
           theme={{
             foregroundColor: "#2D3648",
