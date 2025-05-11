@@ -31,7 +31,7 @@ export function DisclaimerModal({ isOpen, onClose }: DisclaimerModalProps) {
             <p>• As the developers of this application, we proclaim to be acting in good faith in its development and execution.</p>
             <p>• We, the developers of this application, and our wallet provider, Para, do not have access to your wallet&apos;s private keys, nor your funds, and have no admin priveleges over your assets of any kind.</p>
             <p>• The code used in this application is NOT AUDITED. Use it at your own risk.</p>
-            <p>• The Jupiter Terminal, in the Owner&apos;s Yield tab, is connected to MAINNET and you are using REAL TOKENS and REAL MONEY if you use this interface to swap.</p>
+            <p>• The Jupiter Terminal, in the <em>Swap</em> tab, is connected to MAINNET and you are using REAL TOKENS and REAL MONEY if you use this interface to swap.</p>
             <p>• The front-end user interface is not audited. The on-chain Anchor program the application is built on is not audited. They were created with care, but unknown vulnerabilties may still exist.</p>
             <p>• Your use of the application with any real mainnet funds is entirely of your own volition, and we do not accept liability for any lost funds as a result of you using this application.</p>
             <p>• We may use referral codes in our Perena USD* integration, or implement additional fees (0.001%-0.01% max) in the Jupiter Terminal that benefit us directly if you use these features within our application.</p>

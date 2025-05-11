@@ -13,8 +13,11 @@ export const metadata = {
 // Define navigation links at the server level
 const defaultLinks: NavigationLink[] = [
   { label: 'Create Merchant', path: '/merchant/setup' },
+  { label: 'Inventory Management', path: '/inventory_management' },
+  { label: 'Revenue Payments', path: '/tax_compliance' },
+  { label: 'Treasury and Yield', path: '/yield' },
+  { label: 'Swap', path: '/owner_yield' },
   { label: 'Project Phases', path: '/roadmap' },
-  { label: 'Owner\'s Yield Dashboard', path: '/owner_yield' },
 ]
 
 const merchantLinks: NavigationLink[] = [
