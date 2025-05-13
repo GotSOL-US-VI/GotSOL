@@ -4,6 +4,8 @@ import { DisclaimerButton } from './disclaimer-button';
 import { FeedbackLink } from './feedback-link';
 import { GitHubLink } from './github-link';
 import { TwitterLink } from './twitter-link';
+import { YouTubeLink } from './youtube-link';
+
 
 export function Footer() {
     return (
@@ -13,8 +15,9 @@ export function Footer() {
                 <FeedbackLink />
             </div>
             <div className="flex gap-4 px-2">
-                <GitHubLink />
                 <TwitterLink />
+                <YouTubeLink />
+                <GitHubLink />
             </div>
         </footer>
     );
