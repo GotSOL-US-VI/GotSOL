@@ -7,3 +7,9 @@ GotSOL is a keyless, gas-less Point of Sale system for Merchants and their custo
 * Automatic revenue splits between the Merchant and the House -- 98.75%/1.25% respectively.
 * Merchants no longer need to handle their own private keys!
 * Merchants and their Customers pay 0 gas fees! (coming soon!)
+
+## Product Resources
+
+https://www.youtube.com/@GotSOL-USVI
+
+https://x.com/gotsolana
