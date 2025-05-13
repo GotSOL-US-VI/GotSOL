@@ -4,7 +4,7 @@ import { clusterApiUrl, Connection } from '@solana/web3.js'
 import { atom, useAtomValue, useSetAtom } from 'jotai'
 import { atomWithStorage } from 'jotai/utils'
 import { createContext, ReactNode, useContext } from 'react'
-import toast from 'react-hot-toast'
+import { toastUtils } from '@/utils/toast-utils'
 import { env } from '@/utils/env'
 
 export interface Cluster {
@@ -117,12 +117,12 @@ export function ClusterProvider({ children }: { children: ReactNode }) {
           })
           .catch((err: Error) => {
             console.error('Connection test failed:', err);
-            toast.error(`Failed to connect to endpoint: ${err.message}`);
+            toastUtils.error(`Failed to connect to endpoint: ${err.message}`);
           });
       } catch (err) {
         const error = err instanceof Error ? err : new Error('Unknown error occurred');
         console.error('Cluster validation error:', error);
-        toast.error(`Invalid endpoint: ${error.message}`);
+        toastUtils.error(`Invalid endpoint: ${error.message}`);
       }
     },
     deleteCluster: (cluster: Cluster) => {
@@ -135,7 +135,7 @@ export function ClusterProvider({ children }: { children: ReactNode }) {
       } catch (err) {
         const error = err instanceof Error ? err : new Error('Unknown error occurred');
         console.error('Error setting cluster:', error);
-        toast.error(`Failed to set cluster: ${error.message}`);
+        toastUtils.error(`Failed to set cluster: ${error.message}`);
       }
     },
     getExplorerUrl: (path: string) => `https://explorer.solana.com/${path}${getClusterUrlParam(cluster)}`,

@@ -12,7 +12,7 @@ import {
   VersionedTransaction,
 } from '@solana/web3.js'
 import {useMutation, useQuery, useQueryClient} from '@tanstack/react-query'
-import toast from 'react-hot-toast'
+import { toastUtils } from '@/utils/toast-utils'
 import { useTransactionToast } from '@/hooks/use-transaction-toast'
 import { formatSolscanDevnetLink } from '@/utils/format-transaction-link'
 import { useWallet } from "@getpara/react-sdk"
@@ -102,7 +102,7 @@ export function useTransferSol({ address }: { address: PublicKey }) {
       ])
     },
     onError: (error) => {
-      toast.error(`Transaction failed! ${error}`)
+      toastUtils.error(`Transaction failed! ${error}`)
     },
   })
 }
@@ -136,7 +136,7 @@ export function useRequestAirdrop({ address }: { address: PublicKey }) {
       ])
     },
     onError: (error) => {
-      toast.error(`Airdrop failed! ${error}`)
+      toastUtils.error(`Airdrop failed! ${error}`)
     },
   })
 }

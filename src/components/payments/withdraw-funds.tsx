@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useConnection } from '@/lib/connection-context';
 import { PublicKey } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID } from "@solana/spl-token";
-import toast from 'react-hot-toast';
+import { toastUtils } from '@/utils/toast-utils';
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 import { useUsdcBalance } from '@/hooks/use-usdc-balance';
 import { useQueryClient } from '@tanstack/react-query';
@@ -165,7 +165,7 @@ export function WithdrawFunds({
         await refreshBalances();
       }, 2000);
 
-      toast.success(
+      toastUtils.success(
         <div>
           <p>Withdrawal successful!</p>
           <p className="text-xs mt-1">
@@ -178,8 +178,7 @@ export function WithdrawFunds({
               View transaction
             </a>
           </p>
-        </div>,
-        { duration: 8000 }
+        </div>
       );
 
       setWithdrawAmount('');
@@ -197,7 +196,7 @@ export function WithdrawFunds({
       // Display appropriate error message based on the error code
       switch (parsedError.code) {
         case 'INSUFFICIENT_FUNDS':
-          toast.error(
+          toastUtils.error(
             <ErrorToastContent 
               title="Insufficient funds" 
               message="The merchant account doesn't have enough USDC for this withdrawal" 
@@ -205,7 +204,7 @@ export function WithdrawFunds({
           );
           break;
         case 'NOT_MERCHANT_OWNER':
-          toast.error(
+          toastUtils.error(
             <ErrorToastContent 
               title="Unauthorized" 
               message="Only the merchant owner can withdraw funds" 
@@ -213,7 +212,7 @@ export function WithdrawFunds({
           );
           break;
         case 'INACTIVE_MERCHANT':
-          toast.error(
+          toastUtils.error(
             <ErrorToastContent 
               title="Inactive merchant" 
               message="This merchant account is currently inactive" 
@@ -222,7 +221,7 @@ export function WithdrawFunds({
           break;
         default:
           // Generic error message with details if available
-          toast.error(
+          toastUtils.error(
             <ErrorToastContent 
               title="Failed to withdraw funds" 
               message={parsedError.message} 

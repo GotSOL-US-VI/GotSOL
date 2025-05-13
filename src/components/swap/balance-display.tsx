@@ -10,7 +10,7 @@ import {
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 import { useConnection } from '@/lib/connection-context';
 import { MainnetConnectionProvider } from '@/lib/mainnet-connection-provider';
-import { toast } from 'react-hot-toast';
+import { toastUtils } from '@/utils/toast-utils';
 
 // Token addresses - using mainnet addresses directly since this is a mainnet-only component
 const USDC_MINT = new PublicKey('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v');
@@ -193,7 +193,7 @@ function BalanceDisplayInner() {
       if (mountedRef.current) {
         setIsRefreshing(false);
         if (isRefreshing) {
-          toast.success('Balances updated successfully');
+          toastUtils.success('Balances updated successfully');
         }
       }
     }

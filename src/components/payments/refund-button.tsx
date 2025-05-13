@@ -4,7 +4,7 @@ import * as anchor from "@coral-xyz/anchor";
 import { Program, Idl, BN } from '@coral-xyz/anchor';
 import { PublicKey } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID } from '@solana/spl-token';
-import toast from 'react-hot-toast';
+import { toastUtils } from '@/utils/toast-utils';
 import { env } from '@/utils/env';
 import { formatSolscanDevnetLink } from '@/utils/format-transaction-link';
 import { useWallet } from "@getpara/react-sdk";
@@ -42,7 +42,7 @@ export function RefundButton({ program, merchantPubkey, payment, onSuccess, isDe
 
     const handleRefund = async () => {
         if (!publicKey || !wallet) {
-            toast.error('Please connect your wallet');
+            toastUtils.error('Please connect your wallet');
             return;
         }
 
@@ -316,7 +316,7 @@ export function RefundButton({ program, merchantPubkey, payment, onSuccess, isDe
             // Start refreshing balances immediately
             refreshBalances();
             
-            toast.success(
+            toastUtils.success(
                 <div>
                     <p>Refund processed successfully!</p>
                     <p className="text-xs mt-1">
@@ -329,8 +329,7 @@ export function RefundButton({ program, merchantPubkey, payment, onSuccess, isDe
                             View transaction
                         </a>
                     </p>
-                </div>,
-                { duration: 8000 }
+                </div>
             );
             
             // Call onSuccess callback if provided
@@ -347,7 +346,7 @@ export function RefundButton({ program, merchantPubkey, payment, onSuccess, isDe
             // Display appropriate error message based on the error code
             switch (parsedError.code) {
                 case 'INSUFFICIENT_FUNDS':
-                    toast.error(
+                    toastUtils.error(
                         <ErrorToastContent 
                             title="Insufficient funds" 
                             message="The merchant account doesn't have enough USDC to process this refund." 
@@ -355,7 +354,7 @@ export function RefundButton({ program, merchantPubkey, payment, onSuccess, isDe
                     );
                     break;
                 case 'EXCEEDS_REFUND_LIMIT':
-                    toast.error(
+                    toastUtils.error(
                         <ErrorToastContent 
                             title="Refund exceeds limit" 
                             message="This refund exceeds the Merchant&apos;s configured refund limit." 
@@ -363,7 +362,7 @@ export function RefundButton({ program, merchantPubkey, payment, onSuccess, isDe
                     );
                     break;
                 case 'REFUND_ALREADY_PROCESSED':
-                    toast.error(
+                    toastUtils.error(
                         <ErrorToastContent 
                             title="Refund already processed" 
                             message="This payment has already been refunded. This program prevents double refunds." 
@@ -371,7 +370,7 @@ export function RefundButton({ program, merchantPubkey, payment, onSuccess, isDe
                     );
                     break;
                 case 'NOT_MERCHANT_OWNER':
-                    toast.error(
+                    toastUtils.error(
                         <ErrorToastContent 
                             title="Unauthorized" 
                             message="Only the Merchant&apos;s owner can process refunds." 
@@ -380,7 +379,7 @@ export function RefundButton({ program, merchantPubkey, payment, onSuccess, isDe
                     break;
                 default:
                     // Generic error message with details if available
-                    toast.error(
+                    toastUtils.error(
                         <ErrorToastContent 
                             title="Unable to process refund" 
                             message={parsedError.message} 

@@ -8,10 +8,10 @@ import { ArrowsUpDownIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import { PublicKey, VersionedTransaction } from '@solana/web3.js';
 import { ParaSolanaWeb3Signer } from "@getpara/solana-web3.js-v1-integration";
 import { useParaModal } from '@/components/para/para-provider';
-import { toast } from 'react-hot-toast';
 import { TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Image from 'next/image';
+import { toastUtils } from '@/utils/toast-utils';
 
 // Token addresses - using mainnet addresses directly since this is a mainnet-only component
 const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
@@ -276,7 +276,7 @@ function SwapPageInner() {
       console.log('Transaction sent:', txid);
 
       // Show pending toast
-      toast.loading('Transaction pending...', { id: txid });
+      toastUtils.loading('Transaction pending...', { id: txid });
 
       try {
         const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
@@ -291,10 +291,8 @@ function SwapPageInner() {
         }
 
         // Clear loading toast and show success
-        toast.dismiss(txid);
-        toast.success('Swap successful! 🎉', {
-          duration: 5000
-        });
+        toastUtils.dismiss(txid);
+        toastUtils.success('Swap successful! 🎉');
 
         // Open Solscan in new tab
         window.open(`https://solscan.io/tx/${txid}`, '_blank');
@@ -311,13 +309,13 @@ function SwapPageInner() {
 
       } catch (confirmError) {
         // Clear loading toast and show error
-        toast.dismiss(txid);
+        toastUtils.dismiss(txid);
         console.error('Transaction confirmation failed:', confirmError);
         throw new Error('Transaction failed to confirm. Please check Solscan for status.');
       }
     } catch (err) {
       console.error('Error executing swap:', err);
-      toast.error(err instanceof Error ? err.message : 'Failed to execute swap');
+      toastUtils.error(err instanceof Error ? err.message : 'Failed to execute swap');
       setError(err instanceof Error ? err.message : 'Failed to execute swap');
     } finally {
       setIsLoading(false);

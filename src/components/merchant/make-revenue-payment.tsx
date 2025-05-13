@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react';
 import { PublicKey } from '@solana/web3.js';
 import { Program, Idl } from '@coral-xyz/anchor';
 import { useWallet } from "@getpara/react-sdk";
-import toast from 'react-hot-toast';
+import { toastUtils } from '@/utils/toast-utils';
 import { USDC_DEVNET_MINT, findAssociatedTokenAddress } from '@/utils/token-utils';
 
 const GOV = new PublicKey('7WxjvbhBgAcWfTnL8yQy6iP1vF4n5fKPc7tL7fMYvSsc');
@@ -44,13 +44,13 @@ export function MakeRevenuePaymentButton({ program, merchantPubkey, merchantName
             // Revenue payment feature is currently under development
             // When implemented, it will use the program, wallet, and merchant details
             
-            toast.success('Revenue payment feature is coming soon');
+            toastUtils.success('Revenue payment feature is coming soon');
             
             if (onSuccess) onSuccess();
         } catch (err) {
             console.error('Error making revenue payment:', err);
             setError('Failed to make revenue payment');
-            toast.error('Failed to make revenue payment');
+            toastUtils.error('Failed to make revenue payment');
         } finally {
             setIsLoading(false);
         }

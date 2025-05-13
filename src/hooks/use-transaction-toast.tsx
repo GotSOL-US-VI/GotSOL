@@ -1,13 +1,14 @@
 'use client';
 
-import toast from 'react-hot-toast';
+import { toastUtils } from '@/utils/toast-utils';
 
 /**
  * Hook to provide a consistent transaction toast notification
+ * This is now a wrapper around the standardized toast utility
  */
 export function useTransactionToast() {
   return (signature: string, solscanLink?: string) => {
-    toast.success(
+    toastUtils.success(
       <div className={'text-center'}>
         <div className="text-lg">Transaction sent</div>
         {solscanLink ? (
@@ -29,7 +30,7 @@ export function useTransactionToast() {
             View Transaction
           </a>
         )}
-      </div>,
+      </div>
     )
   }
 } 

@@ -6,7 +6,7 @@ import { useEffect, useCallback } from 'react';
 import { useConnection } from '@/lib/connection-context';
 import { formatSolscanDevnetLink } from '@/utils/format-transaction-link';
 import { TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID } from "@solana/spl-token";
-import toast from 'react-hot-toast';
+import { toastUtils } from '@/utils/toast-utils';
 import { Program } from '@coral-xyz/anchor';
 import { RefundButton } from './refund-button';
 import type { Kumbaya } from '@/utils/kumbaya-exports';
@@ -436,8 +436,7 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
                                     )}
                                 </div>
                             );
-                            toast.success(toastMessage, {
-                                duration: 8000,
+                            toastUtils.success(toastMessage, {
                                 position: 'bottom-right'
                             });
 
@@ -471,7 +470,7 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
                 };
             } catch (err) {
                 console.error('Error setting up USDC ATA subscription:', err);
-                toast.error('Failed to set up real-time updates');
+                toastUtils.error('Failed to set up real-time updates');
                 return () => {}; // Return empty cleanup function
             }
         };

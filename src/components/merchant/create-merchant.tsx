@@ -6,7 +6,7 @@ import { Program, Idl } from '@coral-xyz/anchor';
 import { PublicKey } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { useWallet } from "@getpara/react-sdk";
-import toast from 'react-hot-toast';
+import { toastUtils } from '@/utils/toast-utils';
 import { parseAnchorError, ErrorToastContent } from '@/utils/error-parser';
 
 interface CreateMerchantProps {
@@ -79,7 +79,7 @@ export function CreateMerchant({ program, onSuccess }: CreateMerchantProps) {
                 .rpc();
 
             console.log('Created merchant:', merchantPda);
-            toast.success('Merchant account created successfully!');
+            toastUtils.success('Merchant account created successfully!');
             onSuccess?.(merchantPda);
         } catch (err) {
             console.error('Failed to create merchant:', err);
@@ -91,7 +91,7 @@ export function CreateMerchant({ program, onSuccess }: CreateMerchantProps) {
             // Display appropriate error toast based on the error code
             switch (parsedError.code) {
                 case 'INVALID_MERCHANT_NAME':
-                    toast.error(
+                    toastUtils.error(
                         <ErrorToastContent 
                             title="Invalid merchant name" 
                             message="Merchant name cannot be empty" 
@@ -99,7 +99,7 @@ export function CreateMerchant({ program, onSuccess }: CreateMerchantProps) {
                     );
                     break;
                 case 'ACCOUNT_ALREADY_EXISTS':
-                    toast.error(
+                    toastUtils.error(
                         <ErrorToastContent 
                             title="Merchant already exists" 
                             message="A merchant with this name already exists for your wallet" 
@@ -108,7 +108,7 @@ export function CreateMerchant({ program, onSuccess }: CreateMerchantProps) {
                     break;
                 default:
                     // Generic error message with details if available
-                    toast.error(
+                    toastUtils.error(
                         <ErrorToastContent 
                             title="Failed to create merchant" 
                             message={parsedError.message} 
