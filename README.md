@@ -10,6 +10,6 @@ GotSOL is a keyless, gas-less Point of Sale system for Merchants and their custo
 
 ## Product Resources
 
-https://www.youtube.com/@GotSOL-USVI
+[YouTube Channel](https://www.youtube.com/@GotSOL-USVI){:target="_blank"} for product overviews, demonstrations, and how-to's!
 
-https://x.com/gotsolana
+[X/Twitter](https://x.com/gotsolana){:target="_blank"} for communications and updates!
