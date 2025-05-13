@@ -15,9 +15,9 @@ export function Footer() {
                 <FeedbackLink />
             </div>
             <div className="flex gap-4 px-2">
+                <GitHubLink />
                 <TwitterLink />
                 <YouTubeLink />
-                <GitHubLink />
             </div>
         </footer>
     );
