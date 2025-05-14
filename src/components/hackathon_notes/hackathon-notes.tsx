@@ -16,26 +16,23 @@ export default function HackathonNotes() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Notes on Our Program, for the Hackathon Judges</h1>
-          <br></br>
-          <p>
-            The current version of the program, including both the Anchor program, and the NextJS front-end are fully functional on devnet. We already have the next version written,
-            but don&apos;t want to risk breaking the program/front-end integration without having the time to fix it before the hackathon&apos;s submission date.
-            Therefore we will submit it with the current working version, but plan on making further upgrades as we move decisively towards main-net launch with our v1 product.
-          </p> <br></br>
-          <p>Here is what will change:</p>
+          <h1 className="text-3xl font-bold tracking-tight">Hackathon Submission Notes</h1>
+          <p className="mt-4">
+            Our current implementation is fully functional on devnet. While we&apos;ve developed an improved version, we&apos;re submitting the stable release to ensure reliability. Post-hackathon upgrades are planned for our mainnet launch.
+          </p>
+          <p className="mt-4 font-medium">Key Upcoming Changes:</p>
           <ul className="list-disc pl-5 space-y-2 text-gray-200">
-            <li>The current version has 5 instructions: createMerchant, withdrawUsdc, refund, setMerchantStatus, and updateRefundLimit.</li>
+            <li>Current Instructions: createMerchant, withdrawUsdc, Refund, setMerchantStatus, updateRefundLimit</li>
             <ul className="list-disc pl-5 mt-2">
-            <li>The updated version will have 5 instructions: createMerchant, Withdraw, Refund, setMerchantStatus, and closeMerchant.</li>
-            <li>Withdraw is no longer keyed to USDC only, and 8 stablecoin options will be supported.</li>
-            <li>The Merchant&apos;s token account will be initialized in the SolanaPay QR code logic at time of payment when needed, and not in the createMerchant instruction.</li>
-            <li>The Owner now has the ability to close a Merchant account.</li>
+              <li>New Instructions: createMerchant, Withdraw, Refund, setMerchantStatus, closeMerchant</li>
+              <li>Expanding from USDC-only to support 8 stablecoins</li>
+              <li>Token accounts will initialize during payment rather than at Merchant creation</li>
+              <li>Added Merchant account closure capability</li>
             </ul>
-            <li>User feedback from Merchants has pointed out that the Withdraw Funds component, which shows the Merchant&apos;s and Owner&apos;s token balances lacks privacy for the Merchant because a Customer can potentially see the Merchant&apos;s funds when scanning a payment QR code.</li>
+            <li>Privacy Improvements:</li>
             <ul className="list-disc pl-5 mt-2">
-              <li>In the upgraded version of the front-end we will move the Merchant&apos;s and Owner&apos;s token balances to a separate page, where the Merchant will be able to manage their funds without risking showing their Customer their account balances on the Point of Sale.</li>
-              <li>The Refund button in each Payment History record could also be potentially abused in-person (though unlikely), and refund functionality may also be moved to a more secure page.</li>
+              <li>Moving balance displays to a separate Merchant dashboard to prevent customers from seeing sensitive financial data</li>
+              <li>Relocating refund functionality to reduce potential for misuse</li>
             </ul>
             {/* <li>Access detailed product information including SKU details, and sales history</li>
             <ul className="list-disc pl-5 mt-2">
