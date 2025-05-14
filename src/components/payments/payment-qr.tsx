@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, ChangeEvent } from 'react';
+import { useState, useEffect, useCallback, ChangeEvent, useRef } from 'react';
 import { PublicKey } from '@solana/web3.js';
 import { useWallet } from '@getpara/react-sdk';
 import Image from 'next/image';
@@ -21,6 +21,9 @@ export function PaymentQR({ merchantPubkey, isDevnet = true, resetSignal }: Paym
   const [qrCode, setQrCode] = useState<string>('');
   const [error, setError] = useState<string>('');
   const [useNumpad, setUseNumpad] = useState<boolean>(false);
+  const [showSuccessIcon, setShowSuccessIcon] = useState<boolean>(false);
+  const isFirstRender = useRef(true);
+  const prevResetSignal = useRef(resetSignal);
 
   // Validate USDC amount constraints
   const isValidAmount = (value: string): boolean => {
@@ -122,11 +125,34 @@ export function PaymentQR({ merchantPubkey, isDevnet = true, resetSignal }: Paym
 
   // Reset state when resetSignal changes
   useEffect(() => {
-    if (resetSignal !== undefined) {
+    // Skip the effect on the initial render
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      prevResetSignal.current = resetSignal;
+      return;
+    }
+    
+    // Only run if resetSignal actually changed from previous value
+    if (resetSignal !== undefined && resetSignal !== prevResetSignal.current) {
+      // Update stored value
+      prevResetSignal.current = resetSignal;
+      
+      // Show the success icon
+      setShowSuccessIcon(true);
+      
+      // Clear the form fields
       setAmount('');
       setMemo('');
       setQrCode('');
       setError('');
+      
+      // Hide the success icon after 3.5 seconds
+      const timer = setTimeout(() => {
+        setShowSuccessIcon(false);
+      }, 3500);
+      
+      // Clean up timer if component unmounts
+      return () => clearTimeout(timer);
     }
   }, [resetSignal]);
 
@@ -207,7 +233,25 @@ export function PaymentQR({ merchantPubkey, isDevnet = true, resetSignal }: Paym
           <div className="text-error text-sm mt-2">{error}</div>
         )}
 
-        {qrCode && (
+        {showSuccessIcon ? (
+          <div className="mt-4 flex flex-col items-center">
+            <div className="success-icon bg-green-500 rounded-full w-[250px] h-[250px] flex items-center justify-center">
+              <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                width="150" 
+                height="150" 
+                viewBox="0 0 24 24"
+                className="text-white"
+                fill="currentColor"
+              >
+                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" />
+              </svg>
+            </div>
+            <p className="text-sm text-green-500 font-bold mt-2">
+              Payment Received!
+            </p>
+          </div>
+        ) : qrCode && (
           <div className="mt-4 flex flex-col items-center">
             <Image
               src={qrCode}
