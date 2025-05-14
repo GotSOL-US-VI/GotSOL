@@ -18,6 +18,7 @@ const defaultLinks: NavigationLink[] = [
   { label: 'Treasury and Yield', path: '/yield' },
   { label: 'Swap', path: '/owner_yield' },
   { label: 'Project Phases', path: '/roadmap' },
+  { label: 'Colosseum Hackathon Notes', path: '/hackathon_notes' },
 ]
 
 const merchantLinks: NavigationLink[] = [
