@@ -28,6 +28,7 @@ function DashboardContent({ params }: { params: { merchantId: string } }) {
   const { connection } = useConnection();
   const provider = useAnchorProvider();
   const [merchantBalance, setMerchantBalance] = useState<number>(0);
+  const [resetSignal, setResetSignal] = useState<number>(0);
   const isDevnet = true; // TODO: Make this dynamic if needed
 
   const merchantPubkey = useMemo(() => {
@@ -128,6 +129,7 @@ function DashboardContent({ params }: { params: { merchantId: string } }) {
                 <PaymentQR
                   merchantPubkey={merchantPubkey}
                   isDevnet={true}
+                  resetSignal={resetSignal}
                 />
               </div>
             </div>
@@ -160,6 +162,7 @@ function DashboardContent({ params }: { params: { merchantId: string } }) {
                   merchantPubkey={merchantPubkey}
                   isDevnet={true}
                   onBalanceUpdate={setMerchantBalance}
+                  onPaymentReceived={() => setResetSignal(prev => prev + 1)}
                 />
               </div>
             </div>

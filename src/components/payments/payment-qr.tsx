@@ -9,11 +9,12 @@ import { usePaymentQR } from './use-payment-qr';
 interface PaymentQRProps {
   merchantPubkey: PublicKey;
   isDevnet?: boolean;
+  resetSignal?: number;
 }
 
 type NumberPadInput = string | 'backspace' | 'clear';
 
-export function PaymentQR({ merchantPubkey, isDevnet = true }: PaymentQRProps) {
+export function PaymentQR({ merchantPubkey, isDevnet = true, resetSignal }: PaymentQRProps) {
   const { data: wallet } = useWallet();
   const [amount, setAmount] = useState<string>('');
   const [memo, setMemo] = useState<string>('');
@@ -118,6 +119,16 @@ export function PaymentQR({ merchantPubkey, isDevnet = true }: PaymentQRProps) {
 
     return () => clearTimeout(debounceTimer);
   }, [amount, memo, generateQR]);
+
+  // Reset state when resetSignal changes
+  useEffect(() => {
+    if (resetSignal !== undefined) {
+      setAmount('');
+      setMemo('');
+      setQrCode('');
+      setError('');
+    }
+  }, [resetSignal]);
 
   const renderNumberPad = (): JSX.Element => (
     <div className="grid grid-cols-3 gap-2 w-full mt-2">

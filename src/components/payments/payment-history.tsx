@@ -5,7 +5,6 @@ import { PublicKey, ParsedTransactionWithMeta, ParsedInstruction, PartiallyDecod
 import { useEffect, useCallback } from 'react';
 import { useConnection } from '@/lib/connection-context';
 import { formatSolscanDevnetLink } from '@/utils/format-transaction-link';
-import { TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { toastUtils } from '@/utils/toast-utils';
 import { Program } from '@coral-xyz/anchor';
 import { RefundButton } from './refund-button';
@@ -20,6 +19,7 @@ interface PaymentHistoryProps {
     merchantPubkey: PublicKey;
     isDevnet?: boolean;
     onBalanceUpdate?: (balance: number) => void;
+    onPaymentReceived?: () => void;
 }
 
 interface Payment {
@@ -201,7 +201,7 @@ async function fetchPaymentData(
     }
 }
 
-export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBalanceUpdate }: PaymentHistoryProps) {
+export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBalanceUpdate, onPaymentReceived }: PaymentHistoryProps) {
     const { data: wallet } = useWallet();
     const { connection } = useConnection();
     const queryClient = useQueryClient();
@@ -439,6 +439,11 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
                             toastUtils.success(toastMessage, {
                                 position: 'bottom-right'
                             });
+                            
+                            // Trigger the reset callback if provided
+                            if (onPaymentReceived) {
+                                onPaymentReceived();
+                            }
 
                             // Invalidate all balance-related queries to ensure UI updates everywhere
                             await Promise.all([
