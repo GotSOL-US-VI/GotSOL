@@ -235,7 +235,7 @@ export function PaymentQR({ merchantPubkey, isDevnet = true, resetSignal }: Paym
 
         {showSuccessIcon ? (
           <div className="mt-4 flex flex-col items-center">
-            <div className="success-icon bg-green-500 rounded-full w-[250px] h-[250px] flex items-center justify-center">
+            <div className="success-icon bg-gradient-to-r from-green-400 to-green-600 shadow-lg rounded-full w-[250px] h-[250px] flex items-center justify-center">
               <svg 
                 xmlns="http://www.w3.org/2000/svg" 
                 width="150" 
