@@ -48,7 +48,7 @@ Devnet Program Address: <a href="https://solscan.io/account/RKAxBK5mBxYta3FUfMLH
 
 15. Have a look around at our other tabs, such as Inventory Management, Revenue Payments, Treasury / Yield, USD On & Off-ramps, Project Phases, and your Merchant's devnet account history on Solscan.
 
-16. Outside of the Merchant routes, you can find the Swap page, which is a working Jupiter Terminal connected to MAINNET! Here you can swap mainnet USDC to Perena's USD* and gain some sweet yield on your stablecoins without risk of Freeze Authorities or Permanent Delegates!
+16. Outside of the Merchant routes, you can find the Swap page, which is a working Jupiter Terminal connected to MAINNET! Here you can swap mainnet USDC to Perena's USD* and gain some sweet yield on your stablecoins without risk of Freeze Authorities or Permanent Delegates! We recommend that you DO NOT send any main net funds to your Owner's address, as they could potentially be stranded on a beta environment Para wallet. The Swap is disabled for now, but will be live on mainnet.
 
 17. Give us some much appreciated feedback by using the User Experience Survey! in the bottom left corner!
 
