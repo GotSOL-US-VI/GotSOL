@@ -6,6 +6,7 @@ import { ClusterProvider } from '@/components/cluster/cluster-data-access';
 import { ConnectionProvider } from '@/lib/devnet-connection-provider';
 import { ParaProvider } from '@/components/para/para-provider';
 import { DisclaimerProvider } from '@/components/ui/disclaimer-provider';
+import { SoundProvider } from '@/components/sound/sound-context';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useParams, usePathname, useRouter } from 'next/navigation';
@@ -14,6 +15,7 @@ import { Toaster } from 'react-hot-toast';
 import { AccountChecker } from '@/components/accounts/account-ui';
 import { ClusterChecker } from '@/components/cluster/cluster-ui';
 import { Footer } from '@/components/ui/footer';
+import { SoundToggle } from '@/components/sound/sound-toggle';
 
 // Define proper types for links
 export interface NavigationLink {
@@ -34,9 +36,11 @@ export function ClientProviders({ children, defaultLinks, merchantLinks }: Clien
         <ConnectionProvider>
           <ParaProvider>
             <DisclaimerProvider>
-              <ClientSideStateHandler defaultLinks={defaultLinks} merchantLinks={merchantLinks}>
-                {children}
-              </ClientSideStateHandler>
+              <SoundProvider>
+                <ClientSideStateHandler defaultLinks={defaultLinks} merchantLinks={merchantLinks}>
+                  {children}
+                </ClientSideStateHandler>
+              </SoundProvider>
             </DisclaimerProvider>
           </ParaProvider>
         </ConnectionProvider>

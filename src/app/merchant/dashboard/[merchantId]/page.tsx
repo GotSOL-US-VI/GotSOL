@@ -10,6 +10,8 @@ import { useConnection } from '@/lib/connection-context';
 import { getKumbayaProgram } from '@/utils/kumbaya-exports';
 import { useAnchorProvider, ParaAnchorProvider } from '@/components/para/para-provider';
 import { useQuery } from '@tanstack/react-query';
+// Import the SoundToggle component to allow users to mute/unmute the payment sound
+import { SoundToggle } from '@/components/sound/sound-toggle';
 
 const USDC_DEVNET_MINT = new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU');
 
@@ -121,7 +123,10 @@ function DashboardContent({ params }: { params: { merchantId: string } }) {
         <div className="h-[600px]">
           <div className="card bg-base-300 shadow-xl">
             <div className="card-body p-4">
-              <h1 className="text-2xl font-bold text-center">Point of Sale</h1>
+              <div className="relative mb-2">
+                <h1 className="text-2xl font-bold text-center">Point of Sale</h1>
+                <SoundToggle className="absolute top-0 right-0" />
+              </div>
               {merchantName && (
                 <h2 className="text-lg text-center text-gray-400 mt-1">{merchantName}</h2>
               )}

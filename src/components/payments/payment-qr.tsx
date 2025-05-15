@@ -5,6 +5,7 @@ import { PublicKey } from '@solana/web3.js';
 import { useWallet } from '@getpara/react-sdk';
 import Image from 'next/image';
 import { usePaymentQR } from './use-payment-qr';
+import { useSoundContext } from '@/components/sound/sound-context';
 
 interface PaymentQRProps {
   merchantPubkey: PublicKey;
@@ -16,6 +17,7 @@ type NumberPadInput = string | 'backspace' | 'clear';
 
 export function PaymentQR({ merchantPubkey, isDevnet = true, resetSignal }: PaymentQRProps) {
   const { data: wallet } = useWallet();
+  const { playSound } = useSoundContext();
   const [amount, setAmount] = useState<string>('');
   const [memo, setMemo] = useState<string>('');
   const [qrCode, setQrCode] = useState<string>('');
@@ -140,9 +142,12 @@ export function PaymentQR({ merchantPubkey, isDevnet = true, resetSignal }: Paym
       // Show the success icon
       setShowSuccessIcon(true);
 
-      // Play the sound
-      const audio = new Audio('/cash-register-sound-effect.mp3');
-      audio.play();
+      /**
+       * Play the cash register sound when payment is received
+       * Uses the global sound context to respect the user's mute preference
+       * The actual sound file is located at /public/cash-register-sound-effect.mp3
+       */
+      playSound('/cash-register-sound-effect.mp3');
 
       // Clear the form fields
       setAmount('');
@@ -158,7 +163,7 @@ export function PaymentQR({ merchantPubkey, isDevnet = true, resetSignal }: Paym
       // Clean up timer if component unmounts
       return () => clearTimeout(timer);
     }
-  }, [resetSignal]);
+  }, [resetSignal, playSound]);
 
   const renderNumberPad = (): JSX.Element => (
     <div className="grid grid-cols-3 gap-2 w-full mt-2">
