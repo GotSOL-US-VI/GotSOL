@@ -29,7 +29,7 @@ export function PaymentQR({ merchantPubkey, isDevnet = true, resetSignal }: Paym
   const isValidAmount = (value: string): boolean => {
     // Don't allow empty strings
     if (!value) return true;
-    
+
     // Must be a valid number
     if (!/^\d*\.?\d*$/.test(value)) return false;
 
@@ -39,7 +39,7 @@ export function PaymentQR({ merchantPubkey, isDevnet = true, resetSignal }: Paym
 
     // Whole number can't be more than 16 digits (reasonable USDC amount limit)
     if (wholeNum.length > 16) return false;
-    
+
     // Decimals can't be more than 6 places (USDC decimal limit)
     if (decimals.length > 6) return false;
 
@@ -88,7 +88,7 @@ export function PaymentQR({ merchantPubkey, isDevnet = true, resetSignal }: Paym
     try {
       setError('');
       const numAmount = parseFloat(amount);
-      
+
       if (isNaN(numAmount) || numAmount <= 0) {
         setError('Please enter a valid amount');
         return;
@@ -96,7 +96,7 @@ export function PaymentQR({ merchantPubkey, isDevnet = true, resetSignal }: Paym
 
       const trimmedMemo = memo.trim();
       const result = await generatePaymentQR(numAmount, merchantPubkey, isDevnet, trimmedMemo);
-      
+
       if (result.error) {
         setError(result.error.message);
         return;
@@ -131,26 +131,30 @@ export function PaymentQR({ merchantPubkey, isDevnet = true, resetSignal }: Paym
       prevResetSignal.current = resetSignal;
       return;
     }
-    
+
     // Only run if resetSignal actually changed from previous value
     if (resetSignal !== undefined && resetSignal !== prevResetSignal.current) {
       // Update stored value
       prevResetSignal.current = resetSignal;
-      
+
       // Show the success icon
       setShowSuccessIcon(true);
-      
+
+      // Play the sound
+      const audio = new Audio('/cash-register-sound-effect.mp3');
+      audio.play();
+
       // Clear the form fields
       setAmount('');
       setMemo('');
       setQrCode('');
       setError('');
-      
+
       // Hide the success icon after 3.5 seconds
       const timer = setTimeout(() => {
         setShowSuccessIcon(false);
       }, 3500);
-      
+
       // Clean up timer if component unmounts
       return () => clearTimeout(timer);
     }
@@ -215,7 +219,7 @@ export function PaymentQR({ merchantPubkey, isDevnet = true, resetSignal }: Paym
         </div>
 
         {useNumpad && renderNumberPad()}
-        
+
         <label className="label mt-4">
           <span className="label-text">Add a Memo (optional)</span>
         </label>
@@ -236,10 +240,10 @@ export function PaymentQR({ merchantPubkey, isDevnet = true, resetSignal }: Paym
         {showSuccessIcon ? (
           <div className="mt-4 flex flex-col items-center">
             <div className="success-icon bg-gradient-to-r from-green-400 to-green-600 shadow-lg rounded-full w-[250px] h-[250px] flex items-center justify-center">
-              <svg 
-                xmlns="http://www.w3.org/2000/svg" 
-                width="150" 
-                height="150" 
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="150"
+                height="150"
                 viewBox="0 0 24 24"
                 className="text-white"
                 fill="currentColor"
