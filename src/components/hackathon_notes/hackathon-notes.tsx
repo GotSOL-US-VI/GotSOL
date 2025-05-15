@@ -28,6 +28,7 @@ export default function HackathonNotes() {
               <li>Expanding from USDC-only to support 8 stablecoins</li>
               <li>Token accounts will initialize during payment rather than at Merchant creation</li>
               <li>Added Merchant account closure capability</li>
+              <li>The Refund attack surface is handled by our secure front end and Para's API keys signing transactions that originate only from our app's URL, therefore we have removed the updateRefundLimit instruction for now</li>
             </ul>
             <li>Privacy Improvements:</li>
             <ul className="list-disc pl-5 mt-2">
