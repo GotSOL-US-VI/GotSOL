@@ -5,6 +5,7 @@ import { FeedbackLink } from './feedback-link';
 import { GitHubLink } from './github-link';
 import { TwitterLink } from './twitter-link';
 import { YouTubeLink } from './youtube-link';
+import { FacebookLink } from './facebook-link';
 
 
 export function Footer() {
@@ -17,6 +18,7 @@ export function Footer() {
             <div className="flex gap-4 px-2">
                 <GitHubLink />
                 <TwitterLink />
+                <FacebookLink/>
                 <YouTubeLink />
             </div>
         </footer>
