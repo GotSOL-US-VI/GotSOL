@@ -343,7 +343,7 @@ function SwapPageInner() {
   return (
     <div className="container mx-auto p-4">
       <div className="text-center">
-        <h1 className="text-2xl font-bold text-warning">ATTENTION! This feature is under construction! It is connected to MAIN NET and you are using REAL MONEY if you use it! Unknown bugs may still exist, but your funds are safe!</h1>
+        {/* <h1 className="text-2xl font-bold text-warning">ATTENTION! This feature is under construction! It is connected to MAIN NET and you are using REAL MONEY if you use it! Unknown bugs may still exist, but your funds are safe!</h1> */}
       </div>
       <div className="flex gap-8">
         {/* Balance Display Section - 30% width */}
@@ -510,12 +510,14 @@ function SwapPageInner() {
                 <button
                   className="btn btn-primary w-full rounded-xl"
                   onClick={executeSwap}
-                  disabled={!quote || isLoading}
+                  // disabled={!quote || isLoading}
+                  disabled={true}
+
                 >
                   {isLoading ? (
                     <span className="loading loading-spinner loading-sm"></span>
                   ) : (
-                    'Swap'
+                    'Swap (disabled for now, available once we are live on mainnet!)'
                   )}
                 </button>
               )}

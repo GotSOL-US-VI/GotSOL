@@ -82,8 +82,8 @@ export function ParaProvider({ children }: { children: React.ReactNode }) {
             font: "Inter",
           }}
           appName="GotSOL"
-          recoverySecretStepEnabled={true}
-          twoFactorAuthEnabled={true}
+          recoverySecretStepEnabled={false}
+          twoFactorAuthEnabled={false}
         />
         {children}
       </ParaProviderV2>
