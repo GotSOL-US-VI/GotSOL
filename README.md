@@ -18,6 +18,8 @@ Devnet Program Address: <a href="https://solscan.io/account/RKAxBK5mBxYta3FUfMLH
 
 ## How to Use (Devnet)
 
+Navigate to https://gotsol-dev.vercel.app/
+
 1. Login via your preferred social sign-on method, or use a test account such as {test123}@test.getpara.com, where the content inside the curly braces { } is arbitrary, but the @test.getpara.com domain is required. (you don't need to use the curly braces { } in your email input)
 
 2. Enter any numbers into the verification code challenge -- 111111 will do fine.
