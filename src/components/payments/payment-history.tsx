@@ -486,13 +486,6 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
         };
     }, [connection, merchantPubkey, isDevnet, processNewTransaction, queryClient, savePaymentsToCache]);
 
-    // Style for scrollbar to ensure it's visible and usable
-    const scrollbarStyle: React.CSSProperties = {
-        scrollbarWidth: "thin",
-        scrollbarColor: "#333 #1C1C1C",
-        msOverflowStyle: "auto",
-    };
-
     if (isLoading) {
         return (
             <div className="space-y-4">
@@ -535,9 +528,7 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
                         marginTop: "8px",
                         display: "flex",
                         flexDirection: "column",
-                        gap: "12px",
-                        scrollbarWidth: "thin",
-                        scrollbarColor: "#333 #1C1C1C", 
+                        gap: "12px"
                     }}
                 >
                     {payments.map((payment: Payment) => (

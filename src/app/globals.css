@@ -64,25 +64,107 @@ body {
   box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.15) !important;
 }
 
+/* Clear styles - apply to all cards first */
 [data-theme="dark"] .card {
-  background: #000000 !important;
-  border: none !important;
+  background: #111111 !important;
+  border: 1px solid rgba(137, 248, 203, 0.2) !important;
+  box-shadow: 3px 3px 6px rgba(137, 248, 203, 0.08) !important;
 }
 
-[data-theme="dark"] .card:hover {
-  border: none !important;
-  outline: none !important;
-  box-shadow: none !important;
-}
-
-/* Override any hover border classes */
+/* Special classes ONLY for merchant cards */
 [data-theme="dark"] .card.hover\:border-mint\/50:hover,
-[data-theme="dark"] .card.hover\:border,
-[data-theme="dark"] .card.hover\:border-mint,
-[data-theme="dark"] .card:hover {
-  border: none !important;
+[data-theme="dark"] .hover\:border-mint\/50.card:hover {
+  border: 1px solid var(--color-mint) !important;
+  box-shadow: 4px 4px 8px rgba(137, 248, 203, 0.15) !important;
   outline: none !important;
-  box-shadow: none !important;
+}
+
+/* Dashboard container cards - thinner borders */
+[data-theme="dark"] .bg-base-300.card,
+[data-theme="dark"] .card.bg-base-300,
+[data-theme="dark"] .bg-base-200.card,
+[data-theme="dark"] .card.bg-base-200 {
+  border: 0.5px solid rgba(137, 248, 203, 0.5) !important;
+  box-shadow: 2px 2px 4px rgba(137, 248, 203, 0.05) !important;
+  transition: all 0.2s ease-in-out !important;
+}
+
+/* Dashboard container cards hover effect (without lift) */
+[data-theme="dark"] .bg-base-300.card:hover,
+[data-theme="dark"] .card.bg-base-300:hover,
+[data-theme="dark"] .bg-base-200.card:hover,
+[data-theme="dark"] .card.bg-base-200:hover {
+  border: 0.5px solid rgba(137, 248, 203, 0.8) !important;
+  box-shadow: 3px 3px 6px rgba(137, 248, 203, 0.1) !important;
+}
+
+/* Style for inner payment history cards */
+[data-theme="dark"] .payment-history-container .card {
+  background: #1C1C1C !important;
+  border: 0.5px solid rgba(137, 248, 203, 0.4) !important;
+  box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2) !important;
+  transition: all 0.2s ease-in-out !important;
+}
+
+/* Hover effect for inner payment history cards */
+[data-theme="dark"] .payment-history-container .card:hover {
+  border: 0.5px solid rgba(137, 248, 203, 0.8) !important;
+  box-shadow: 3px 3px 6px rgba(137, 248, 203, 0.1) !important;
+}
+
+/* Override for cards that should have no hover effect */
+.no-hover:hover {
+  transform: none !important;
+  border-color: rgba(137, 248, 203, 0.3) !important;
+  box-shadow: 2px 2px 4px rgba(137, 248, 203, 0.05) !important;
+  transition: none !important;
+}
+
+/* Custom scrollbar styles for payment history */
+.payment-history-container {
+  scrollbar-width: thin;
+}
+
+/* Webkit scrollbar styles (Chrome, Safari, Edge) */
+.payment-history-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.payment-history-container::-webkit-scrollbar-track {
+  border-radius: 10px;
+}
+
+.payment-history-container::-webkit-scrollbar-thumb {
+  border-radius: 10px;
+}
+
+/* Light mode scrollbar */
+[data-theme="light"] .payment-history-container::-webkit-scrollbar-track {
+  background: #e0e0e0;
+}
+
+[data-theme="light"] .payment-history-container::-webkit-scrollbar-thumb {
+  background: #ffffff;
+  border: 1px solid #d0d0d0;
+}
+
+/* Dark mode scrollbar */
+[data-theme="dark"] .payment-history-container::-webkit-scrollbar-track {
+  background: #1C1C1C;
+}
+
+[data-theme="dark"] .payment-history-container::-webkit-scrollbar-thumb {
+  background: rgba(137, 248, 203, 0.4);
+  border: 1px solid #1C1C1C;
+}
+
+/* Firefox scrollbar colors */
+[data-theme="light"] .payment-history-container {
+  scrollbar-color: #ffffff #e0e0e0;
+}
+
+[data-theme="dark"] .payment-history-container {
+  scrollbar-color: rgba(137, 248, 203, 0.4) #1C1C1C;
 }
 
 .navbar {
