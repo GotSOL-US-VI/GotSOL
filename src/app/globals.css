@@ -53,6 +53,17 @@ body {
   border: 1px solid hsl(var(--b3));
 }
 
+/* Light mode merchant card styling */
+[data-theme="light"] .card {
+  border: 1px solid rgba(137, 248, 203, 0.3) !important;
+  box-shadow: 3px 3px 6px rgba(0, 0, 0, 0.1) !important;
+}
+
+[data-theme="light"] .card:hover {
+  border: 1px solid var(--color-mint) !important;
+  box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.15) !important;
+}
+
 [data-theme="dark"] .card {
   background: #000000 !important;
   border: none !important;
