@@ -130,7 +130,7 @@ function ClientSideStateHandler({
         <div className="flex-1">
           <Link href="/" className="flex items-center" onClick={handleLogoClick}>
             <Image
-              src={theme === 'light' ? "/gotsol_light_new.png" : "/gotsol_dark.png"}
+              src={theme === 'light' ? "/gotsol_light.png" : "/gotsol_dark.png"}
               alt="Got Sol Logo"
               width={150}
               height={50}
