@@ -12,7 +12,7 @@ export function Footer() {
     return (
         <footer className="fixed bottom-0 left-0 w-full px-4 py-4 flex justify-between items-center bg-transparent z-50">
             <div className="flex gap-4">
-                <DisclaimerButton />
+                {/* <DisclaimerButton /> */}
                 <FeedbackLink />
             </div>
             <div className="flex gap-4 px-2">
