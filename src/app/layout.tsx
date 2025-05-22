@@ -17,7 +17,7 @@ const defaultLinks: NavigationLink[] = [
   { label: 'Revenue', path: '/tax_compliance' },
   { label: 'Portfolio', path: '/yield' },
   // { label: 'Swap', path: '/owner_yield' },
-  { label: 'Project Phases', path: '/roadmap' },
+  { label: 'Roadmap', path: '/roadmap' },
   { label: 'Colosseum Hackathon Notes', path: '/hackathon_notes' },
 ]
 
@@ -26,8 +26,8 @@ const merchantLinks: NavigationLink[] = [
   { label: 'Inventory', path: '/merchant/dashboard/:merchantId/inventory_management' },
   { label: 'Revenue', path: '/merchant/dashboard/:merchantId/tax_compliance' },
   { label: 'Treasury', path: '/merchant/dashboard/:merchantId/yield' },
-  { label: 'Withdraw', path: '/merchant/dashboard/:merchantId/off-ramps' },
-  { label: 'Project Phases', path: '/merchant/dashboard/:merchantId/roadmap' },
+  { label: 'Withdraw USD', path: '/merchant/dashboard/:merchantId/off-ramps' },
+  { label: 'Roadmap', path: '/merchant/dashboard/:merchantId/roadmap' },
   { label: <ExplorerLink />, path: '#' }
 ]
 
