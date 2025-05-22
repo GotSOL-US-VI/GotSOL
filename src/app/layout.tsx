@@ -13,20 +13,20 @@ export const metadata = {
 // Define navigation links at the server level
 const defaultLinks: NavigationLink[] = [
   { label: 'Create Merchant', path: '/merchant/setup' },
-  { label: 'Inventory Management', path: '/inventory_management' },
-  { label: 'Revenue Payments', path: '/tax_compliance' },
-  { label: 'Treasury and Yield', path: '/yield' },
-  { label: 'Swap', path: '/owner_yield' },
+  { label: 'Inventory', path: '/inventory_management' },
+  { label: 'Revenue', path: '/tax_compliance' },
+  { label: 'Portfolio', path: '/yield' },
+  // { label: 'Swap', path: '/owner_yield' },
   { label: 'Project Phases', path: '/roadmap' },
   { label: 'Colosseum Hackathon Notes', path: '/hackathon_notes' },
 ]
 
 const merchantLinks: NavigationLink[] = [
   { label: 'Point of Sale', path: '/merchant/dashboard/:merchantId' },
-  { label: 'Inventory Management', path: '/merchant/dashboard/:merchantId/inventory_management' },
-  { label: 'Revenue Payments', path: '/merchant/dashboard/:merchantId/tax_compliance' },
-  { label: 'Treasury / Yield', path: '/merchant/dashboard/:merchantId/yield' },
-  { label: 'USD On & Off-ramps', path: '/merchant/dashboard/:merchantId/off-ramps' },
+  { label: 'Inventory', path: '/merchant/dashboard/:merchantId/inventory_management' },
+  { label: 'Revenue', path: '/merchant/dashboard/:merchantId/tax_compliance' },
+  { label: 'Treasury', path: '/merchant/dashboard/:merchantId/yield' },
+  { label: 'Withdraw', path: '/merchant/dashboard/:merchantId/off-ramps' },
   { label: 'Project Phases', path: '/merchant/dashboard/:merchantId/roadmap' },
   { label: <ExplorerLink />, path: '#' }
 ]

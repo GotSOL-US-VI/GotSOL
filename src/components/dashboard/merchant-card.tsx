@@ -14,7 +14,7 @@ export function MerchantCard({ merchant }: { merchant: Merchant }) {
   };
   
   return (
-    <div className="card hover:border-mint/50 transition-colors">
+    <div className="card hover:border-mint/50 transition-colors merchant-card">
       <div className="card-body">
         <h2 className="card-title text-mint">{merchant.account.entityName}</h2>
         <p className="text-sm opacity-60">

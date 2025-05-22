@@ -60,8 +60,8 @@ export default function YieldPage() {
   return (
     <div className="relative">
       <AppHero
-        title={<h1 className="text-4xl font-bold hero-gradient-text">Merchant Treasury / Yield Dashboard</h1>}
-        subtitle={<p className="text-xl font-medium mt-4">Manage your yield positions and explore opportunities</p>}
+        title={<h1 className="text-4xl font-bold hero-gradient-text">Owner&apos;s Portfolio</h1>}
+        subtitle={<p className="text-xl font-medium mt-4">Manage your on-chain Portfolio, separate from your Merchant Treasuries</p>}
       />
 <p className='flex items-center justify-center'>This Product Offering will be built in Phase 4 or later, after core Point of Sale and management features are complete.</p>
 <p className='flex justify-center'><span className="text-error font-bold">THIS IS A DUMMY UI!</span></p>

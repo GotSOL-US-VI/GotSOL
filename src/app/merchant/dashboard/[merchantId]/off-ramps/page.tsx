@@ -1,64 +1,26 @@
 'use client'
 
 import { AppHero } from '@/components/ui/ui-layout'
+import { CoinflowWithdraw } from '@/components/CoinflowWithdraw'
 
-
-export default function OffRampsPage({ params }: { params: { merchantId: string } }) {
-
-
+export default function OffRampsPage() {
   return (
     <div>
       <AppHero
-        title={<h1 className="text-4xl font-bold hero-gradient-text">USD On & Off-Ramps</h1>}
-        subtitle={<p className="text-xl font-medium mt-4">Convert your USDC to fiat through our trusted partners</p>}
+        title={<h1 className="text-4xl font-bold hero-gradient-text">Withdraw to Bank Account via Coinflow</h1>}
+        subtitle={<p className="text-xl font-medium mt-4">Standard ACH, Same Day ACH, Real-Time Payments, or Push-to-Card </p>}
       />
 
-      <p className='flex justify-center'>This Product Offering should be available at launch, giving Merchant Owners the ability to move money from their bank account on-chain and back.</p>
-      <p className='flex justify-center'><span className="text-error font-bold">THIS IS A DUMMY UI!</span></p>
+      {/* Yellow attention line */}
+      <div className="bg-black text-yellow text-lg text-center py-2 px-4 rounded mb-6 font-semibold shadow">
+        ⚠️ Attention: This feature is under construction and is currently non-functional.
+      </div>
 
       <div className="max-w-4xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
         <div className="card bg-base-300">
           <div className="divide-y divide-base-200">
-            <div className="p-6 flex items-center justify-between">
-              <div>
-                <h3 className="text-xl font-semibold">Kado</h3>
-                <p className="text-sm opacity-70 mt-1">Fast and reliable USDC to USD conversion</p>
-              </div>
-              <button className="btn btn-primary">Off-Ramp with Kado</button>
-            </div>
-
-            <div className="p-6 flex items-center justify-between">
-              <div>
-                <h3 className="text-xl font-semibold">AlchemyPay</h3>
-                <p className="text-sm opacity-70 mt-1">Global payment solutions with competitive rates</p>
-              </div>
-              <button className="btn btn-primary">Off-Ramp with AlchemyPay</button>
-            </div>
-
-            <div className="p-6 flex items-center justify-between">
-              <div>
-                <h3 className="text-xl font-semibold">Stripe</h3>
-                <p className="text-sm opacity-70 mt-1">Seamless integration with traditional banking</p>
-              </div>
-              <button className="btn btn-primary">Off-Ramp with Stripe</button>
-            </div>
-
-            <div className="p-6 flex items-center justify-between">
-              <div>
-                <h3 className="text-xl font-semibold">Moonpay</h3>
-                <p className="text-sm opacity-70 mt-1">Simple and secure fiat off-ramp solution</p>
-              </div>
-              <button className="btn btn-primary">Off-Ramp with Moonpay</button>
-            </div>
+            <CoinflowWithdraw />
           </div>
-        </div>
-
-        <div className="mt-8 bg-base-300 rounded-lg p-4">
-          <h3 className="font-bold mb-2">About Off-Ramps</h3>
-          <p className="text-sm opacity-70">
-            Our off-ramp partners provide secure and compliant solutions for converting your USDC to traditional currency.
-            Each partner may have different fees, processing times, and supported regions. Choose the one that best fits your needs.
-          </p>
         </div>
       </div>
     </div>
