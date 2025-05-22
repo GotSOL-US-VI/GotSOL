@@ -12,7 +12,7 @@ export default function OffRampsPage() {
       />
 
       {/* Yellow attention line */}
-      <div className="bg-black text-yellow text-lg text-center py-2 px-4 rounded mb-6 font-semibold shadow">
+      <div className="text-yellow text-lg text-center py-2 px-4 rounded mb-6 font-semibold">
         ⚠️ Attention: This feature is under construction and is currently non-functional.
       </div>
 
