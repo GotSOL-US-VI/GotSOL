@@ -156,7 +156,7 @@ export default function YieldPage() {
             <div className="card bg-base-300 h-[200px] flex items-center justify-center">
               <div className="text-center p-6">
                 <h3 className="text-lg font-semibold mb-2">Coming Soon</h3>
-                <p className="text-sm opacity-70">Bitcoin yield opportunities.</p>
+                <p className="text-sm opacity-70">zBTC and btcSOL yield</p>
               </div>
             </div>
           </div>
