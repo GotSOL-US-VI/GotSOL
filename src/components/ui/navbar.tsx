@@ -47,15 +47,15 @@ export function NavBar({ defaultLinks, merchantLinks }: NavBarProps) {
   return (
     <div className="navbar flex-col md:flex-row space-y-2 md:space-y-0 px-4">
       <div className="flex-1">
-        <Link href="/" className="flex items-center" onClick={handleLogoClick}>
+        {/* <Link href="/" className="flex items-center" onClick={handleLogoClick}>
           <Image
-            src={theme === 'light' ? "/gotsol_light.png" : "/gotsol_dark.png"}
+            src={theme === 'light' ? "/logo.png" : "/gotsol_dark.png"}
             alt="Got Sol Logo"
             width={150}
             height={50}
-            className="object-contain"
+            className="object-contain w-[150px]"
           />
-        </Link>
+        </Link> */}
         <ul className="menu menu-horizontal px-1 space-x-2">
           {currentLinks.map(({ label, path }) => (
             <li key={path}>

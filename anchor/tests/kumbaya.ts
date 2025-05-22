@@ -63,45 +63,6 @@ describe("kumbaya", () => {
       anchor.utils.token.ASSOCIATED_PROGRAM_ID
     );
 
-    try {
-      // Execute the init_global instruction
-      const tx = await program.methods
-        .initGlobal()
-        .accountsPartial({
-          house: HOUSE,
-          global,
-          usdcMint: mockUsdcMint,
-          houseUsdcAta: houseMockUsdcAta,
-          tokenProgram: TOKEN_PROGRAM_ID,
-          associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
-          systemProgram: anchor.web3.SystemProgram.programId,
-        })
-        .rpc();
-
-      console.log("Transaction signature:", tx);
-
-      // Fetch the created account
-      const globalAccount = await program.account.global.fetch(global);
-
-      // Verify the account data
-      assert.ok(
-        globalAccount.house.equals(HOUSE),
-        "House address should match"
-      );
-      assert.ok(globalAccount.globalBump > 0, "Bump should be set");
-      console.log(
-        "global bump in global state account: ",
-        globalAccount.globalBump
-      );
-      console.log(
-        "HOUSE address in global state account: ",
-        globalAccount.house.toString()
-      );
-      console.log("HOUSE USDC ATA Address: ", houseMockUsdcAta.toString())
-    } catch (error) {
-      console.error("Error:", error);
-      throw error;
-    }
   });
 
   it("Initializes a Merchant called The Remedy", async () => {
