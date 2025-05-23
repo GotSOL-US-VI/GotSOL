@@ -1,7 +1,7 @@
 import { cache } from 'react'
 import { Connection, PublicKey } from "@solana/web3.js"
 import { BorshCoder, Idl } from '@coral-xyz/anchor'
-import idl from '@/utils/kumbaya.json'
+import idl from '@/utils/gotsol.json'
 import bs58 from 'bs58'
 import { env } from "@/utils/env"
 

@@ -7,7 +7,7 @@ import { WithdrawFunds } from '@/components/payments/withdraw-funds';
 import { useMemo, useState } from 'react';
 import { PublicKey } from '@solana/web3.js';
 import { useConnection } from '@/lib/connection-context';
-import { getKumbayaProgram } from '@/utils/kumbaya-exports';
+import { getGotsolProgram } from '@/utils/gotsol-exports';
 import { useAnchorProvider, ParaAnchorProvider } from '@/components/para/para-provider';
 import { useQuery } from '@tanstack/react-query';
 // Import the SoundToggle component to allow users to mute/unmute the payment sound
@@ -50,7 +50,7 @@ function DashboardContent({ params }: { params: { merchantId: string } }) {
   // Initialize program
   const program = useMemo(() => {
     if (!provider) return null;
-    return getKumbayaProgram(provider);
+    return getGotsolProgram(provider);
   }, [provider]);
 
   // Use React Query to fetch merchant data

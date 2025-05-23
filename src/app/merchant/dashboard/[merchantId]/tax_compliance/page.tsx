@@ -4,7 +4,7 @@ import { PublicKey } from '@solana/web3.js'
 import { useEffect, useState } from 'react'
 import { useAnchorProvider, ParaAnchorProvider } from '@/components/para/para-provider'
 import { Program, Idl } from '@coral-xyz/anchor'
-import * as kumbayaIdl from '@/utils/kumbaya.json'
+import * as gotsolIdl from '@/utils/gotsol.json'
 import { MakeRevenuePaymentButton } from '@/components/merchant/make-revenue-payment'
 import { useConnection } from '@/lib/connection-context'
 
@@ -18,7 +18,7 @@ function TaxComplianceContent({ params }: { params: { merchantId: string } }) {
   // Initialize program
   useEffect(() => {
     if (provider) {
-      const programInstance = new Program(kumbayaIdl as Idl, provider)
+      const programInstance = new Program(gotsolIdl as Idl, provider)
       setProgram(programInstance)
     }
   }, [provider])

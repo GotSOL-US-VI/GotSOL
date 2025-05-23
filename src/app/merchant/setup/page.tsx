@@ -4,7 +4,7 @@
 import * as anchor from '@coral-xyz/anchor';
 import { useRouter } from 'next/navigation';
 import { useMemo } from 'react';
-import idl from '../../../utils/kumbaya.json';
+import idl from '../../../utils/gotsol.json';
 import { CreateMerchant } from '@/components/merchant/create-merchant';
 import { PublicKey } from '@solana/web3.js';
 import { AppHero } from '@/components/ui/ui-layout';

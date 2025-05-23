@@ -12,7 +12,7 @@ import { useWallet, useClient } from "@getpara/react-sdk";
 import * as anchor from "@coral-xyz/anchor";
 import { formatSolscanDevnetLink } from '@/utils/format-transaction-link';
 import { ParaSolanaWeb3Signer } from "@getpara/solana-web3.js-v1-integration";
-import { getKumbayaProgram } from '@/utils/kumbaya-exports';
+import { getGotsolProgram } from '@/utils/gotsol-exports';
 import { USDC_MINT, USDC_DEVNET_MINT, HOUSE, findAssociatedTokenAddress } from '@/utils/token-utils';
 import { parseAnchorError, ErrorToastContent } from '@/utils/error-parser';
 
@@ -122,7 +122,7 @@ export function WithdrawFunds({
       );
 
       // Get the program using the helper function
-      const program = getKumbayaProgram(provider);
+      const program = getGotsolProgram(provider);
 
       // Convert amount to USDC decimals (6 decimals)
       const withdrawAmountU64 = Math.floor(parseFloat(withdrawAmount) * 1_000_000);

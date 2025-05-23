@@ -1,18 +1,18 @@
 import * as anchor from "@coral-xyz/anchor";
 import { Program, web3 } from "@coral-xyz/anchor";
-import { Kumbaya } from "../target/types/kumbaya";
+import { Gotsol } from "../target/types/gotsol";
 import { PublicKey } from "@solana/web3.js";
 import { assert } from "chai";
 import { TOKEN_PROGRAM_ID, createMint } from "@solana/spl-token";
 
 // associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
 
-describe("kumbaya", () => {
+describe("gotsol", () => {
   // Configure the client to use the local cluster
   const provider = anchor.AnchorProvider.env();
   anchor.setProvider(provider);
 
-  const program = anchor.workspace.Kumbaya as Program<Kumbaya>;
+  const program = anchor.workspace.Gotsol as Program<Gotsol>;
 
   // The expected house public key from the program
   const HOUSE = new PublicKey("Hth4EBxLWJSoRWj7raCKoniuzcvXt8MUFgGKty3B66ih");

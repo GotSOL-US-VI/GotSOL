@@ -8,14 +8,14 @@ import { formatSolscanDevnetLink } from '@/utils/format-transaction-link';
 import { toastUtils } from '@/utils/toast-utils';
 import { Program } from '@coral-xyz/anchor';
 import { RefundButton } from './refund-button';
-import type { Kumbaya } from '@/utils/kumbaya-exports';
+import type { Gotsol } from '@/utils/gotsol-exports';
 import { retryWithBackoff } from '@/utils/para';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { usePaymentCache } from '@/hooks/use-payment-cache';
 import { USDC_MINT, USDC_DEVNET_MINT, findAssociatedTokenAddress, formatUSDCAmount } from '@/utils/token-utils';
 
 interface PaymentHistoryProps {
-    program: Program<Kumbaya>;
+    program: Program<Gotsol>;
     merchantPubkey: PublicKey;
     isDevnet?: boolean;
     onBalanceUpdate?: (balance: number) => void;

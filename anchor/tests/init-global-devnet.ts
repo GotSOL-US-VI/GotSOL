@@ -1,6 +1,6 @@
 import * as anchor from "@coral-xyz/anchor";
-import { Program, web3 } from "@coral-xyz/anchor";
-import { Kumbaya } from "../target/types/kumbaya";
+import { Program } from "@coral-xyz/anchor";
+import { Gotsol } from "../target/types/gotsol";
 import { PublicKey } from "@solana/web3.js";
 import { assert } from "chai";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
@@ -12,12 +12,12 @@ import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 ///////////////////////////////////////////////////////
 
 
-describe("kumbaya", () => {
+describe("gotsol", () => {
   // Configure the client to use the local cluster
   const provider = anchor.AnchorProvider.env();
   anchor.setProvider(provider);
 
-  const program = anchor.workspace.Kumbaya as Program<Kumbaya>;
+  const program = anchor.workspace.Gotsol as Program<Gotsol>;
 
   // The expected house public key from the program
   const HOUSE = new PublicKey("Hth4EBxLWJSoRWj7raCKoniuzcvXt8MUFgGKty3B66ih");
@@ -33,7 +33,7 @@ describe("kumbaya", () => {
   );
 
 
-  const [global] = web3.PublicKey.findProgramAddressSync(
+  const [global] = anchor.web3.PublicKey.findProgramAddressSync(
     [Buffer.from("global")],
     program.programId
   );
@@ -41,7 +41,7 @@ describe("kumbaya", () => {
 
   it("should initialize global state", async () => {
     // Get the merchant's USDC ATA address (TO MOCK USDC ON LOCALNET)
-    const [houseUsdcAta] = web3.PublicKey.findProgramAddressSync(
+    const [houseUsdcAta] = anchor.web3.PublicKey.findProgramAddressSync(
       [HOUSE.toBuffer(), TOKEN_PROGRAM_ID.toBuffer(), USDC_DEVNET_MINT.toBuffer()],
       anchor.utils.token.ASSOCIATED_PROGRAM_ID
     );

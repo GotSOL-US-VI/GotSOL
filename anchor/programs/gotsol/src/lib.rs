@@ -15,7 +15,7 @@ use crate::context::*;
 declare_id!("RKAxBK5mBxYta3FUfMLHafMj8xakd8PLsH3PXFa773r");
 
 #[program]
-pub mod kumbaya {
+pub mod gotsol {
     use super::*;
 
     pub fn create_merchant(ctx: Context<CreateMerchant>, name: String) -> Result<()> {

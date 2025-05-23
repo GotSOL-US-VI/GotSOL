@@ -1,14 +1,20 @@
-{
+/**
+ * Program IDL in camelCase format in order to be used in JS/TS.
+ *
+ * Note that this is only a type helper and is not the actual IDL. The original
+ * IDL can be found at `target/idl/gotsol.json`.
+ */
+export type Gotsol = {
   "address": "RKAxBK5mBxYta3FUfMLHafMj8xakd8PLsH3PXFa773r",
   "metadata": {
-    "name": "kumbaya",
+    "name": "gotsol",
     "version": "0.1.0",
     "spec": "0.1.0",
     "description": "Created with Anchor"
   },
   "instructions": [
     {
-      "name": "create_merchant",
+      "name": "createMerchant",
       "discriminator": [
         249,
         172,
@@ -21,7 +27,7 @@
       ],
       "accounts": [
         {
-          "name": "fee_payer",
+          "name": "feePayer",
           "docs": [
             "Optional fee payer account. If provided, this account will pay for transaction fees."
           ],
@@ -64,10 +70,10 @@
           }
         },
         {
-          "name": "usdc_mint"
+          "name": "usdcMint"
         },
         {
-          "name": "merchant_usdc_ata",
+          "name": "merchantUsdcAta",
           "writable": true,
           "pda": {
             "seeds": [
@@ -114,7 +120,7 @@
               },
               {
                 "kind": "account",
-                "path": "usdc_mint"
+                "path": "usdcMint"
               }
             ],
             "program": {
@@ -157,14 +163,14 @@
           }
         },
         {
-          "name": "associated_token_program",
+          "name": "associatedTokenProgram",
           "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
         },
         {
-          "name": "token_program"
+          "name": "tokenProgram"
         },
         {
-          "name": "system_program",
+          "name": "systemProgram",
           "address": "11111111111111111111111111111111"
         }
       ],
@@ -189,7 +195,7 @@
       ],
       "accounts": [
         {
-          "name": "fee_payer",
+          "name": "feePayer",
           "writable": true,
           "signer": true,
           "optional": true
@@ -220,7 +226,7 @@
               {
                 "kind": "account",
                 "path": "merchant.entity_name",
-                "account": "Merchant"
+                "account": "merchant"
               },
               {
                 "kind": "account",
@@ -230,7 +236,7 @@
           }
         },
         {
-          "name": "merchant_usdc_ata",
+          "name": "merchantUsdcAta",
           "writable": true,
           "pda": {
             "seeds": [
@@ -277,7 +283,7 @@
               },
               {
                 "kind": "account",
-                "path": "usdc_mint"
+                "path": "usdcMint"
               }
             ],
             "program": {
@@ -320,7 +326,7 @@
           }
         },
         {
-          "name": "recipient_usdc_ata",
+          "name": "recipientUsdcAta",
           "writable": true,
           "pda": {
             "seeds": [
@@ -367,7 +373,7 @@
               },
               {
                 "kind": "account",
-                "path": "usdc_mint"
+                "path": "usdcMint"
               }
             ],
             "program": {
@@ -410,7 +416,7 @@
           }
         },
         {
-          "name": "refund_record",
+          "name": "refundRecord",
           "writable": true,
           "pda": {
             "seeds": [
@@ -427,28 +433,28 @@
               },
               {
                 "kind": "arg",
-                "path": "original_tx_sig"
+                "path": "originalTxSig"
               }
             ]
           }
         },
         {
-          "name": "usdc_mint"
+          "name": "usdcMint"
         },
         {
           "name": "recipient"
         },
         {
-          "name": "token_program"
+          "name": "tokenProgram"
         },
         {
-          "name": "system_program",
+          "name": "systemProgram",
           "address": "11111111111111111111111111111111"
         }
       ],
       "args": [
         {
-          "name": "original_tx_sig",
+          "name": "originalTxSig",
           "type": "string"
         },
         {
@@ -458,7 +464,7 @@
       ]
     },
     {
-      "name": "set_merchant_status",
+      "name": "setMerchantStatus",
       "discriminator": [
         76,
         172,
@@ -480,19 +486,19 @@
           "writable": true
         },
         {
-          "name": "system_program",
+          "name": "systemProgram",
           "address": "11111111111111111111111111111111"
         }
       ],
       "args": [
         {
-          "name": "is_active",
+          "name": "isActive",
           "type": "bool"
         }
       ]
     },
     {
-      "name": "update_refund_limit",
+      "name": "updateRefundLimit",
       "discriminator": [
         212,
         77,
@@ -505,7 +511,7 @@
       ],
       "accounts": [
         {
-          "name": "fee_payer",
+          "name": "feePayer",
           "docs": [
             "Optional fee payer account. If provided, this account will pay for transaction fees."
           ],
@@ -539,7 +545,7 @@
               {
                 "kind": "account",
                 "path": "merchant.entity_name",
-                "account": "Merchant"
+                "account": "merchant"
               },
               {
                 "kind": "account",
@@ -549,19 +555,19 @@
           }
         },
         {
-          "name": "system_program",
+          "name": "systemProgram",
           "address": "11111111111111111111111111111111"
         }
       ],
       "args": [
         {
-          "name": "new_limit",
+          "name": "newLimit",
           "type": "u64"
         }
       ]
     },
     {
-      "name": "withdraw_usdc",
+      "name": "withdrawUsdc",
       "discriminator": [
         114,
         49,
@@ -574,7 +580,7 @@
       ],
       "accounts": [
         {
-          "name": "fee_payer",
+          "name": "feePayer",
           "writable": true,
           "signer": true,
           "optional": true
@@ -604,7 +610,7 @@
               {
                 "kind": "account",
                 "path": "merchant.entity_name",
-                "account": "Merchant"
+                "account": "merchant"
               },
               {
                 "kind": "account",
@@ -614,10 +620,10 @@
           }
         },
         {
-          "name": "usdc_mint"
+          "name": "usdcMint"
         },
         {
-          "name": "merchant_usdc_ata",
+          "name": "merchantUsdcAta",
           "writable": true,
           "pda": {
             "seeds": [
@@ -664,7 +670,7 @@
               },
               {
                 "kind": "account",
-                "path": "usdc_mint"
+                "path": "usdcMint"
               }
             ],
             "program": {
@@ -707,7 +713,7 @@
           }
         },
         {
-          "name": "owner_usdc_ata",
+          "name": "ownerUsdcAta",
           "writable": true,
           "pda": {
             "seeds": [
@@ -754,7 +760,7 @@
               },
               {
                 "kind": "account",
-                "path": "usdc_mint"
+                "path": "usdcMint"
               }
             ],
             "program": {
@@ -801,7 +807,7 @@
           "writable": true
         },
         {
-          "name": "house_usdc_ata",
+          "name": "houseUsdcAta",
           "writable": true,
           "pda": {
             "seeds": [
@@ -848,7 +854,7 @@
               },
               {
                 "kind": "account",
-                "path": "usdc_mint"
+                "path": "usdcMint"
               }
             ],
             "program": {
@@ -891,14 +897,14 @@
           }
         },
         {
-          "name": "associated_token_program",
+          "name": "associatedTokenProgram",
           "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
         },
         {
-          "name": "token_program"
+          "name": "tokenProgram"
         },
         {
-          "name": "system_program",
+          "name": "systemProgram",
           "address": "11111111111111111111111111111111"
         }
       ],
@@ -912,7 +918,7 @@
   ],
   "accounts": [
     {
-      "name": "Merchant",
+      "name": "merchant",
       "discriminator": [
         71,
         235,
@@ -925,7 +931,7 @@
       ]
     },
     {
-      "name": "RefundRecord",
+      "name": "refundRecord",
       "discriminator": [
         101,
         159,
@@ -940,7 +946,7 @@
   ],
   "events": [
     {
-      "name": "MerchantStatusChanged",
+      "name": "merchantStatusChanged",
       "discriminator": [
         17,
         58,
@@ -953,7 +959,7 @@
       ]
     },
     {
-      "name": "RefundProcessed",
+      "name": "refundProcessed",
       "discriminator": [
         203,
         88,
@@ -969,43 +975,43 @@
   "errors": [
     {
       "code": 6000,
-      "name": "InsufficientFunds",
+      "name": "insufficientFunds",
       "msg": "Insufficient funds for withdrawal; input amount is greater than available balance."
     },
     {
       "code": 6001,
-      "name": "NotMerchantOwner",
+      "name": "notMerchantOwner",
       "msg": "Only the Merchant's Owner can call this instruction."
     },
     {
       "code": 6002,
-      "name": "ZeroAmountWithdrawal",
+      "name": "zeroAmountWithdrawal",
       "msg": "Withdrawal amount must be greater than 0"
     },
     {
       "code": 6003,
-      "name": "InvalidMerchantName",
+      "name": "invalidMerchantName",
       "msg": "Invalid merchant name: cannot be empty"
     },
     {
       "code": 6004,
-      "name": "InactiveMerchant",
+      "name": "inactiveMerchant",
       "msg": "This merchant account is currently inactive. Do not pass the fee payer account in your transaction, and the Owner will pay for the transaction instead."
     },
     {
       "code": 6005,
-      "name": "ExceedsRefundLimit",
+      "name": "exceedsRefundLimit",
       "msg": "Refund amount exceeds the merchant's configured limit"
     },
     {
       "code": 6006,
-      "name": "UnauthorizedStatusChange",
+      "name": "unauthorizedStatusChange",
       "msg": "Only the HOUSE account can change merchant status"
     }
   ],
   "types": [
     {
-      "name": "Merchant",
+      "name": "merchant",
       "type": {
         "kind": "struct",
         "fields": [
@@ -1014,34 +1020,34 @@
             "type": "pubkey"
           },
           {
-            "name": "entity_name",
+            "name": "entityName",
             "type": "string"
           },
           {
-            "name": "total_withdrawn",
+            "name": "totalWithdrawn",
             "type": "u64"
           },
           {
-            "name": "total_refunded",
+            "name": "totalRefunded",
             "type": "u64"
           },
           {
-            "name": "is_active",
+            "name": "isActive",
             "type": "bool"
           },
           {
-            "name": "refund_limit",
+            "name": "refundLimit",
             "type": "u64"
           },
           {
-            "name": "merchant_bump",
+            "name": "merchantBump",
             "type": "u8"
           }
         ]
       }
     },
     {
-      "name": "MerchantStatusChanged",
+      "name": "merchantStatusChanged",
       "type": {
         "kind": "struct",
         "fields": [
@@ -1050,7 +1056,7 @@
             "type": "pubkey"
           },
           {
-            "name": "is_active",
+            "name": "isActive",
             "type": "bool"
           },
           {
@@ -1061,12 +1067,12 @@
       }
     },
     {
-      "name": "RefundProcessed",
+      "name": "refundProcessed",
       "type": {
         "kind": "struct",
         "fields": [
           {
-            "name": "original_tx_sig",
+            "name": "originalTxSig",
             "type": "string"
           },
           {
@@ -1081,7 +1087,7 @@
       }
     },
     {
-      "name": "RefundRecord",
+      "name": "refundRecord",
       "type": {
         "kind": "struct",
         "fields": [
@@ -1090,7 +1096,7 @@
             "type": "u64"
           },
           {
-            "name": "original_tx_sig",
+            "name": "originalTxSig",
             "type": "string"
           },
           {
@@ -1101,4 +1107,4 @@
       }
     }
   ]
-}
+};

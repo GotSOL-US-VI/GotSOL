@@ -8,7 +8,7 @@ import { toastUtils } from '@/utils/toast-utils';
 import { env } from '@/utils/env';
 import { formatSolscanDevnetLink } from '@/utils/format-transaction-link';
 import { useWallet } from "@getpara/react-sdk";
-import type { Kumbaya } from '@/utils/kumbaya-exports';
+import type { Gotsol } from '@/utils/gotsol-exports';
 import { useQueryClient } from '@tanstack/react-query';
 import { findAssociatedTokenAddress, USDC_MINT, USDC_DEVNET_MINT } from '@/utils/token-utils';
 import { parseAnchorError, ErrorToastContent } from '@/utils/error-parser';
@@ -22,7 +22,7 @@ export interface MerchantAccount {
 }
 
 interface RefundButtonProps {
-    program: Program<Kumbaya>;
+    program: Program<Gotsol>;
     merchantPubkey: PublicKey;
     payment: {
         signature: string;

@@ -3,7 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { PublicKey } from '@solana/web3.js';
 import { BorshCoder, Idl } from '@coral-xyz/anchor';
-import idl from '@/utils/kumbaya.json';
+import idl from '@/utils/gotsol.json';
 import bs58 from 'bs58';
 
 export interface MerchantAccount {
