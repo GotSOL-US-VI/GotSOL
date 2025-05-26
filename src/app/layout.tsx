@@ -8,6 +8,28 @@ import { ExplorerLink } from '@/components/explorer-link';
 export const metadata = {
   title: 'GotSOL - USDC Payments on Solana',
   description: 'Your gateway to seamless Solana payments. Accept USDC, manage transactions, and grow your business on Solana.',
+  manifest: '/manifest.json',
+  themeColor: '#0066CC',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'GotSOL',
+  },
+  viewport: {
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 1,
+    userScalable: false,
+  },
+  icons: {
+    icon: [
+      { url: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icons/icon-512x512.png', sizes: '512x512', type: 'image/png' },
+    ],
+    apple: [
+      { url: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' },
+    ],
+  },
 }
 
 // Define navigation links at the server level
@@ -34,6 +56,19 @@ const merchantLinks: NavigationLink[] = [
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className="h-full">
+      <head>
+        <meta name="application-name" content="GotSOL" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="GotSOL" />
+        <meta name="format-detection" content="telephone=no" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="theme-color" content="#0066CC" />
+        
+        <link rel="icon" href="/logo.png" type="image/png" />
+        <link rel="apple-touch-icon" href="/logo.png" type="image/png" />
+        <link rel="manifest" href="/manifest.json" />
+      </head>
       <body className="h-full">
         {/* ClientProviders component will handle all client-side functionality */}
         <ClientProviders defaultLinks={defaultLinks} merchantLinks={merchantLinks}>
