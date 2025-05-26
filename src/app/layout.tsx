@@ -6,7 +6,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next"
 import { ExplorerLink } from '@/components/explorer-link';
 
 export const metadata = {
-  title: 'GotSOL - USDC Payments on Solana',
+  title: 'GotSOL - Merchant Point of Sale and financial tool suite',
   description: 'Your gateway to seamless Solana payments. Accept USDC, manage transactions, and grow your business on Solana.',
   manifest: '/manifest.json',
   themeColor: '#0066CC',
@@ -63,7 +63,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="apple-mobile-web-app-title" content="GotSOL" />
         <meta name="format-detection" content="telephone=no" />
         <meta name="mobile-web-app-capable" content="yes" />
-        <meta name="theme-color" content="#0066CC" />
+        <meta name="theme-color" content="#89f8cb" />
         
         <link rel="icon" href="/logo.png" type="image/png" />
         <link rel="apple-touch-icon" href="/logo.png" type="image/png" />
