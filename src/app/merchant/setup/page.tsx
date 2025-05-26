@@ -19,10 +19,10 @@ export default function MerchantSetupPage() {
   const { data: wallet } = useWallet();
   const para = useClient();
   
-  // Debug wallet data
-  console.log('Wallet data:', wallet);
-  console.log('Wallet public key:', wallet?.publicKey);
-  console.log('Para client:', para);
+  // // Debug wallet data
+  // console.log('Wallet data:', wallet);
+  // console.log('Wallet public key:', wallet?.publicKey);
+  // console.log('Para client:', para);
   
   // Initialize the program with Para signer
   const program = useMemo(() => {
