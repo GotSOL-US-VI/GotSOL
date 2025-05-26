@@ -27,12 +27,6 @@ export default function MerchantSetupPage() {
   // Initialize the program with Para signer
   const program = useMemo(() => {
     if (!wallet?.address || !connection || !para) {
-      console.log('Missing dependencies:', {
-        hasWallet: !!wallet,
-        hasAddress: !!wallet?.address,
-        hasConnection: !!connection,
-        hasPara: !!para
-      });
       return null;
     }
 
@@ -76,7 +70,6 @@ export default function MerchantSetupPage() {
 
   // Early return with debug info if no wallet
   if (!wallet?.address) {
-    console.log('No wallet connected. Wallet data:', wallet);
     return (
       <div>
         <AppHero
