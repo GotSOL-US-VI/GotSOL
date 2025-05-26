@@ -1,6 +1,6 @@
 import { Connection, PublicKey, Transaction, SystemProgram } from '@solana/web3.js';
-import { Program, Idl, AnchorProvider } from '@coral-xyz/anchor';
-import { executeTransactionWithFeePayer } from './execute-transaction';
+import { Program, Idl } from '@coral-xyz/anchor';
+import { executeTransaction } from './execute-transaction';
 import { ParaSolanaWeb3Signer } from "@getpara/solana-web3.js-v1-integration";
 
 // This is a test function to verify the transaction signing flow
@@ -25,7 +25,7 @@ export async function testTransactionSigning(
     // Create a simple transfer instruction
     const transferInstruction = SystemProgram.transfer({
       fromPubkey: ownerPubkey,
-      toPubkey: new PublicKey('3vexG5TyQvyscvZzPHSPyYvszUyuL2gY76sZEsGc9B9i'), // Fee payer address
+      toPubkey: ownerPubkey, // Transfer to self for testing
       lamports: 1000, // Small amount for testing
     });
     
@@ -47,13 +47,12 @@ export async function testTransactionSigning(
     // Create the accounts object
     const accounts = {
       owner: ownerPubkey,
-      // Add any other accounts needed for the transaction
     };
     
-    console.log('Executing transaction with fee payer...');
+    console.log('Executing transaction...');
     
-    // Execute the transaction with the fee payer
-    const signature = await executeTransactionWithFeePayer(program, methodBuilder, accounts, signer);
+    // Execute the transaction
+    const signature = await executeTransaction(program, methodBuilder, accounts, signer);
     
     console.log('Transaction executed successfully!');
     console.log('Signature:', signature);

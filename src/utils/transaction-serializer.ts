@@ -1,38 +1,19 @@
-import { Transaction, PublicKey, Keypair } from '@solana/web3.js';
+import { Transaction, PublicKey } from '@solana/web3.js';
 import { Program, Idl } from '@coral-xyz/anchor';
 
-// Use the specific fee payer public key provided by the user
-const FEE_PAYER_PUBKEY = new PublicKey('3vexG5TyQvyscvZzPHSPyYvszUyuL2gY76sZEsGc9B9i');
-
-// Instead of loading from file system, we'll use environment variables or other browser-compatible methods
-// to get the fee payer keypair
-let feePayerKeypair: Keypair | null = null;
-
-// We'll initialize this in a browser-compatible way
-try {
-  // For development/testing, you might use a hardcoded keypair
-  // For production, use a more secure method like environment variables or a secure key management service
-  if (typeof window !== 'undefined' && process.env.NEXT_PUBLIC_FEE_PAYER_PRIVATE_KEY) {
-    const privateKeyString = process.env.NEXT_PUBLIC_FEE_PAYER_PRIVATE_KEY;
-    const privateKeyBytes = new Uint8Array(privateKeyString.split(',').map(num => parseInt(num)));
-    feePayerKeypair = Keypair.fromSecretKey(privateKeyBytes);
-    console.log('Loaded fee payer keypair with public key:', feePayerKeypair.publicKey.toString());
-  }
-} catch (error) {
-  console.error('Failed to load fee payer keypair:', error);
-}
-
 /**
- * Serializes a transaction to be signed by a fee payer
+ * Serializes a transaction
  * @param program The Anchor program
  * @param methodBuilder The method builder from the program
  * @param accounts The accounts for the transaction
+ * @param feePayer The public key of the fee payer (owner)
  * @returns The serialized transaction as a base64 string
  */
 export async function serializeTransaction(
   program: Program<Idl>,
   methodBuilder: any,
-  accounts: any
+  accounts: any,
+  feePayer: PublicKey
 ): Promise<string> {
   try {
     // Build the transaction without sending it
@@ -46,9 +27,9 @@ export async function serializeTransaction(
     // Set the recent blockhash on the transaction
     tx.recentBlockhash = blockhash;
     
-    // Use the specific fee payer public key
-    tx.feePayer = FEE_PAYER_PUBKEY;
-    console.log('Using fee payer:', FEE_PAYER_PUBKEY.toString());
+    // Set the fee payer
+    tx.feePayer = feePayer;
+    console.log('Using fee payer:', feePayer.toString());
     
     // Serialize the transaction to base64
     const serializedBytes = tx.serialize({
@@ -70,7 +51,7 @@ export async function serializeTransaction(
 }
 
 /**
- * Serializes an existing transaction to be signed by a fee payer
+ * Serializes an existing transaction
  * @param transaction The transaction to serialize
  * @returns The serialized transaction as a base64 string
  */
@@ -94,27 +75,6 @@ export function serializeExistingTransaction(transaction: Transaction): string {
       signers: transaction.signatures.length
     });
     
-    // Log each instruction's program ID and account keys for debugging
-    transaction.instructions.forEach((instruction, index) => {
-      console.log(`Instruction ${index} details:`, {
-        programId: instruction.programId?.toString() || 'undefined',
-        keys: instruction.keys.map(key => key.pubkey?.toString() || 'undefined')
-      });
-      
-      // Log detailed information about each account key
-      instruction.keys.forEach((key, keyIndex) => {
-        try {
-          console.log(`Instruction ${index}, Key ${keyIndex}:`, {
-            pubkey: key.pubkey?.toString() || 'undefined',
-            isSigner: key.isSigner,
-            isWritable: key.isWritable
-          });
-        } catch (err) {
-          console.error(`Error logging key ${keyIndex} for instruction ${index}:`, err);
-        }
-      });
-    });
-    
     // Serialize the transaction to base64
     const serializedBytes = transaction.serialize({
       requireAllSignatures: false,
@@ -129,7 +89,7 @@ export function serializeExistingTransaction(transaction: Transaction): string {
     }
     return btoa(binary);
   } catch (error) {
-    console.error('Error serializing existing transaction:', error);
+    console.error('Error serializing transaction:', error);
     throw error;
   }
 }

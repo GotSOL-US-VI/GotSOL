@@ -1,20 +1,13 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { Connection, Transaction, Keypair } from '@solana/web3.js';
+import { Connection, Transaction, PublicKey } from '@solana/web3.js';
+import { env } from '@/utils/env';
+import { checkWalletBalance } from '@/lib/para-server';
 
-// Initialize connection to Solana network (use your RPC URL)
-const connection = new Connection(process.env.NEXT_PUBLIC_HELIUS_RPC_URL || '');
-
-// Initialize fee payer keypair from environment variable
-const feePayerPrivateKey = process.env.FEE_PAYER_PRIVATE_KEY;
-if (!feePayerPrivateKey) {
-  console.warn('FEE_PAYER_PRIVATE_KEY environment variable is not set');
-}
-
-// Only initialize the keypair if we have the private key
-const feePayerKeypair = feePayerPrivateKey ? 
-  Keypair.fromSecretKey(
-    new Uint8Array(feePayerPrivateKey.split(',').map(num => parseInt(num)))
-  ) : null;
+// Initialize connection to Solana network
+const connection = new Connection(
+  env.isDevnet ? env.devnetHeliusRpcUrl : env.mainnetHeliusRpcUrl,
+  'confirmed'
+);
 
 export default async function handler(
   req: NextApiRequest,
@@ -25,15 +18,16 @@ export default async function handler(
   }
 
   try {
-    // Check if fee payer is configured
-    if (!feePayerKeypair) {
-      return res.status(500).json({ error: 'Fee payer not configured' });
+    const { serializedTransaction, publicKey } = req.body;
+
+    if (!serializedTransaction || !publicKey) {
+      return res.status(400).json({ error: 'Missing serializedTransaction or publicKey in request body' });
     }
 
-    const { serializedTransaction } = req.body;
-
-    if (!serializedTransaction) {
-      return res.status(400).json({ error: 'Missing serializedTransaction in request body' });
+    // Check if user has sufficient balance
+    const hasBalance = await checkWalletBalance(new PublicKey(publicKey));
+    if (!hasBalance) {
+      return res.status(400).json({ error: 'Insufficient balance' });
     }
 
     console.log('Received serialized transaction:', serializedTransaction);
@@ -50,14 +44,9 @@ export default async function handler(
       instructions: transaction.instructions.length
     });
 
-    // Sign the transaction with the fee payer
-    transaction.partialSign(feePayerKeypair);
-
-    console.log('Transaction signed by fee payer');
-
-    // Send the signed transaction
+    // Send the transaction (it should already be signed by the client)
     const signature = await connection.sendRawTransaction(
-      transaction.serialize(),
+      transactionBuffer,
       {
         skipPreflight: false,
         maxRetries: 3,

@@ -1,7 +1,8 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { Connection, Transaction, VersionedTransaction } from '@solana/web3.js';
 import { env } from '@/utils/env';
-import { signTransactionWithFeePayer, checkFeePayerBalance } from '@/lib/para-server';
+import { checkWalletBalance } from '@/lib/para-server';
+import { PublicKey } from '@solana/web3.js';
 
 export default async function handler(
   req: NextApiRequest,
@@ -12,23 +13,20 @@ export default async function handler(
   }
 
   try {
-    const { transaction } = req.body;
+    const { transaction, publicKey } = req.body;
 
-    if (!transaction) {
-      return res.status(400).json({ error: 'Transaction is required' });
+    if (!transaction || !publicKey) {
+      return res.status(400).json({ error: 'Transaction and public key are required' });
     }
 
-    // Check if fee payer has sufficient balance
-    const hasBalance = await checkFeePayerBalance();
+    // Check if user has sufficient balance
+    const hasBalance = await checkWalletBalance(new PublicKey(publicKey));
     if (!hasBalance) {
-      return res.status(400).json({ error: 'Fee payer has insufficient balance' });
+      return res.status(400).json({ error: 'Insufficient balance' });
     }
 
     // Convert the transaction to a Buffer
     const transactionBuffer = Buffer.from(transaction, 'base64');
-
-    // Sign the transaction with the fee payer
-    const signedTransaction = await signTransactionWithFeePayer(transactionBuffer);
 
     // Initialize connection
     const connection = new Connection(
@@ -36,8 +34,8 @@ export default async function handler(
       'confirmed'
     );
 
-    // Send the transaction
-    const signature = await connection.sendRawTransaction(signedTransaction, {
+    // Send the transaction (it should already be signed by the client)
+    const signature = await connection.sendRawTransaction(transactionBuffer, {
       skipPreflight: false,
       preflightCommitment: 'confirmed',
     });
