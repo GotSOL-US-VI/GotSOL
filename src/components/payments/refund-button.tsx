@@ -12,6 +12,8 @@ import type { Gotsol } from '@/utils/gotsol-exports';
 import { useQueryClient } from '@tanstack/react-query';
 import { findAssociatedTokenAddress, USDC_MINT, USDC_DEVNET_MINT } from '@/utils/token-utils';
 import { parseAnchorError, ErrorToastContent } from '@/utils/error-parser';
+import { useClient } from "@getpara/react-sdk";
+import { createClient } from '@/utils/supabaseClient';
 
 export interface MerchantAccount {
     owner: PublicKey;
@@ -39,6 +41,8 @@ export function RefundButton({ program, merchantPubkey, payment, onSuccess, isDe
     const [isLoading, setIsLoading] = useState(false);
     const queryClient = useQueryClient();
     const publicKey = wallet?.address ? new PublicKey(wallet.address) : null;
+    const para = useClient();
+    const supabase = createClient();
 
     const handleRefund = async () => {
         if (!publicKey || !wallet) {
@@ -336,6 +340,22 @@ export function RefundButton({ program, merchantPubkey, payment, onSuccess, isDe
             if (onSuccess) {
                 onSuccess();
             }
+
+            // Store event in Supabase
+            if (!para) throw new Error("Para client not initialized");
+            const wallets = para.getWallets();
+            const paraWalletId = Object.values(wallets)[0].id;
+            await supabase.from('refund_events').insert([
+                {
+                    paraWalletId,
+                    merchant_pda: merchantPubkey.toString(),
+                    owner_wallet: publicKey.toString(),
+                    amount: refundAmountU64,
+                    original_tx_sig: payment.signature,
+                    refund_tx_sig: txid,
+                    recipient_wallet: payment.recipient.toString(),
+                }
+            ]);
 
         } catch (error) {
             console.error('Refund error:', error);

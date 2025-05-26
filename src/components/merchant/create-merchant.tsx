@@ -8,6 +8,8 @@ import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { useWallet } from "@getpara/react-sdk";
 import { toastUtils } from '@/utils/toast-utils';
 import { parseAnchorError, ErrorToastContent } from '@/utils/error-parser';
+import { useClient } from "@getpara/react-sdk";
+import { createClient } from '@/utils/supabaseClient';
 
 interface CreateMerchantProps {
     program: Program<Idl>;
@@ -19,6 +21,8 @@ export function CreateMerchant({ program, onSuccess }: CreateMerchantProps) {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string>('');
     const { data: wallet } = useWallet();
+    const para = useClient();
+    const supabase = createClient();
     
     // Debug log to see wallet data
     console.log('Para wallet data:', wallet);
@@ -81,6 +85,22 @@ export function CreateMerchant({ program, onSuccess }: CreateMerchantProps) {
             console.log('Created merchant:', merchantPda);
             toastUtils.success('Merchant account created successfully!');
             onSuccess?.(merchantPda);
+
+            // Store event in Supabase
+            if (!para) throw new Error("Para client not initialized");
+            const wallets = para.getWallets();
+            const paraWalletId = Object.values(wallets)[0].id;
+            await supabase.from('createMerchant_events').insert([
+                {
+                    paraWalletId,
+                    owner_wallet: publicKey.toString(),
+                    merchant_pda: merchantPda.toString(),
+                    name,
+                    is_active: true,
+                    refund_limit: 1000_000000,
+                    txid: tx,
+                }
+            ]);
         } catch (err) {
             console.error('Failed to create merchant:', err);
             

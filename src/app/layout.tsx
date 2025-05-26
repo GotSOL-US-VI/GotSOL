@@ -9,17 +9,10 @@ export const metadata = {
   title: 'GotSOL - Merchant Point of Sale and financial tool suite',
   description: 'Your gateway to seamless Solana payments. Accept USDC, manage transactions, and grow your business on Solana.',
   manifest: '/manifest.json',
-  themeColor: '#0066CC',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
     title: 'GotSOL',
-  },
-  viewport: {
-    width: 'device-width',
-    initialScale: 1,
-    maximumScale: 1,
-    userScalable: false,
   },
   icons: {
     icon: [
@@ -30,7 +23,17 @@ export const metadata = {
       { url: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' },
     ],
   },
-}
+};
+
+// Add this at the top level (outside metadata)
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+};
+
+export const themeColor = '#89f8cb'; // Or your preferred color
 
 // Define navigation links at the server level
 const defaultLinks: NavigationLink[] = [
@@ -63,7 +66,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="apple-mobile-web-app-title" content="GotSOL" />
         <meta name="format-detection" content="telephone=no" />
         <meta name="mobile-web-app-capable" content="yes" />
-        <meta name="theme-color" content="#89f8cb" />
         
         <link rel="icon" href="/logo.png" type="image/png" />
         <link rel="apple-touch-icon" href="/logo.png" type="image/png" />

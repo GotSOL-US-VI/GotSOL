@@ -15,6 +15,7 @@ import { ParaSolanaWeb3Signer } from "@getpara/solana-web3.js-v1-integration";
 import { getGotsolProgram } from '@/utils/gotsol-exports';
 import { USDC_MINT, USDC_DEVNET_MINT, HOUSE, findAssociatedTokenAddress } from '@/utils/token-utils';
 import { parseAnchorError, ErrorToastContent } from '@/utils/error-parser';
+import { createClient } from '@/utils/supabaseClient';
 
 interface WithdrawFundsProps {
   merchantPubkey: PublicKey;
@@ -37,6 +38,8 @@ export function WithdrawFunds({
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isBalancesVisible, setIsBalancesVisible] = useState(true);
+
+  const supabase = createClient();
 
   // Use the TanStack Query hooks with refetch capabilities
   const { 
@@ -186,6 +189,17 @@ export function WithdrawFunds({
       if (onSuccess) {
         onSuccess();
       }
+
+      // Insert event data into Supabase
+      await supabase.from('withdrawal_events').insert([
+        {
+          paraWalletId: wallet.id,
+          merchant_pda: merchantPubkey.toString(),
+          owner_wallet: ownerPubkey.toString(),
+          amount: withdrawAmountU64,
+          txid,
+        }
+      ]);
     } catch (err) {
       console.error('Error withdrawing funds:', err);
       
