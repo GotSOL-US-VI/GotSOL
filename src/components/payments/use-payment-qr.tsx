@@ -61,12 +61,12 @@ export function usePaymentQR() {
       });
 
       const urlString = url.toString();
-      console.log('Solana Pay URL:', urlString);
-      console.log('Payment details:', {
-        recipient: merchantUsdcAta.toString(),
-        amount: amount,
-        token: isDevnet ? USDC_DEVNET_MINT.toString() : USDC_MINT.toString()
-      });
+      // console.log('Solana Pay URL:', urlString);
+      // console.log('Payment details:', {
+      //   recipient: merchantUsdcAta.toString(),
+      //   amount: amount,
+      //   token: isDevnet ? USDC_DEVNET_MINT.toString() : USDC_MINT.toString()
+      // });
 
       // Generate QR code
       const qrCode = await QRCode.toDataURL(urlString, {
