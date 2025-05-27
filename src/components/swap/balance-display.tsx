@@ -122,12 +122,12 @@ function BalanceDisplayInner() {
   , [wallet?.address]);
 
   // Log wallet changes only when they happen
-  useEffect(() => {
-    if (wallet?.address) {
-      console.log('Para wallet data:', wallet);
-      console.log('Derived public key:', publicKey?.toString());
-    }
-  }, [wallet, wallet?.address, publicKey]);
+  // useEffect(() => {
+  //   if (wallet?.address) {
+  //     console.log('Para wallet data:', wallet);
+  //     console.log('Derived public key:', publicKey?.toString());
+  //   }
+  // }, [wallet, wallet?.address, publicKey]);
 
   const fetchBalances = useCallback(async () => {
     // Prevent concurrent fetches

@@ -5,10 +5,10 @@ import { useState } from 'react';
 import { Program, Idl } from '@coral-xyz/anchor';
 import { PublicKey } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
-import { useWallet } from "@getpara/react-sdk";
+import { useWallet, useClient } from "@getpara/react-sdk";
+import { ParaSolanaWeb3Signer } from "@getpara/solana-web3.js-v1-integration";
 import { toastUtils } from '@/utils/toast-utils';
 import { parseAnchorError, ErrorToastContent } from '@/utils/error-parser';
-import { useClient } from "@getpara/react-sdk";
 import { createClient } from '@/utils/supabaseClient';
 
 interface CreateMerchantProps {
@@ -25,12 +25,12 @@ export function CreateMerchant({ program, onSuccess }: CreateMerchantProps) {
     const supabase = createClient();
     
     // Debug log to see wallet data
-    console.log('Para wallet data:', wallet);
+    // console.log('Para wallet data:', wallet);
     
     // Get the public key from Para wallet's address field
     const publicKey = wallet?.address ? new PublicKey(wallet.address) : null;
     
-    console.log('Derived public key:', publicKey?.toString());
+    // console.log('Derived public key:', publicKey?.toString());
 
     if (!publicKey) {
         return (
@@ -60,7 +60,7 @@ export function CreateMerchant({ program, onSuccess }: CreateMerchantProps) {
             const [merchantPda] = PublicKey.findProgramAddressSync(
                 [
                     Buffer.from('merchant'),
-                    Buffer.from(name),
+                    Buffer.from(name.trim()),
                     publicKey.toBuffer(),
                 ],
                 program.programId
@@ -69,18 +69,46 @@ export function CreateMerchant({ program, onSuccess }: CreateMerchantProps) {
             // Get the USDC mint (using devnet for now)
             const usdcMint = new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU');
 
-            // Create the merchant using standard transaction
-            const tx = await program.methods
+            // Create the merchant using Para transaction signing
+            const methodBuilder = program.methods
                 .createMerchant(name)
-                .accounts({
+                .accountsPartial({
                     owner: publicKey,
                     merchant: merchantPda,
                     usdcMint,
                     tokenProgram: TOKEN_PROGRAM_ID,
                     associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
                     systemProgram: anchor.web3.SystemProgram.programId,
-                })
-                .rpc();
+                });
+
+            // Get the transaction
+            const transaction = await methodBuilder.transaction();
+
+            // Get the latest blockhash
+            const { blockhash } = await program.provider.connection.getLatestBlockhash();
+            transaction.recentBlockhash = blockhash;
+            transaction.feePayer = publicKey;
+
+            // Create Para Solana signer
+            if (!para) {
+                throw new Error("Para client not initialized");
+            }
+            const solanaSigner = new ParaSolanaWeb3Signer(para, program.provider.connection);
+
+            // Sign the transaction with Para
+            const signedTx = await solanaSigner.signTransaction(transaction);
+
+            // Send the signed transaction
+            const tx = await program.provider.connection.sendRawTransaction(
+                signedTx.serialize(),
+                { skipPreflight: false }
+            );
+
+            // Wait for confirmation
+            const confirmation = await program.provider.connection.confirmTransaction(tx, 'confirmed');
+            if (confirmation.value.err) {
+                throw new Error(`Transaction failed: ${confirmation.value.err}`);
+            }
 
             console.log('Created merchant:', merchantPda);
             toastUtils.success('Merchant account created successfully!');

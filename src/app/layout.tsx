@@ -51,7 +51,7 @@ const merchantLinks: NavigationLink[] = [
   { label: 'Inventory', path: '/merchant/dashboard/:merchantId/inventory_management' },
   { label: 'Revenue', path: '/merchant/dashboard/:merchantId/tax_compliance' },
   { label: 'Treasury', path: '/merchant/dashboard/:merchantId/yield' },
-  { label: 'Withdraw USD', path: '/merchant/dashboard/:merchantId/off-ramps' },
+  // { label: 'Withdraw USD', path: '/merchant/dashboard/:merchantId/off-ramps' },
   { label: 'Roadmap', path: '/merchant/dashboard/:merchantId/roadmap' },
   { label: <ExplorerLink />, path: '#' }
 ]
