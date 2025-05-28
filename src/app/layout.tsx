@@ -37,6 +37,7 @@ const defaultLinks: NavigationLink[] = [
   // { label: 'Swap', path: '/owner_yield' },
   { label: 'Roadmap', path: '/roadmap' },
   { label: 'Colosseum Hackathon Notes', path: '/hackathon_notes' },
+  // { label: 'Test Supabase', path: '/test-supabase' },
 ]
 
 const merchantLinks: NavigationLink[] = [

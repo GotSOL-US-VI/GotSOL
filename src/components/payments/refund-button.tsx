@@ -345,12 +345,14 @@ export function RefundButton({ program, merchantPubkey, payment, onSuccess, isDe
             if (!para) throw new Error("Para client not initialized");
             const wallets = para.getWallets();
             const paraWalletId = Object.values(wallets)[0].id;
+            const decimalAmount = refundAmountU64 / 1_000_000;
             await supabase.from('refund_events').insert([
                 {
-                    paraWalletId,
+                    parawalletid: paraWalletId,
                     merchant_pda: merchantPubkey.toString(),
                     owner_wallet: publicKey.toString(),
                     amount: refundAmountU64,
+                    decimal_amount: decimalAmount,
                     original_tx_sig: payment.signature,
                     refund_tx_sig: txid,
                     recipient_wallet: payment.recipient.toString(),

@@ -191,12 +191,15 @@ export function WithdrawFunds({
       }
 
       // Insert event data into Supabase
+      const decimalAmount = withdrawAmountU64 / 1_000_000;
+
       await supabase.from('withdrawal_events').insert([
         {
-          paraWalletId: wallet.id,
+          parawalletid: wallet.id,
           merchant_pda: merchantPubkey.toString(),
           owner_wallet: ownerPubkey.toString(),
           amount: withdrawAmountU64,
+          decimal_amount: decimalAmount,
           txid,
         }
       ]);
@@ -258,9 +261,35 @@ export function WithdrawFunds({
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    if (value === '' || /^\d*\.?\d*$/.test(value)) {
-      setWithdrawAmount(value);
+    
+    // Prevent empty input - if empty, set to "0"
+    if (value === '') {
+      setWithdrawAmount('0');
+      return;
     }
+
+    // Only allow numbers and a single decimal point
+    if (!/^\d*\.?\d*$/.test(value)) {
+      return;
+    }
+
+    // Split on decimal point to check decimal places
+    const [whole, decimal] = value.split('.');
+    
+    // If there's a decimal part, limit it to 6 places
+    if (decimal && decimal.length > 6) {
+      const truncatedDecimal = decimal.slice(0, 6);
+      setWithdrawAmount(`${whole}.${truncatedDecimal}`);
+      return;
+    }
+
+    // Ensure the value is not just a decimal point
+    if (value === '.') {
+      setWithdrawAmount('0.');
+      return;
+    }
+
+    setWithdrawAmount(value);
   };
 
   const isLoadingBalances = isMerchantBalanceLoading || isOwnerBalanceLoading;

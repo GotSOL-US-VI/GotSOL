@@ -110,7 +110,7 @@ export function CreateMerchant({ program, onSuccess }: CreateMerchantProps) {
                 throw new Error(`Transaction failed: ${confirmation.value.err}`);
             }
 
-            console.log('Created merchant:', merchantPda);
+            // console.log('Created merchant:', merchantPda);
             toastUtils.success('Merchant account created successfully!');
             onSuccess?.(merchantPda);
 
@@ -118,9 +118,9 @@ export function CreateMerchant({ program, onSuccess }: CreateMerchantProps) {
             if (!para) throw new Error("Para client not initialized");
             const wallets = para.getWallets();
             const paraWalletId = Object.values(wallets)[0].id;
-            await supabase.from('createMerchant_events').insert([
+            await supabase.from('createmerchant_events').insert([
                 {
-                    paraWalletId,
+                    parawalletid: paraWalletId,
                     owner_wallet: publicKey.toString(),
                     merchant_pda: merchantPda.toString(),
                     name,
