@@ -9,11 +9,6 @@ export const metadata = {
   title: 'GotSOL - Merchant Point of Sale and financial tool suite',
   description: 'Your gateway to seamless Solana payments. Accept USDC, manage transactions, and grow your business on Solana.',
   manifest: '/manifest.json',
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: 'default',
-    title: 'GotSOL',
-  },
   icons: {
     icon: [
       { url: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' },
@@ -32,8 +27,6 @@ export const viewport = {
   maximumScale: 1,
   userScalable: false,
 };
-
-export const themeColor = '#89f8cb'; // Or your preferred color
 
 // Define navigation links at the server level
 const defaultLinks: NavigationLink[] = [

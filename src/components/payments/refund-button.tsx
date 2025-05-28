@@ -64,25 +64,25 @@ export function RefundButton({ program, merchantPubkey, payment, onSuccess, isDe
             }
 
             // Log merchant details for debugging
-            console.log('Fetched Merchant Details:', {
-                entityName: merchantAccount.entityName,
-                owner: merchantAccount.owner.toString(),
-                totalWithdrawn: merchantAccount.totalWithdrawn.toString(),
-                totalRefunded: merchantAccount.totalRefunded.toString(),
-                bump: merchantAccount.merchantBump
-            });
+            // console.log('Fetched Merchant Details:', {
+            //     entityName: merchantAccount.entityName,
+            //     owner: merchantAccount.owner.toString(),
+            //     totalWithdrawn: merchantAccount.totalWithdrawn.toString(),
+            //     totalRefunded: merchantAccount.totalRefunded.toString(),
+            //     bump: merchantAccount.merchantBump
+            // });
 
             // Convert merchant name to bytes properly
             const merchantNameBytes = Buffer.from(merchantAccount.entityName);
 
             // Debug merchant name bytes
-            console.log('Merchant Name Debug:', {
-                raw: merchantAccount.entityName,
-                bytes: Array.from(merchantNameBytes),
-                length: merchantNameBytes.length,
-                utf8: merchantNameBytes.toString('utf8'),
-                hex: merchantNameBytes.toString('hex')
-            });
+            // console.log('Merchant Name Debug:', {
+            //     raw: merchantAccount.entityName,
+            //     bytes: Array.from(merchantNameBytes),
+            //     length: merchantNameBytes.length,
+            //     utf8: merchantNameBytes.toString('utf8'),
+            //     hex: merchantNameBytes.toString('hex')
+            // });
 
             // Debug merchant PDA seeds lengths
             // console.log('Merchant PDA Seeds Lengths:', {

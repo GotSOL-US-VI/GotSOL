@@ -103,12 +103,12 @@ export function ParaAnchorProvider({ children }: { children: React.ReactNode }) 
 
   const provider = useMemo(() => {
     if (!wallet?.address || !connection || !para) {
-      console.log('Missing dependencies for Anchor provider:', {
-        hasWallet: !!wallet,
-        hasAddress: !!wallet?.address,
-        hasConnection: !!connection,
-        hasPara: !!para
-      });
+      // console.log('Missing dependencies for Anchor provider:', {
+      //   hasWallet: !!wallet,
+      //   hasAddress: !!wallet?.address,
+      //   hasConnection: !!connection,
+      //   hasPara: !!para
+      // });
       return null;
     }
 
