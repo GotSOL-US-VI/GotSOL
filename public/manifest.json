@@ -7,7 +7,21 @@
   "background_color": "#FFFFFF",
   "theme_color": "#89f8cb",
   "orientation": "portrait-primary",
+  "logo": "/logo.png",
+  "logo_alt": "/gotsol_dark.png",
   "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/gotsol_dark.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
     {
       "src": "/icons/icon-72x72.png",
       "sizes": "72x72",
