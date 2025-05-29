@@ -262,12 +262,6 @@ export function WithdrawFunds({
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     
-    // Prevent empty input - if empty, set to "0"
-    if (value === '') {
-      setWithdrawAmount('0');
-      return;
-    }
-
     // Only allow numbers and a single decimal point
     if (!/^\d*\.?\d*$/.test(value)) {
       return;
