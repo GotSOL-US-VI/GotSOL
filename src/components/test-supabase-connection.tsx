@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@/utils/supabaseClient';
 import { toastUtils } from '@/utils/toast-utils';
 
@@ -17,7 +17,7 @@ export function TestSupabaseConnection() {
     const [newMessage, setNewMessage] = useState('');
     const supabase = createClient();
 
-    const fetchTestRecords = async () => {
+    const fetchTestRecords = useCallback(async () => {
         try {
             const { data, error } = await supabase
                 .from('connection_test')
@@ -31,7 +31,7 @@ export function TestSupabaseConnection() {
             console.error('Error fetching test records:', error);
             toastUtils.error('Failed to fetch test records');
         }
-    };
+    }, [supabase]);
 
     const addTestRecord = async () => {
         if (!newMessage.trim()) {
@@ -83,7 +83,7 @@ export function TestSupabaseConnection() {
         }
 
         testConnection();
-    }, []);
+    }, [supabase, fetchTestRecords]);
 
     if (isLoading) {
         return <div className="p-4">Testing Supabase connection...</div>;

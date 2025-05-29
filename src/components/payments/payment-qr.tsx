@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, ChangeEvent, useRef } from 'react';
+import React, { useState, useEffect, useCallback, ChangeEvent, useRef } from 'react';
 import { PublicKey } from '@solana/web3.js';
 import { useWallet } from '@getpara/react-sdk';
 import Image from 'next/image';
@@ -165,7 +165,7 @@ export function PaymentQR({ merchantPubkey, isDevnet = true, resetSignal }: Paym
     }
   }, [resetSignal, playSound]);
 
-  const renderNumberPad = (): JSX.Element => (
+  const renderNumberPad = (): React.ReactElement => (
     <div className="grid grid-cols-3 gap-2 w-full mt-2">
       {[7, 8, 9, 4, 5, 6, 1, 2, 3].map((num) => (
         <button

@@ -484,7 +484,7 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
         return () => {
             cleanup.then(cleanupFn => cleanupFn?.());
         };
-    }, [connection, merchantPubkey, isDevnet, processNewTransaction, queryClient, savePaymentsToCache]);
+    }, [connection, merchantPubkey, isDevnet, processNewTransaction, queryClient, savePaymentsToCache, onPaymentReceived]);
 
     if (isLoading) {
         return (
