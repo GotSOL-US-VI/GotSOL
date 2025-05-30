@@ -367,16 +367,13 @@ export function WithdrawFunds({
         </button>
         <button
           onClick={handleWithdraw}
-          className="btn btn-primary"
-          disabled={
-            !merchantPubkey || 
+          className={`btn btn-primary ${(!merchantPubkey || 
             !ownerPubkey || 
             !withdrawAmount || 
             parseFloat(withdrawAmount) <= 0 || 
             merchantBalance <= 0 || 
             parseFloat(withdrawAmount) > merchantBalance || 
-            isLoading
-          }
+            isLoading) ? 'bg-[#111111] hover:bg-[#111111] hover:transform-none' : ''}`}
         >
           {isLoading ? 'Processing...' : 'Withdraw'}
         </button>
