@@ -1,7 +1,7 @@
 import YieldContent from './YieldContent'
 
 // Server component
-export default async function YieldPage({
+export default async function PortfolioPage({
   params,
 }: {
   params: Promise<{ merchantId: string }>

@@ -2,7 +2,7 @@
 
 import { useWallet } from '@getpara/react-sdk';
 import { PublicKey, ParsedTransactionWithMeta, ParsedInstruction, PartiallyDecodedInstruction, Connection } from '@solana/web3.js';
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useState } from 'react';
 import { useConnection } from '@/lib/connection-context';
 import { formatSolscanDevnetLink } from '@/utils/format-transaction-link';
 import { toastUtils } from '@/utils/toast-utils';
@@ -13,6 +13,7 @@ import { retryWithBackoff } from '@/utils/para';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { usePaymentCache } from '@/hooks/use-payment-cache';
 import { USDC_MINT, USDC_DEVNET_MINT, findAssociatedTokenAddress, formatUSDCAmount } from '@/utils/token-utils';
+import { FaChevronUp, FaChevronDown } from 'react-icons/fa';
 
 interface PaymentHistoryProps {
     program: Program<Gotsol>;
@@ -486,6 +487,8 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
         };
     }, [connection, merchantPubkey, isDevnet, processNewTransaction, queryClient, savePaymentsToCache, onPaymentReceived]);
 
+    const [expanded, setExpanded] = useState(true);
+
     if (isLoading) {
         return (
             <div className="space-y-4">
@@ -509,12 +512,21 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
         <div className="space-y-4">
             <div className="flex justify-between items-center">
                 <h2 className="text-xl font-bold">Payment History</h2>
-                <button 
-                    onClick={() => refetch()} 
-                    className="btn btn-ghost btn-sm"
-                >
-                    Refresh
-                </button>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => setExpanded((prev) => !prev)}
+                        className="btn btn-ghost btn-sm"
+                        title={expanded ? 'Collapse all' : 'Expand all'}
+                    >
+                        {expanded ? <FaChevronUp /> : <FaChevronDown />}
+                    </button>
+                    <button 
+                        onClick={() => refetch()} 
+                        className="btn btn-ghost btn-sm"
+                    >
+                        Refresh
+                    </button>
+                </div>
             </div>
             {!payments || payments.length === 0 ? (
                 <p className="text-gray-500">No payments received yet</p>
@@ -531,7 +543,7 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
                         gap: "12px"
                     }}
                 >
-                    {payments.map((payment: Payment) => (
+                    {expanded && payments.map((payment: Payment) => (
                         <div 
                             key={payment.signature} 
                             className="card bg-[#1C1C1C] shadow flex-shrink-0"

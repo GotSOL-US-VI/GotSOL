@@ -3,7 +3,6 @@
 import { useWallet } from '@getpara/react-sdk';
 import { PaymentQR } from '@/components/payments/payment-qr';
 import { PaymentHistory } from '@/components/payments/payment-history';
-import { WithdrawFunds } from '@/components/payments/withdraw-funds';
 import { useMemo, useState } from 'react';
 import { PublicKey } from '@solana/web3.js';
 import { useConnection } from '@/lib/connection-context';
@@ -140,35 +139,17 @@ export default function DashboardContent({ params }: { params: { merchantId: str
           </div>
         </div>
 
-        {/* Right Column - Withdraw & History */}
-        <div className="flex flex-col gap-6">
-          {/* Withdraw Funds */}
-          <div>
-            <div className="card bg-base-300 shadow-xl">
-              <div className="card-body p-4">
-                {owner && merchantPubkey && (
-                  <WithdrawFunds
-                    merchantPubkey={merchantPubkey}
-                    ownerPubkey={new PublicKey(owner)}
-                    isDevnet={true}
-                  />
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Payment History */}
-          <div>
-            <div className="card bg-base-300 shadow-xl">
-              <div className="card-body p-4">
-                <PaymentHistory
-                  program={program}
-                  merchantPubkey={merchantPubkey}
-                  isDevnet={true}
-                  onBalanceUpdate={setMerchantBalance}
-                  onPaymentReceived={() => setResetSignal(prev => prev + 1)}
-                />
-              </div>
+        {/* Right Column - Payment History */}
+        <div>
+          <div className="card bg-base-300 shadow-xl">
+            <div className="card-body p-4">
+              <PaymentHistory
+                program={program}
+                merchantPubkey={merchantPubkey}
+                isDevnet={true}
+                onBalanceUpdate={setMerchantBalance}
+                onPaymentReceived={() => setResetSignal(prev => prev + 1)}
+              />
             </div>
           </div>
         </div>
