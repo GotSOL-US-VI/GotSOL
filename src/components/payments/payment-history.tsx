@@ -2,7 +2,7 @@
 
 import { useWallet } from '@getpara/react-sdk';
 import { PublicKey, ParsedTransactionWithMeta, ParsedInstruction, PartiallyDecodedInstruction, Connection } from '@solana/web3.js';
-import { useEffect, useCallback, useState, useMemo } from 'react';
+import { useEffect, useCallback, useState, useMemo, useRef } from 'react';
 import { useConnection } from '@/lib/connection-context';
 import { formatSolscanDevnetLink } from '@/utils/format-transaction-link';
 import { toastUtils } from '@/utils/toast-utils';
@@ -23,6 +23,7 @@ interface PaymentHistoryProps {
     onPaymentReceived?: () => void;
     title?: string;
     maxPayments?: number;
+    forceRefresh?: React.MutableRefObject<(() => Promise<void>) | null>;
 }
 
 interface Payment {
@@ -53,6 +54,36 @@ interface ParsedInstructionWithInfo extends ParsedInstruction {
 
 interface TransactionSignatureResult {
     signature: string;
+}
+
+// Import cache configuration and utilities
+const CACHE_CONFIG = {
+    MAX_PAYMENTS: 200,
+    MAX_AGE_DAYS: 90,
+    PRUNE_TO_COUNT: 150,
+    MIN_RECENT_PAYMENTS: 50,
+} as const;
+
+function prunePayments(payments: Payment[]): Payment[] {
+    if (payments.length <= CACHE_CONFIG.MAX_PAYMENTS) {
+        return payments;
+    }
+
+    const sortedPayments = [...payments].sort((a, b) => b.timestamp - a.timestamp);
+    const ageCutoff = Date.now() - (CACHE_CONFIG.MAX_AGE_DAYS * 24 * 60 * 60 * 1000);
+    
+    const recentPayments = sortedPayments.filter((payment, index) => 
+        payment.timestamp > ageCutoff || index < CACHE_CONFIG.MIN_RECENT_PAYMENTS
+    );
+    
+    const finalPayments = recentPayments.slice(0, CACHE_CONFIG.PRUNE_TO_COUNT);
+    
+    const prunedCount = payments.length - finalPayments.length;
+    if (prunedCount > 0) {
+        console.log(`Pruned ${prunedCount} old payments during incremental update`);
+    }
+    
+    return finalPayments;
 }
 
 // Utility to batch requests to avoid rate limiting
@@ -118,89 +149,211 @@ async function fetchPaymentData(
         );
 
         // Process transactions into payments (avoiding additional network calls)
-        const payments: Payment[] = [];
-        
-        for (const tx of validTransactions) {
-            try {
-                // Find the token transfer instruction
-                const transferInstructions = tx.transaction.message.instructions.filter(
-                    (instruction: ParsedInstruction | PartiallyDecodedInstruction) => {
-                        if (!('parsed' in instruction)) return false;
-                        if (instruction.program !== 'spl-token') return false;
-
-                        const parsedData = typeof instruction.parsed === 'string' 
-                            ? { type: instruction.parsed } 
-                            : instruction.parsed;
-
-                        if (!('type' in parsedData)) return false;
-
-                        const { type } = parsedData;
-                        const isTransferType = type === 'transfer' || type === 'transferChecked';
-                        if (!isTransferType) return false;
-
-                        let destination: string | undefined;
-                        if ('info' in parsedData && parsedData.info) {
-                            destination = parsedData.info.destination;
-                        }
-
-                        return destination === merchantUsdcAta.toString();
-                    }
-                );
-
-                if (transferInstructions.length === 0) continue;
-
-                // Use the first matching instruction
-                const transferInstruction = transferInstructions[0] as ParsedInstruction;
-                
-                const parsedData = typeof transferInstruction.parsed === 'string'
-                    ? { type: transferInstruction.parsed }
-                    : transferInstruction.parsed;
-
-                if (!('info' in parsedData)) continue;
-
-                const info = parsedData.info;
-                const authority = info.authority || info.multisigAuthority || info.source;
-                const amount = info.tokenAmount?.amount || info.amount;
-
-                if (!authority || !amount) continue;
-
-                // Extract memo from transaction logs
-                let memo = null;
-                if (tx.meta?.logMessages) {
-                    // Look for memo in transaction logs
-                    const memoLog = tx.meta.logMessages.find(log => {
-                        const lowerLog = log.toLowerCase();
-                        return lowerLog.includes('program log: memo (len') || 
-                               lowerLog.includes('memo program: memo');
-                    });
-                    
-                    if (memoLog) {
-                        // Extract memo content
-                        const matches = memoLog.match(/(?:Program log: Memo \(len \d+\): |Memo Program: Memo )(.+)/i);
-                        if (matches && matches[1]) {
-                            // Remove surrounding quotes if they exist
-                            memo = matches[1].trim().replace(/^"(.*)"$/, '$1');
-                        }
-                    }
-                }
-
-                payments.push({
-                    signature: tx.transaction.signatures[0],
-                    amount: Number(amount) / Math.pow(10, 6),
-                    memo,
-                    timestamp: tx.blockTime ? tx.blockTime * 1000 : Date.now(),
-                    sender: new PublicKey(authority)
-                });
-            } catch (err) {
-                console.error('Error processing transaction:', err);
-                // Continue to next transaction on error
-            }
-        }
-
+        const payments = await processTransactionsToPayments(validTransactions, merchantUsdcAta);
         return payments;
     } catch (error) {
         console.error('Error fetching payments:', error);
         throw new Error('Failed to fetch payment history');
+    }
+}
+
+// Function to fetch only new payments since the most recent cached payment
+async function fetchNewPayments(
+    merchantPubkey: PublicKey,
+    connection: Connection,
+    existingPayments: Payment[],
+    isDevnet: boolean = true
+): Promise<Payment[]> {
+    if (!merchantPubkey || !connection) return [];
+    
+    try {
+        // Get the merchant's USDC ATA
+        const usdcMint = isDevnet ? USDC_DEVNET_MINT : USDC_MINT;
+        const merchantUsdcAta = await findAssociatedTokenAddress(merchantPubkey, usdcMint);
+        
+        // First check if the ATA exists
+        const ataInfo = await connection.getAccountInfo(merchantUsdcAta);
+        if (!ataInfo) {
+            return [];
+        }
+
+        // Get the most recent signature we already have
+        const mostRecentSignature = existingPayments.length > 0 ? existingPayments[0].signature : null;
+        
+        // Fetch signatures until we hit one we already have
+        const signatures = await connection.getSignaturesForAddress(merchantUsdcAta, {
+            limit: 100, // Smaller limit since we're looking for incremental updates
+            ...(mostRecentSignature && { until: mostRecentSignature })
+        });
+
+        // If no new signatures, return empty array
+        if (signatures.length === 0) {
+            return [];
+        }
+
+        // Filter out signatures we already have (safety check)
+        const existingSignatureSet = new Set(existingPayments.map(p => p.signature));
+        const newSignatures = signatures.filter(sig => !existingSignatureSet.has(sig.signature));
+        
+        if (newSignatures.length === 0) {
+            return [];
+        }
+
+        console.log(`Fetching ${newSignatures.length} new payment(s) for incremental update`);
+
+        // Process new signatures in smaller batches
+        const transactions = await batchProcess<{signature: string}, ParsedTransactionWithMeta | null>(
+            newSignatures,
+            3, // Smaller batch size for incremental updates
+            async (sig) => connection.getParsedTransaction(sig.signature, 'confirmed'),
+            200 // Faster processing for smaller batches
+        );
+
+        // Process and filter the transactions
+        const validTransactions = transactions.filter((tx): tx is ParsedTransactionWithMeta => 
+            tx !== null && tx.meta !== null
+        );
+
+        // Process transactions into payments
+        const newPayments = await processTransactionsToPayments(validTransactions, merchantUsdcAta);
+        return newPayments;
+    } catch (error) {
+        console.error('Error fetching new payments:', error);
+        return []; // Return empty array instead of throwing to avoid breaking existing data
+    }
+}
+
+// Helper function to process transactions into payments (extracted for reuse)
+async function processTransactionsToPayments(
+    transactions: ParsedTransactionWithMeta[],
+    merchantUsdcAta: PublicKey
+): Promise<Payment[]> {
+    const payments: Payment[] = [];
+    
+    for (const tx of transactions) {
+        try {
+            // Find the token transfer instruction
+            const transferInstructions = tx.transaction.message.instructions.filter(
+                (instruction: ParsedInstruction | PartiallyDecodedInstruction) => {
+                    if (!('parsed' in instruction)) return false;
+                    if (instruction.program !== 'spl-token') return false;
+
+                    const parsedData = typeof instruction.parsed === 'string' 
+                        ? { type: instruction.parsed } 
+                        : instruction.parsed;
+
+                    if (!('type' in parsedData)) return false;
+
+                    const { type } = parsedData;
+                    const isTransferType = type === 'transfer' || type === 'transferChecked';
+                    if (!isTransferType) return false;
+
+                    let destination: string | undefined;
+                    if ('info' in parsedData && parsedData.info) {
+                        destination = parsedData.info.destination;
+                    }
+
+                    return destination === merchantUsdcAta.toString();
+                }
+            );
+
+            if (transferInstructions.length === 0) continue;
+
+            // Use the first matching instruction
+            const transferInstruction = transferInstructions[0] as ParsedInstruction;
+            
+            const parsedData = typeof transferInstruction.parsed === 'string'
+                ? { type: transferInstruction.parsed }
+                : transferInstruction.parsed;
+
+            if (!('info' in parsedData)) continue;
+
+            const info = parsedData.info;
+            const authority = info.authority || info.multisigAuthority || info.source;
+            const amount = info.tokenAmount?.amount || info.amount;
+
+            if (!authority || !amount) continue;
+
+            // Extract memo from transaction logs
+            let memo = null;
+            if (tx.meta?.logMessages) {
+                // Look for memo in transaction logs
+                const memoLog = tx.meta.logMessages.find(log => {
+                    const lowerLog = log.toLowerCase();
+                    return lowerLog.includes('program log: memo (len') || 
+                           lowerLog.includes('memo program: memo');
+                });
+                
+                if (memoLog) {
+                    // Extract memo content
+                    const matches = memoLog.match(/(?:Program log: Memo \(len \d+\): |Memo Program: Memo )(.+)/i);
+                    if (matches && matches[1]) {
+                        // Remove surrounding quotes if they exist
+                        memo = matches[1].trim().replace(/^"(.*)"$/, '$1');
+                    }
+                }
+            }
+
+            payments.push({
+                signature: tx.transaction.signatures[0],
+                amount: Number(amount) / Math.pow(10, 6),
+                memo,
+                timestamp: tx.blockTime ? tx.blockTime * 1000 : Date.now(),
+                sender: new PublicKey(authority)
+            });
+        } catch (err) {
+            console.error('Error processing transaction:', err);
+            // Continue to next transaction on error
+        }
+    }
+
+    return payments;
+}
+
+// Function to fetch older payments beyond cache limits (for "Load More" functionality)
+async function fetchOlderPayments(
+    merchantPubkey: PublicKey,
+    connection: Connection,
+    beforeSignature: string,
+    isDevnet: boolean = true,
+    limit: number = 50
+): Promise<Payment[]> {
+    if (!merchantPubkey || !connection) return [];
+    
+    try {
+        const usdcMint = isDevnet ? USDC_DEVNET_MINT : USDC_MINT;
+        const merchantUsdcAta = await findAssociatedTokenAddress(merchantPubkey, usdcMint);
+        
+        console.log(`Fetching ${limit} older payments before signature: ${beforeSignature.slice(0, 8)}...`);
+        
+        // Fetch signatures before the given signature
+        const signatures = await connection.getSignaturesForAddress(merchantUsdcAta, {
+            limit,
+            before: beforeSignature
+        });
+
+        if (signatures.length === 0) {
+            return [];
+        }
+
+        // Process signatures in batches
+        const transactions = await batchProcess<{signature: string}, ParsedTransactionWithMeta | null>(
+            signatures,
+            3,
+            async (sig) => connection.getParsedTransaction(sig.signature, 'confirmed'),
+            200
+        );
+
+        const validTransactions = transactions.filter((tx): tx is ParsedTransactionWithMeta => 
+            tx !== null && tx.meta !== null
+        );
+
+        const olderPayments = await processTransactionsToPayments(validTransactions, merchantUsdcAta);
+        console.log(`Found ${olderPayments.length} older payments`);
+        return olderPayments;
+    } catch (error) {
+        console.error('Error fetching older payments:', error);
+        return [];
     }
 }
 
@@ -211,7 +364,8 @@ export function PaymentHistory({
     onBalanceUpdate, 
     onPaymentReceived,
     title = 'Payment History',
-    maxPayments
+    maxPayments,
+    forceRefresh
 }: PaymentHistoryProps) {
     const { data: wallet } = useWallet();
     const { connection } = useConnection();
@@ -498,6 +652,44 @@ export function PaymentHistory({
     }, [connection, merchantPubkey, isDevnet, processNewTransaction, queryClient, savePaymentsToCache, onPaymentReceived]);
 
     const [expanded, setExpanded] = useState(true);
+    const [loadingOlder, setLoadingOlder] = useState(false);
+    const [hasMorePayments, setHasMorePayments] = useState(true);
+
+    // Function to load older payments
+    const loadMorePayments = useCallback(async () => {
+        if (!payments.length || loadingOlder) return;
+        
+        setLoadingOlder(true);
+        try {
+            const oldestPayment = payments[payments.length - 1];
+            const olderPayments = await fetchOlderPayments(
+                merchantPubkey,
+                connection,
+                oldestPayment.signature,
+                isDevnet,
+                50
+            );
+            
+            if (olderPayments.length > 0) {
+                // Append older payments to current list (don't prune here - let user decide)
+                const updatedPayments = [...payments, ...olderPayments];
+                
+                queryClient.setQueryData(
+                    ['payments', merchantPubkey.toString(), isDevnet],
+                    updatedPayments
+                );
+                
+                console.log(`Loaded ${olderPayments.length} additional payments`);
+            } else {
+                setHasMorePayments(false);
+                console.log('No more payments available');
+            }
+        } catch (error) {
+            console.error('Error loading more payments:', error);
+        } finally {
+            setLoadingOlder(false);
+        }
+    }, [payments, loadingOlder, merchantPubkey, connection, isDevnet, queryClient]);
 
     // Filter payments based on maxPayments
     const displayPayments = useMemo(() => {
@@ -506,6 +698,99 @@ export function PaymentHistory({
         }
         return payments;
     }, [payments, maxPayments]);
+
+    // Determine if we should show "Load More" button
+    const shouldShowLoadMore = !maxPayments && hasMorePayments && payments.length > 0 && payments.length >= CACHE_CONFIG.MIN_RECENT_PAYMENTS;
+
+    // Expose refetch method to parent components
+    const handleForceRefresh = useCallback(async () => {
+        try {
+            // Get existing payment data from cache
+            const existingPayments = queryClient.getQueryData<Payment[]>(
+                ['payments', merchantPubkey.toString(), isDevnet]
+            ) || [];
+            
+            // If we have existing payments, try incremental fetch first
+            if (existingPayments.length > 0) {
+                console.log('Performing incremental payment refresh...');
+                const newPayments = await fetchNewPayments(
+                    merchantPubkey, 
+                    connection, 
+                    existingPayments, 
+                    isDevnet
+                );
+                
+                if (newPayments.length > 0) {
+                    // Merge new payments with existing ones (new payments first)
+                    const mergedPayments = [...newPayments, ...existingPayments];
+                    
+                    // Apply pruning to keep cache size manageable
+                    const prunedPayments = prunePayments(mergedPayments);
+                    
+                    // Update the cache with pruned data
+                    queryClient.setQueryData(
+                        ['payments', merchantPubkey.toString(), isDevnet],
+                        prunedPayments
+                    );
+                    
+                    // Save to localStorage (which will also apply pruning)
+                    savePaymentsToCache(prunedPayments);
+                    
+                    console.log(`Added ${newPayments.length} new payment(s) to cache (total: ${prunedPayments.length})`);
+                } else {
+                    console.log('No new payments found');
+                }
+            } else {
+                // No existing data, do a full refresh
+                console.log('No existing payments, performing full refresh...');
+                await queryClient.invalidateQueries({
+                    queryKey: ['payments', merchantPubkey.toString(), isDevnet],
+                    refetchType: 'active'
+                });
+                await refetch();
+            }
+            
+            // Always refresh balance as it's lightweight
+            await queryClient.invalidateQueries({
+                queryKey: ['usdc-balance', merchantPubkey.toString(), isDevnet],
+                refetchType: 'active'
+            });
+        } catch (error) {
+            console.error('Error in incremental refresh, falling back to full refresh:', error);
+            // Fallback to full refresh on error
+            await queryClient.invalidateQueries({
+                queryKey: ['payments', merchantPubkey.toString(), isDevnet],
+                refetchType: 'active'
+            });
+            await refetch();
+        }
+    }, [queryClient, merchantPubkey, isDevnet, refetch, connection, savePaymentsToCache]);
+
+    // Expose the force refresh method to parent components
+    useEffect(() => {
+        if (forceRefresh) {
+            forceRefresh.current = handleForceRefresh;
+        }
+    }, [forceRefresh, handleForceRefresh]);
+
+    // Listen for visibility changes to refresh when user returns to app
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            // If the user returns to the app after being away, force refresh
+            if (!document.hidden && document.visibilityState === 'visible') {
+                // Add a small delay to ensure the connection is stable
+                setTimeout(() => {
+                    handleForceRefresh();
+                }, 1000);
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+        };
+    }, [handleForceRefresh]);
 
     if (isLoading) {
         return (
@@ -613,6 +898,26 @@ export function PaymentHistory({
                             </div>
                         </div>
                     ))}
+                    
+                    {/* Load More Button */}
+                    {expanded && shouldShowLoadMore && (
+                        <div className="flex justify-center mt-4">
+                            <button
+                                onClick={loadMorePayments}
+                                disabled={loadingOlder}
+                                className="btn btn-ghost btn-sm"
+                            >
+                                {loadingOlder ? (
+                                    <>
+                                        <span className="loading loading-spinner loading-sm"></span>
+                                        Loading older payments...
+                                    </>
+                                ) : (
+                                    'Load More History'
+                                )}
+                            </button>
+                        </div>
+                    )}
                 </div>
             )}
         </div>

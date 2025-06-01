@@ -3,13 +3,14 @@
 import { useWallet } from '@getpara/react-sdk';
 import { PaymentQR } from '@/components/payments/payment-qr';
 import { PaymentHistory } from '@/components/payments/payment-history';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { PublicKey } from '@solana/web3.js';
 import { useConnection } from '@/lib/connection-context';
 import { getGotsolProgram } from '@/utils/gotsol-exports';
 import { useAnchorProvider } from '@/components/para/para-provider';
 import { useQuery } from '@tanstack/react-query';
 import { SoundToggle } from '@/components/sound/sound-toggle';
+import { usePaymentRefresh } from '@/hooks/use-payment-cache';
 
 const USDC_DEVNET_MINT = new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU');
 
@@ -50,6 +51,18 @@ export default function DashboardContent({ params }: { params: { merchantId: str
     if (!provider) return null;
     return getGotsolProgram(provider);
   }, [provider]);
+
+  const { forceRefresh: forceRefreshPayments, forceRefreshRef } = usePaymentRefresh(merchantPubkey, true);
+
+  // Force refresh payment data when component mounts to catch any missed payments
+  useEffect(() => {
+    // Add a delay to ensure the component is fully mounted and connections are ready
+    const timer = setTimeout(() => {
+      forceRefreshPayments();
+    }, 1500);
+
+    return () => clearTimeout(timer);
+  }, [forceRefreshPayments]);
 
   // Use React Query to fetch merchant data
   const { data: merchantData } = useQuery({
@@ -151,6 +164,7 @@ export default function DashboardContent({ params }: { params: { merchantId: str
                 onPaymentReceived={() => setResetSignal(prev => prev + 1)}
                 title="Recent Payment History"
                 maxPayments={3}
+                forceRefresh={forceRefreshRef}
               />
             </div>
           </div>

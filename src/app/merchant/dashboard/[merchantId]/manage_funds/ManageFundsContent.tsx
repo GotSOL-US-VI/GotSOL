@@ -3,13 +3,14 @@
 import { useWallet } from '@getpara/react-sdk';
 import { PaymentHistory } from '@/components/payments/payment-history';
 import { WithdrawFunds } from '@/components/payments/withdraw-funds';
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 import { PublicKey } from '@solana/web3.js';
 import { useConnection } from '@/lib/connection-context';
 import { getGotsolProgram } from '@/utils/gotsol-exports';
 import { useAnchorProvider } from '@/components/para/para-provider';
 import { useQuery } from '@tanstack/react-query';
 import { AppHero } from '@/components/ui/ui-layout';
+import { usePaymentRefresh } from '@/hooks/use-payment-cache';
 
 const USDC_DEVNET_MINT = new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU');
 
@@ -53,6 +54,18 @@ export default function ManageFundsContent({ params }: ManageFundsContentProps) 
     if (!provider) return null;
     return getGotsolProgram(provider);
   }, [provider]);
+
+  const { forceRefresh: forceRefreshPayments, forceRefreshRef } = usePaymentRefresh(merchantPubkey, true);
+
+  // Force refresh payment data when component mounts to catch any missed payments
+  useEffect(() => {
+    // Add a delay to ensure the component is fully mounted and connections are ready
+    const timer = setTimeout(() => {
+      forceRefreshPayments();
+    }, 1500);
+
+    return () => clearTimeout(timer);
+  }, [forceRefreshPayments]);
 
   // Use React Query to fetch merchant data
   const { data: merchantData } = useQuery({
@@ -113,6 +126,7 @@ export default function ManageFundsContent({ params }: ManageFundsContentProps) 
                 onBalanceUpdate={() => {}}
                 onPaymentReceived={() => {}}
                 title="Full Payment History"
+                forceRefresh={forceRefreshRef}
               />
             </div>
           </div>
