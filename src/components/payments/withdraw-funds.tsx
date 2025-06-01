@@ -286,6 +286,13 @@ export function WithdrawFunds({
     setWithdrawAmount(value);
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleWithdraw();
+    }
+  };
+
   const isLoadingBalances = isMerchantBalanceLoading || isOwnerBalanceLoading;
 
   return (
@@ -293,7 +300,7 @@ export function WithdrawFunds({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <h2 className="text-xl">Withdraw to Owner&apos;s Address</h2>
-          <div className="opacity-60 cursor-help" title="1% platform fee on withdrawal amount. 99% to the Merchant&apos;s Owner.">ⓘ</div>
+          <div className="opacity-60 cursor-help" title="1% platform fee on withdrawal amount. 99% to the Merchant&apos;s Owner. You must withdraw here before you can off-ramp to your bank account.">ⓘ</div>
         </div>
         <button
           onClick={() => setIsBalancesVisible(!isBalancesVisible)}
@@ -346,6 +353,7 @@ export function WithdrawFunds({
             className="input input-bordered w-full"
             value={withdrawAmount}
             onChange={handleAmountChange}
+            onKeyDown={handleKeyDown}
             disabled={isLoading}
           />
         </div>

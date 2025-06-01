@@ -149,6 +149,8 @@ export default function DashboardContent({ params }: { params: { merchantId: str
                 isDevnet={true}
                 onBalanceUpdate={setMerchantBalance}
                 onPaymentReceived={() => setResetSignal(prev => prev + 1)}
+                title="Recent Payment History"
+                maxPayments={3}
               />
             </div>
           </div>

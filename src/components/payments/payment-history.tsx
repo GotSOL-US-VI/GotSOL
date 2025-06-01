@@ -2,7 +2,7 @@
 
 import { useWallet } from '@getpara/react-sdk';
 import { PublicKey, ParsedTransactionWithMeta, ParsedInstruction, PartiallyDecodedInstruction, Connection } from '@solana/web3.js';
-import { useEffect, useCallback, useState } from 'react';
+import { useEffect, useCallback, useState, useMemo } from 'react';
 import { useConnection } from '@/lib/connection-context';
 import { formatSolscanDevnetLink } from '@/utils/format-transaction-link';
 import { toastUtils } from '@/utils/toast-utils';
@@ -21,6 +21,8 @@ interface PaymentHistoryProps {
     isDevnet?: boolean;
     onBalanceUpdate?: (balance: number) => void;
     onPaymentReceived?: () => void;
+    title?: string;
+    maxPayments?: number;
 }
 
 interface Payment {
@@ -202,7 +204,15 @@ async function fetchPaymentData(
     }
 }
 
-export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBalanceUpdate, onPaymentReceived }: PaymentHistoryProps) {
+export function PaymentHistory({ 
+    program, 
+    merchantPubkey, 
+    isDevnet = true, 
+    onBalanceUpdate, 
+    onPaymentReceived,
+    title = 'Payment History',
+    maxPayments
+}: PaymentHistoryProps) {
     const { data: wallet } = useWallet();
     const { connection } = useConnection();
     const queryClient = useQueryClient();
@@ -489,6 +499,14 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
 
     const [expanded, setExpanded] = useState(true);
 
+    // Filter payments based on maxPayments
+    const displayPayments = useMemo(() => {
+        if (maxPayments) {
+            return payments.slice(0, maxPayments);
+        }
+        return payments;
+    }, [payments, maxPayments]);
+
     if (isLoading) {
         return (
             <div className="space-y-4">
@@ -511,7 +529,7 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
     return (
         <div className="space-y-4">
             <div className="flex justify-between items-center">
-                <h2 className="text-xl font-bold">Payment History</h2>
+                <h2 className="text-xl font-bold">{title}</h2>
                 <div className="flex items-center gap-2">
                     <button
                         onClick={() => setExpanded((prev) => !prev)}
@@ -528,13 +546,13 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
                     </button>
                 </div>
             </div>
-            {!payments || payments.length === 0 ? (
+            {!displayPayments || displayPayments.length === 0 ? (
                 <p className="text-gray-500">No payments received yet</p>
             ) : (
                 <div 
-                    className="payment-history-container" 
+                    className="payment-history-container"
                     style={{ 
-                        maxHeight: "400px", 
+                        maxHeight: "410px", 
                         overflowY: "auto", 
                         paddingRight: "8px", 
                         marginTop: "8px",
@@ -543,7 +561,7 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
                         gap: "12px"
                     }}
                 >
-                    {expanded && payments.map((payment: Payment) => (
+                    {expanded && displayPayments.map((payment: Payment) => (
                         <div 
                             key={payment.signature} 
                             className="card bg-[#1C1C1C] shadow flex-shrink-0"

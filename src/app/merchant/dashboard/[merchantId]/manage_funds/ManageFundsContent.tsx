@@ -85,17 +85,12 @@ export default function ManageFundsContent({ params }: ManageFundsContentProps) 
   }
 
   return (
-    <div className="relative">
-      <AppHero
-        title={<h1 className="text-4xl font-bold hero-gradient-text">Manage your Merchant&apos;s funds</h1>}
-        subtitle={<p className="text-xl font-medium mt-4">On-chain withdrawals, off-ramp USD to bank, send on-chain, make revenue payments, and execute payroll</p>}
-      />
-      <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Withdraw Funds */}
-          <div className="card bg-base-300 shadow-xl h-fit">
-            <div className="card-body p-6">
-              <h2 className="text-2xl font-semibold mb-4">Withdraw to Owner&apos;s Address</h2>
+    <div className="container mx-auto py-2">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-6xl mx-auto">
+        {/* Left Column - Withdraw Funds */}
+        <div className="h-[600px]">
+          <div className="card bg-base-300 shadow-xl">
+            <div className="card-body p-4">
               {owner && merchantPubkey && (
                 <WithdrawFunds
                   merchantPubkey={merchantPubkey}
@@ -105,17 +100,19 @@ export default function ManageFundsContent({ params }: ManageFundsContentProps) 
               )}
             </div>
           </div>
+        </div>
 
-          {/* Payment History */}
+        {/* Right Column - Payment History */}
+        <div>
           <div className="card bg-base-300 shadow-xl">
-            <div className="card-body p-6">
-              <h2 className="text-2xl font-semibold mb-4">Payment History</h2>
+            <div className="card-body p-4">
               <PaymentHistory
                 program={program}
                 merchantPubkey={merchantPubkey}
                 isDevnet={true}
                 onBalanceUpdate={() => {}}
                 onPaymentReceived={() => {}}
+                title="Full Payment History"
               />
             </div>
           </div>
