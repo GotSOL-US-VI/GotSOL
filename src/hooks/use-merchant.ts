@@ -1,23 +1,22 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams, usePathname, useRouter } from 'next/navigation';
+import { useParams, usePathname } from 'next/navigation';
 import { useMounted } from './use-mounted';
 
 interface UseMerchantReturn {
   activeMerchant: string | null;
   setActiveMerchant: (merchantId: string | null) => void;
-  handleLogoClick: () => void;
 }
 
 /**
  * Hook to manage merchant state with localStorage persistence
+ * Navigation logic is handled in client-providers.tsx
  */
 export function useMerchant(): UseMerchantReturn {
   const [activeMerchant, setActiveMerchantState] = useState<string | null>(null);
   const params = useParams();
   const pathname = usePathname();
-  const router = useRouter();
   const mounted = useMounted();
 
   // Initialize from localStorage and update based on URL
@@ -56,11 +55,5 @@ export function useMerchant(): UseMerchantReturn {
     }
   };
 
-  // Handle logo click to clear merchant state and redirect to home
-  const handleLogoClick = () => {
-    setActiveMerchant(null);
-    router.push('/');
-  };
-
-  return { activeMerchant, setActiveMerchant, handleLogoClick };
+  return { activeMerchant, setActiveMerchant };
 } 

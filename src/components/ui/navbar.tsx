@@ -18,7 +18,7 @@ export function NavBar({ defaultLinks, merchantLinks }: NavBarProps) {
   const params = useParams();
   const router = useRouter();
   const { theme, toggleTheme } = useTheme();
-  const { activeMerchant, handleLogoClick } = useMerchant();
+  const { activeMerchant } = useMerchant();
   const { data: account } = useAccount();
   const { openModal } = useModal();
   const [mounted, setMounted] = useState(false);

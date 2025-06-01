@@ -10,12 +10,15 @@ import { SoundProvider } from '@/components/sound/sound-context';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useParams, usePathname, useRouter } from 'next/navigation';
-import { useAccount, useModal } from '@getpara/react-sdk';
+import { useAccount, useModal, useWallet } from '@getpara/react-sdk';
 import { Toaster } from 'react-hot-toast';
 import { AccountChecker } from '@/components/accounts/account-ui';
 import { ClusterChecker } from '@/components/cluster/cluster-ui';
 import { Footer } from '@/components/ui/footer';
 import { SoundToggle } from '@/components/sound/sound-toggle';
+import { useMerchants } from '@/hooks/find-merchants';
+import { useConnection } from '@/lib/connection-context';
+import { useQueryClient } from '@tanstack/react-query';
 
 // Define proper types for links
 export interface NavigationLink {
@@ -67,8 +70,12 @@ function ClientSideStateHandler({
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
   const [activeMerchant, setActiveMerchant] = useState<string | null>(null);
   const { data: account } = useAccount();
+  const { data: wallet } = useWallet();
   const { openModal } = useModal();
   const [mounted, setMounted] = useState(false);
+  const { connection } = useConnection();
+  const { forceRefresh } = useMerchants(wallet?.address, connection);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     setMounted(true);
@@ -112,9 +119,17 @@ function ClientSideStateHandler({
   };
 
   // Handle logo click to clear merchant state and navigate home
-  const handleLogoClick = () => {
+  const handleLogoClick = async () => {
     setActiveMerchant(null);
     localStorage.removeItem('activeMerchant');
+    
+    // Force refresh and wait for it to complete
+    if (wallet?.address && connection) {
+      // Invalidate all merchant queries
+      await queryClient.invalidateQueries({ queryKey: ['merchants'] });
+      await forceRefresh();
+    }
+    
     router.push('/');
   };
 
