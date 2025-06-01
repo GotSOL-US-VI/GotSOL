@@ -16,6 +16,7 @@ import { getGotsolProgram } from '@/utils/gotsol-exports';
 import { USDC_MINT, USDC_DEVNET_MINT, HOUSE, findAssociatedTokenAddress } from '@/utils/token-utils';
 import { parseAnchorError, ErrorToastContent } from '@/utils/error-parser';
 import { createClient } from '@/utils/supabaseClient';
+import { useBalanceVisibility } from '@/hooks/use-balance-visibility';
 
 interface WithdrawFundsProps {
   merchantPubkey: PublicKey;
@@ -37,7 +38,7 @@ export function WithdrawFunds({
   const [withdrawAmount, setWithdrawAmount] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [isBalancesVisible, setIsBalancesVisible] = useState(true);
+  const [isBalancesVisible, setIsBalancesVisible] = useBalanceVisibility('global');
 
   const supabase = createClient();
 
