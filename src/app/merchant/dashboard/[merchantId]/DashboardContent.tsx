@@ -3,7 +3,7 @@
 import { useWallet } from '@getpara/react-sdk';
 import { PaymentQR } from '@/components/payments/payment-qr';
 import { PaymentHistory } from '@/components/payments/payment-history';
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { PublicKey } from '@solana/web3.js';
 import { useConnection } from '@/lib/connection-context';
 import { getGotsolProgram } from '@/utils/gotsol-exports';
@@ -52,20 +52,20 @@ export default function DashboardContent({ params }: { params: { merchantId: str
     return getGotsolProgram(provider);
   }, [provider]);
 
-  const { forceRefresh: forceRefreshPayments, forceRefreshRef } = usePaymentRefresh(merchantPubkey, true);
+  const { forceRefresh: forceRefreshPayments, setRefreshFunction } = usePaymentRefresh(merchantPubkey, true);
+  const forceRefreshRef = useRef<(() => Promise<void>) | null>(null);
 
-  // Force refresh payment data when component mounts to catch any missed payments
+  // Simplified refresh function registration - avoid circular dependencies
   useEffect(() => {
-    // Add a delay to ensure the component is fully mounted and connections are ready
-    const timer = setTimeout(() => {
-      forceRefreshPayments();
-    }, 1500);
-
-    return () => clearTimeout(timer);
+    // Only set the refresh function, don't call it immediately
+    forceRefreshRef.current = forceRefreshPayments;
   }, [forceRefreshPayments]);
 
-  // Use React Query to fetch merchant data
-  const { data: merchantData } = useQuery({
+  // Remove the auto-refresh on mount to prevent spam
+  // Users can manually refresh if needed via the refresh button in PaymentHistory
+  
+  // Use React Query to fetch merchant account data
+  const { data: merchantAccount } = useQuery({
     queryKey: ['merchant', merchantPubkey?.toString()],
     queryFn: async () => {
       if (!program || !merchantPubkey) return null;
@@ -85,8 +85,8 @@ export default function DashboardContent({ params }: { params: { merchantId: str
   });
 
   // Access merchant data with fallback
-  const merchantName = merchantData?.entityName || '';
-  const owner = merchantData?.owner || null;
+  const merchantName = merchantAccount?.entityName || '';
+  const owner = merchantAccount?.owner || null;
 
   // Use React Query to fetch balances
   const { data: balanceData } = useQuery({

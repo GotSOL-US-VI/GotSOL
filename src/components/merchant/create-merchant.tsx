@@ -10,6 +10,7 @@ import { ParaSolanaWeb3Signer } from "@getpara/solana-web3.js-v1-integration";
 import { toastUtils } from '@/utils/toast-utils';
 import { parseAnchorError, ErrorToastContent } from '@/utils/error-parser';
 import { createClient } from '@/utils/supabaseClient';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface CreateMerchantProps {
     program: Program<Idl>;
@@ -23,6 +24,7 @@ export function CreateMerchant({ program, onSuccess }: CreateMerchantProps) {
     const { data: wallet } = useWallet();
     const para = useClient();
     const supabase = createClient();
+    const queryClient = useQueryClient();
     
     // Debug log to see wallet data
     // console.log('Para wallet data:', wallet);
@@ -112,6 +114,15 @@ export function CreateMerchant({ program, onSuccess }: CreateMerchantProps) {
 
             // console.log('Created merchant:', merchantPda);
             toastUtils.success('Merchant account created successfully!');
+            
+            // Event-based query invalidation after successful merchant creation
+            if (wallet?.address) {
+                await queryClient.invalidateQueries({ 
+                    queryKey: ['merchants', wallet.address],
+                    refetchType: 'active' // Only refetch if the query is currently active
+                });
+            }
+            
             onSuccess?.(merchantPda);
 
             // Store event in Supabase

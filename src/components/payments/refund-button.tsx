@@ -273,52 +273,36 @@ export function RefundButton({ program, merchantPubkey, payment, onSuccess, isDe
             // Wait for confirmation
             await connection.confirmTransaction(txid, 'confirmed');
             
-            // Invalidate relevant queries for both merchant and recipient balances
+            // Optimized balance query invalidation
             await Promise.all([
-                // Invalidate merchant balance
+                // Primary query key invalidation (new format)
                 queryClient.invalidateQueries({ 
-                    queryKey: ['usdc-balance', merchantPubkey.toString(), isDevnet],
-                    refetchType: 'active' // Force immediate refetch
+                    queryKey: ['token-balance', merchantPubkey.toString(), usdcMint.toString()],
+                    refetchType: 'active' // Only refetch active queries
                 }),
-                // Invalidate recipient balance in case they're viewing it
                 queryClient.invalidateQueries({ 
-                    queryKey: ['usdc-balance', payment.recipient.toString(), isDevnet],
-                    refetchType: 'active' // Force immediate refetch
-                }),
-                // Also invalidate token balance queries
-                queryClient.invalidateQueries({
-                    queryKey: ['token-balance'],
+                    queryKey: ['token-balance', payment.recipient.toString(), usdcMint.toString()],
                     refetchType: 'active'
                 }),
-                // Invalidate payment history
+                
+                // Payment history queries
                 queryClient.invalidateQueries({
                     queryKey: ['payments', merchantPubkey.toString(), isDevnet],
+                    refetchType: 'active'
+                }),
+                
+                // Legacy query keys (if still needed)
+                queryClient.invalidateQueries({
+                    queryKey: ['usdc-balance', merchantPubkey.toString(), isDevnet],
+                    refetchType: 'active'
+                }),
+                queryClient.invalidateQueries({
+                    queryKey: ['usdc-balance', payment.recipient.toString(), isDevnet],
                     refetchType: 'active'
                 })
             ]);
             
-            // Additional fetch for immediate UI update
-            const refreshBalances = async () => {
-                try {
-                    // Wait a moment for blockchain to process the transaction
-                    await new Promise(resolve => setTimeout(resolve, 500));
-                    
-                    // Force immediate refetch of balances
-                    await queryClient.refetchQueries({ 
-                        queryKey: ['usdc-balance', merchantPubkey.toString(), isDevnet],
-                    });
-                    
-                    // Also refetch payments data
-                    await queryClient.refetchQueries({ 
-                        queryKey: ['payments', merchantPubkey.toString(), isDevnet],
-                    });
-                } catch (err) {
-                    console.error('Error refreshing data after refund:', err);
-                }
-            };
-            
-            // Start refreshing balances immediately
-            refreshBalances();
+            // Remove redundant setTimeout refresh - immediate invalidation is sufficient
             
             toastUtils.success(
                 <div>
@@ -336,7 +320,7 @@ export function RefundButton({ program, merchantPubkey, payment, onSuccess, isDe
                 </div>
             );
             
-            // Call onSuccess callback if provided
+            // Call onSuccess callback if provided (this triggers PaymentHistory refresh)
             if (onSuccess) {
                 onSuccess();
             }

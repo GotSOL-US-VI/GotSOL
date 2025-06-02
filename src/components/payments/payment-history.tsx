@@ -2,7 +2,7 @@
 
 import { useWallet } from '@getpara/react-sdk';
 import { PublicKey, ParsedTransactionWithMeta, ParsedInstruction, PartiallyDecodedInstruction, Connection } from '@solana/web3.js';
-import { useEffect, useCallback, useState, useMemo, useRef } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { useConnection } from '@/lib/connection-context';
 import { formatSolscanDevnetLink } from '@/utils/format-transaction-link';
 import { toastUtils } from '@/utils/toast-utils';
@@ -13,7 +13,6 @@ import { retryWithBackoff } from '@/utils/para';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { usePaymentCache } from '@/hooks/use-payment-cache';
 import { USDC_MINT, USDC_DEVNET_MINT, findAssociatedTokenAddress, formatUSDCAmount } from '@/utils/token-utils';
-import { FaChevronUp, FaChevronDown } from 'react-icons/fa';
 
 interface PaymentHistoryProps {
     program: Program<Gotsol>;
@@ -54,36 +53,6 @@ interface ParsedInstructionWithInfo extends ParsedInstruction {
 
 interface TransactionSignatureResult {
     signature: string;
-}
-
-// Import cache configuration and utilities
-const CACHE_CONFIG = {
-    MAX_PAYMENTS: 200,
-    MAX_AGE_DAYS: 90,
-    PRUNE_TO_COUNT: 150,
-    MIN_RECENT_PAYMENTS: 50,
-} as const;
-
-function prunePayments(payments: Payment[]): Payment[] {
-    if (payments.length <= CACHE_CONFIG.MAX_PAYMENTS) {
-        return payments;
-    }
-
-    const sortedPayments = [...payments].sort((a, b) => b.timestamp - a.timestamp);
-    const ageCutoff = Date.now() - (CACHE_CONFIG.MAX_AGE_DAYS * 24 * 60 * 60 * 1000);
-    
-    const recentPayments = sortedPayments.filter((payment, index) => 
-        payment.timestamp > ageCutoff || index < CACHE_CONFIG.MIN_RECENT_PAYMENTS
-    );
-    
-    const finalPayments = recentPayments.slice(0, CACHE_CONFIG.PRUNE_TO_COUNT);
-    
-    const prunedCount = payments.length - finalPayments.length;
-    if (prunedCount > 0) {
-        console.log(`Pruned ${prunedCount} old payments during incremental update`);
-    }
-    
-    return finalPayments;
 }
 
 // Utility to batch requests to avoid rate limiting
@@ -130,17 +99,17 @@ async function fetchPaymentData(
             return [];
         }
 
-        // Get all signatures for the merchant's USDC ATA
+        // Reduce the limit to 50 recent transactions instead of 250
         const signatures = await connection.getSignaturesForAddress(merchantUsdcAta, {
-            limit: 250
+            limit: 50 // Reduced from 250 to dramatically cut API calls
         });
 
-        // Process signatures in batches to avoid rate limiting
+        // Process signatures in smaller batches with more delay to reduce rate limiting
         const transactions = await batchProcess<{signature: string}, ParsedTransactionWithMeta | null>(
             signatures,
-            5, // Process 5 transactions at a time
+            3, // Reduced from 5 to 3 transactions at a time
             async (sig) => connection.getParsedTransaction(sig.signature, 'confirmed'),
-            300 // Wait 300ms between batches
+            500 // Increased delay from 300ms to 500ms between batches
         );
 
         // Process and filter the transactions
@@ -149,211 +118,89 @@ async function fetchPaymentData(
         );
 
         // Process transactions into payments (avoiding additional network calls)
-        const payments = await processTransactionsToPayments(validTransactions, merchantUsdcAta);
+        const payments: Payment[] = [];
+        
+        for (const tx of validTransactions) {
+            try {
+                // Find the token transfer instruction
+                const transferInstructions = tx.transaction.message.instructions.filter(
+                    (instruction: ParsedInstruction | PartiallyDecodedInstruction) => {
+                        if (!('parsed' in instruction)) return false;
+                        if (instruction.program !== 'spl-token') return false;
+
+                        const parsedData = typeof instruction.parsed === 'string' 
+                            ? { type: instruction.parsed } 
+                            : instruction.parsed;
+
+                        if (!('type' in parsedData)) return false;
+
+                        const { type } = parsedData;
+                        const isTransferType = type === 'transfer' || type === 'transferChecked';
+                        if (!isTransferType) return false;
+
+                        let destination: string | undefined;
+                        if ('info' in parsedData && parsedData.info) {
+                            destination = parsedData.info.destination;
+                        }
+
+                        return destination === merchantUsdcAta.toString();
+                    }
+                );
+
+                if (transferInstructions.length === 0) continue;
+
+                // Use the first matching instruction
+                const transferInstruction = transferInstructions[0] as ParsedInstruction;
+                
+                const parsedData = typeof transferInstruction.parsed === 'string'
+                    ? { type: transferInstruction.parsed }
+                    : transferInstruction.parsed;
+
+                if (!('info' in parsedData)) continue;
+
+                const info = parsedData.info;
+                const authority = info.authority || info.multisigAuthority || info.source;
+                const amount = info.tokenAmount?.amount || info.amount;
+
+                if (!authority || !amount) continue;
+
+                // Extract memo from transaction logs
+                let memo = null;
+                if (tx.meta?.logMessages) {
+                    // Look for memo in transaction logs
+                    const memoLog = tx.meta.logMessages.find(log => {
+                        const lowerLog = log.toLowerCase();
+                        return lowerLog.includes('program log: memo (len') || 
+                               lowerLog.includes('memo program: memo');
+                    });
+                    
+                    if (memoLog) {
+                        // Extract memo content
+                        const matches = memoLog.match(/(?:Program log: Memo \(len \d+\): |Memo Program: Memo )(.+)/i);
+                        if (matches && matches[1]) {
+                            // Remove surrounding quotes if they exist
+                            memo = matches[1].trim().replace(/^"(.*)"$/, '$1');
+                        }
+                    }
+                }
+
+                payments.push({
+                    signature: tx.transaction.signatures[0],
+                    amount: Number(amount) / Math.pow(10, 6),
+                    memo,
+                    timestamp: tx.blockTime ? tx.blockTime * 1000 : Date.now(),
+                    sender: new PublicKey(authority)
+                });
+            } catch (err) {
+                console.error('Error processing transaction:', err);
+                // Continue to next transaction on error
+            }
+        }
+
         return payments;
     } catch (error) {
         console.error('Error fetching payments:', error);
         throw new Error('Failed to fetch payment history');
-    }
-}
-
-// Function to fetch only new payments since the most recent cached payment
-async function fetchNewPayments(
-    merchantPubkey: PublicKey,
-    connection: Connection,
-    existingPayments: Payment[],
-    isDevnet: boolean = true
-): Promise<Payment[]> {
-    if (!merchantPubkey || !connection) return [];
-    
-    try {
-        // Get the merchant's USDC ATA
-        const usdcMint = isDevnet ? USDC_DEVNET_MINT : USDC_MINT;
-        const merchantUsdcAta = await findAssociatedTokenAddress(merchantPubkey, usdcMint);
-        
-        // First check if the ATA exists
-        const ataInfo = await connection.getAccountInfo(merchantUsdcAta);
-        if (!ataInfo) {
-            return [];
-        }
-
-        // Get the most recent signature we already have
-        const mostRecentSignature = existingPayments.length > 0 ? existingPayments[0].signature : null;
-        
-        // Fetch signatures until we hit one we already have
-        const signatures = await connection.getSignaturesForAddress(merchantUsdcAta, {
-            limit: 100, // Smaller limit since we're looking for incremental updates
-            ...(mostRecentSignature && { until: mostRecentSignature })
-        });
-
-        // If no new signatures, return empty array
-        if (signatures.length === 0) {
-            return [];
-        }
-
-        // Filter out signatures we already have (safety check)
-        const existingSignatureSet = new Set(existingPayments.map(p => p.signature));
-        const newSignatures = signatures.filter(sig => !existingSignatureSet.has(sig.signature));
-        
-        if (newSignatures.length === 0) {
-            return [];
-        }
-
-        console.log(`Fetching ${newSignatures.length} new payment(s) for incremental update`);
-
-        // Process new signatures in smaller batches
-        const transactions = await batchProcess<{signature: string}, ParsedTransactionWithMeta | null>(
-            newSignatures,
-            3, // Smaller batch size for incremental updates
-            async (sig) => connection.getParsedTransaction(sig.signature, 'confirmed'),
-            200 // Faster processing for smaller batches
-        );
-
-        // Process and filter the transactions
-        const validTransactions = transactions.filter((tx): tx is ParsedTransactionWithMeta => 
-            tx !== null && tx.meta !== null
-        );
-
-        // Process transactions into payments
-        const newPayments = await processTransactionsToPayments(validTransactions, merchantUsdcAta);
-        return newPayments;
-    } catch (error) {
-        console.error('Error fetching new payments:', error);
-        return []; // Return empty array instead of throwing to avoid breaking existing data
-    }
-}
-
-// Helper function to process transactions into payments (extracted for reuse)
-async function processTransactionsToPayments(
-    transactions: ParsedTransactionWithMeta[],
-    merchantUsdcAta: PublicKey
-): Promise<Payment[]> {
-    const payments: Payment[] = [];
-    
-    for (const tx of transactions) {
-        try {
-            // Find the token transfer instruction
-            const transferInstructions = tx.transaction.message.instructions.filter(
-                (instruction: ParsedInstruction | PartiallyDecodedInstruction) => {
-                    if (!('parsed' in instruction)) return false;
-                    if (instruction.program !== 'spl-token') return false;
-
-                    const parsedData = typeof instruction.parsed === 'string' 
-                        ? { type: instruction.parsed } 
-                        : instruction.parsed;
-
-                    if (!('type' in parsedData)) return false;
-
-                    const { type } = parsedData;
-                    const isTransferType = type === 'transfer' || type === 'transferChecked';
-                    if (!isTransferType) return false;
-
-                    let destination: string | undefined;
-                    if ('info' in parsedData && parsedData.info) {
-                        destination = parsedData.info.destination;
-                    }
-
-                    return destination === merchantUsdcAta.toString();
-                }
-            );
-
-            if (transferInstructions.length === 0) continue;
-
-            // Use the first matching instruction
-            const transferInstruction = transferInstructions[0] as ParsedInstruction;
-            
-            const parsedData = typeof transferInstruction.parsed === 'string'
-                ? { type: transferInstruction.parsed }
-                : transferInstruction.parsed;
-
-            if (!('info' in parsedData)) continue;
-
-            const info = parsedData.info;
-            const authority = info.authority || info.multisigAuthority || info.source;
-            const amount = info.tokenAmount?.amount || info.amount;
-
-            if (!authority || !amount) continue;
-
-            // Extract memo from transaction logs
-            let memo = null;
-            if (tx.meta?.logMessages) {
-                // Look for memo in transaction logs
-                const memoLog = tx.meta.logMessages.find(log => {
-                    const lowerLog = log.toLowerCase();
-                    return lowerLog.includes('program log: memo (len') || 
-                           lowerLog.includes('memo program: memo');
-                });
-                
-                if (memoLog) {
-                    // Extract memo content
-                    const matches = memoLog.match(/(?:Program log: Memo \(len \d+\): |Memo Program: Memo )(.+)/i);
-                    if (matches && matches[1]) {
-                        // Remove surrounding quotes if they exist
-                        memo = matches[1].trim().replace(/^"(.*)"$/, '$1');
-                    }
-                }
-            }
-
-            payments.push({
-                signature: tx.transaction.signatures[0],
-                amount: Number(amount) / Math.pow(10, 6),
-                memo,
-                timestamp: tx.blockTime ? tx.blockTime * 1000 : Date.now(),
-                sender: new PublicKey(authority)
-            });
-        } catch (err) {
-            console.error('Error processing transaction:', err);
-            // Continue to next transaction on error
-        }
-    }
-
-    return payments;
-}
-
-// Function to fetch older payments beyond cache limits (for "Load More" functionality)
-async function fetchOlderPayments(
-    merchantPubkey: PublicKey,
-    connection: Connection,
-    beforeSignature: string,
-    isDevnet: boolean = true,
-    limit: number = 50
-): Promise<Payment[]> {
-    if (!merchantPubkey || !connection) return [];
-    
-    try {
-        const usdcMint = isDevnet ? USDC_DEVNET_MINT : USDC_MINT;
-        const merchantUsdcAta = await findAssociatedTokenAddress(merchantPubkey, usdcMint);
-        
-        console.log(`Fetching ${limit} older payments before signature: ${beforeSignature.slice(0, 8)}...`);
-        
-        // Fetch signatures before the given signature
-        const signatures = await connection.getSignaturesForAddress(merchantUsdcAta, {
-            limit,
-            before: beforeSignature
-        });
-
-        if (signatures.length === 0) {
-            return [];
-        }
-
-        // Process signatures in batches
-        const transactions = await batchProcess<{signature: string}, ParsedTransactionWithMeta | null>(
-            signatures,
-            3,
-            async (sig) => connection.getParsedTransaction(sig.signature, 'confirmed'),
-            200
-        );
-
-        const validTransactions = transactions.filter((tx): tx is ParsedTransactionWithMeta => 
-            tx !== null && tx.meta !== null
-        );
-
-        const olderPayments = await processTransactionsToPayments(validTransactions, merchantUsdcAta);
-        console.log(`Found ${olderPayments.length} older payments`);
-        return olderPayments;
-    } catch (error) {
-        console.error('Error fetching older payments:', error);
-        return [];
     }
 }
 
@@ -374,24 +221,25 @@ export function PaymentHistory({
     // Use our custom payment cache hook for localStorage persistence
     const { savePaymentsToCache } = usePaymentCache(merchantPubkey, isDevnet);
 
-    // Use React Query for payment data with caching
-    const { 
-        data: payments = [],
-        isLoading,
-        error,
-        refetch
-    } = useQuery({
-        queryKey: ['payments', merchantPubkey.toString(), isDevnet],
-        queryFn: () => retryWithBackoff(() => fetchPaymentData(merchantPubkey, connection, isDevnet), 3, 2000),
-        staleTime: 10 * 60 * 1000, // Data stays fresh for 10 minutes
-        gcTime: 60 * 60 * 1000, // Cache retained for 60 minutes
-        refetchOnWindowFocus: false, // Only refetch on explicit refresh
-        refetchOnMount: false, // Don't refetch automatically on mount
-        refetchOnReconnect: false, // Don't refetch automatically on reconnect
-        retry: 2, // Limit retries to reduce request load
-        retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 10000), // Exponential backoff with max 10s
+    // Use React Query to fetch and cache payment data with optimized caching
+    const { data: payments = [], isLoading, error, refetch } = useQuery({
+        queryKey: ['payments', merchantPubkey?.toString(), isDevnet],
+        queryFn: () => fetchPaymentData(merchantPubkey!, connection, isDevnet),
         enabled: !!merchantPubkey && !!connection,
-        structuralSharing: true, // Enable structural sharing for better performance
+        staleTime: 2 * 60 * 1000, // Consider data fresh for 2 minutes (increased from default)
+        gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes  
+        refetchOnWindowFocus: false, // Disable refetch on window focus to reduce API calls
+        refetchOnMount: true, // Only refetch on mount if data is stale
+        refetchInterval: false, // Disable automatic polling
+        retry: (failureCount, error) => {
+            // Don't retry on certain errors to avoid excessive API calls
+            if (error && typeof error === 'object' && 'status' in error) {
+                const status = (error as any).status;
+                if (status === 429 || status === 403) return false; // Rate limiting or forbidden
+            }
+            return failureCount < 2; // Reduced retry attempts from 3 to 2
+        },
+        retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
     });
 
     // Use React Query for fetching balance
@@ -409,9 +257,9 @@ export function PaymentHistory({
         }
     }, [connection, merchantPubkey, isDevnet]);
 
-    // Fetch and update balance when needed
+    // Fetch and update balance when needed - use correct query key structure
     const { data: balance } = useQuery({
-        queryKey: ['usdc-balance', merchantPubkey.toString(), isDevnet],
+        queryKey: ['token-balance', merchantPubkey.toString(), (isDevnet ? USDC_DEVNET_MINT : USDC_MINT).toString()],
         queryFn: fetchBalance,
         staleTime: 10 * 60 * 1000, // 10 minutes
         gcTime: 30 * 60 * 1000, // 30 minutes
@@ -428,10 +276,22 @@ export function PaymentHistory({
         }
     }, [balance, onBalanceUpdate]);
     
-    // Save payments to localStorage when they change
+    // Save payments to localStorage when they actually change (not just reference change)
+    const previousPaymentsRef = useRef<Payment[]>([]);
     useEffect(() => {
+        // Only save if the payments data has actually changed
         if (payments && payments.length > 0) {
-            savePaymentsToCache(payments);
+            // Compare actual data, not just references
+            const hasChanged = payments.length !== previousPaymentsRef.current.length ||
+                payments.some((payment, index) => {
+                    const prevPayment = previousPaymentsRef.current[index];
+                    return !prevPayment || payment.signature !== prevPayment.signature;
+                });
+            
+            if (hasChanged) {
+                savePaymentsToCache(payments);
+                previousPaymentsRef.current = payments;
+            }
         }
     }, [payments, savePaymentsToCache]);
     
@@ -533,269 +393,104 @@ export function PaymentHistory({
     }, [connection, merchantPubkey, isDevnet, queryClient]);
 
     // Set up subscription to merchant's USDC ATA for real-time updates
+    const subscriptionRef = useRef<number | null>(null);
+    const lastInvalidationTime = useRef<number>(0);
+    
     useEffect(() => {
         if (!merchantPubkey || !connection) return;
 
-        // Keep track of already processed signatures to avoid duplicates
-        const processedSignatures = new Set<string>();
-        
+        let isSubscribed = true;
+
         const setupSubscription = async () => {
             try {
                 const usdcMint = isDevnet ? USDC_DEVNET_MINT : USDC_MINT;
                 const merchantUsdcAta = await findAssociatedTokenAddress(merchantPubkey, usdcMint);
 
-                // Prefill the processed signatures set with existing payment signatures
-                const existingPayments = queryClient.getQueryData<Payment[]>(
-                    ['payments', merchantPubkey.toString(), isDevnet]
-                ) || [];
-                existingPayments.forEach(p => processedSignatures.add(p.signature));
-
-                // Subscribe to account changes
                 const subscriptionId = connection.onAccountChange(
                     merchantUsdcAta,
-                    // Add explicit types to callback parameters
                     async (_accountInfo, _context) => {
-                        // Add a small delay to avoid rate limiting
-                        await new Promise<void>(resolve => setTimeout(resolve, 100));
+                        // Aggressive debouncing - only invalidate payment history every 5 minutes
+                        const now = Date.now();
+                        const timeSinceLastInvalidation = now - lastInvalidationTime.current;
+                        const PAYMENT_HISTORY_INVALIDATION_DELAY = 5 * 60 * 1000; // 5 minutes
                         
-                        // Get the latest transaction signature
-                        const signatures = await connection.getSignaturesForAddress(merchantUsdcAta, {
-                            limit: 1
-                        }) as TransactionSignatureResult[];
-
-                        if (signatures.length === 0) return;
-
-                        const latestSignature = signatures[0].signature;
-                        
-                        // Skip if we already processed this signature
-                        if (processedSignatures.has(latestSignature)) {
-                            return;
-                        }
-                        
-                        // Add to processed list to avoid duplicates
-                        processedSignatures.add(latestSignature);
-                        
-                        const newPayment = await processNewTransaction(latestSignature);
-
-                        if (newPayment) {
-                            // Use queryClient to update the cached payment data
-                            queryClient.setQueryData(
-                                ['payments', merchantPubkey.toString(), isDevnet],
-                                (oldData: Payment[] = []) => {
-                                    // Add new payment to the top
-                                    const updatedPayments = [newPayment, ...oldData];
+                        setTimeout(async () => {
+                            // Only invalidate if we're still mounted and subscribed
+                            if (isSubscribed && subscriptionRef.current === subscriptionId) {
+                                // Only invalidate balance queries frequently, payment history less frequently
+                                const balanceInvalidations = [
+                                    // Invalidate specific USDC balance for the merchant using correct query key
+                                    queryClient.invalidateQueries({
+                                        queryKey: ['token-balance', merchantPubkey.toString(), (isDevnet ? USDC_DEVNET_MINT : USDC_MINT).toString()],
+                                        refetchType: 'active' // Only refetch active queries
+                                    }),
                                     
-                                    // Also save to localStorage
-                                    savePaymentsToCache(updatedPayments);
+                                    // Legacy query key (if still needed)
+                                    queryClient.invalidateQueries({
+                                        queryKey: ['usdc-balance', merchantPubkey.toString(), isDevnet],
+                                        refetchType: 'active'
+                                    })
+                                ];
+                                
+                                await Promise.all(balanceInvalidations);
+                                
+                                // Only invalidate payment history if enough time has passed
+                                if (timeSinceLastInvalidation > PAYMENT_HISTORY_INVALIDATION_DELAY) {
+                                    lastInvalidationTime.current = now;
                                     
-                                    return updatedPayments;
+                                    await queryClient.invalidateQueries({
+                                        queryKey: ['payments', merchantPubkey.toString(), isDevnet],
+                                        refetchType: 'active'
+                                    });
                                 }
-                            );
-
-                            // Show toast notification for new payment
-                            const toastMessage = (
-                                <div>
-                                    <p>{formatUSDCAmount(newPayment.amount)} USDC payment received!</p>
-                                    {newPayment.memo && (
-                                        <p className="text-sm mt-1 opacity-90">{newPayment.memo}</p>
-                                    )}
-                                </div>
-                            );
-                            toastUtils.success(toastMessage, {
-                                position: 'bottom-right'
-                            });
-                            
-                            // Trigger the reset callback if provided
-                            if (onPaymentReceived) {
-                                onPaymentReceived();
                             }
-
-                            // Invalidate all balance-related queries to ensure UI updates everywhere
-                            await Promise.all([
-                                // Invalidate specific USDC balance for the merchant
-                                queryClient.invalidateQueries({
-                                    queryKey: ['usdc-balance', merchantPubkey.toString(), isDevnet],
-                                    refetchType: 'active' // Force immediate refetch
-                                }),
-                                
-                                // Invalidate general token balances
-                                queryClient.invalidateQueries({
-                                    queryKey: ['token-balance'],
-                                    refetchType: 'active'
-                                }),
-                                
-                                // Ensure we refetch the data
-                                queryClient.refetchQueries({
-                                    queryKey: ['usdc-balance', merchantPubkey.toString(), isDevnet]
-                                })
-                            ]);
-                        }
+                        }, 2000); // Increased delay to 2 seconds for better debouncing
                     },
                     'confirmed'
                 );
 
+                subscriptionRef.current = subscriptionId;
+
                 // Cleanup subscription on unmount
                 return () => {
-                    connection.removeAccountChangeListener(subscriptionId);
+                    isSubscribed = false;
+                    if (subscriptionRef.current === subscriptionId) {
+                        connection.removeAccountChangeListener(subscriptionId);
+                        subscriptionRef.current = null;
+                    }
                 };
-            } catch (err) {
-                console.error('Error setting up USDC ATA subscription:', err);
-                toastUtils.error('Failed to set up real-time updates');
-                return () => {}; // Return empty cleanup function
+            } catch (error) {
+                console.error('Error setting up balance subscription:', error);
             }
         };
 
-        const cleanup = setupSubscription();
+        setupSubscription();
+
         return () => {
-            cleanup.then(cleanupFn => cleanupFn?.());
+            isSubscribed = false;
+            if (subscriptionRef.current) {
+                connection.removeAccountChangeListener(subscriptionRef.current);
+                subscriptionRef.current = null;
+            }
         };
-    }, [connection, merchantPubkey, isDevnet, processNewTransaction, queryClient, savePaymentsToCache, onPaymentReceived]);
+    }, [merchantPubkey, connection, isDevnet, queryClient]);
 
-    const [expanded, setExpanded] = useState(true);
-    const [loadingOlder, setLoadingOlder] = useState(false);
-    const [hasMorePayments, setHasMorePayments] = useState(true);
-
-    // Function to load older payments
-    const loadMorePayments = useCallback(async () => {
-        if (!payments.length || loadingOlder) return;
-        
-        setLoadingOlder(true);
-        try {
-            const oldestPayment = payments[payments.length - 1];
-            const olderPayments = await fetchOlderPayments(
-                merchantPubkey,
-                connection,
-                oldestPayment.signature,
-                isDevnet,
-                50
-            );
-            
-            if (olderPayments.length > 0) {
-                // Append older payments to current list (don't prune here - let user decide)
-                const updatedPayments = [...payments, ...olderPayments];
-                
-                queryClient.setQueryData(
-                    ['payments', merchantPubkey.toString(), isDevnet],
-                    updatedPayments
-                );
-                
-                console.log(`Loaded ${olderPayments.length} additional payments`);
-            } else {
-                setHasMorePayments(false);
-                console.log('No more payments available');
-            }
-        } catch (error) {
-            console.error('Error loading more payments:', error);
-        } finally {
-            setLoadingOlder(false);
-        }
-    }, [payments, loadingOlder, merchantPubkey, connection, isDevnet, queryClient]);
-
-    // Filter payments based on maxPayments
-    const displayPayments = useMemo(() => {
-        if (maxPayments) {
-            return payments.slice(0, maxPayments);
-        }
-        return payments;
-    }, [payments, maxPayments]);
-
-    // Determine if we should show "Load More" button
-    const shouldShowLoadMore = !maxPayments && hasMorePayments && payments.length > 0 && payments.length >= CACHE_CONFIG.MIN_RECENT_PAYMENTS;
-
-    // Expose refetch method to parent components
-    const handleForceRefresh = useCallback(async () => {
-        try {
-            // Get existing payment data from cache
-            const existingPayments = queryClient.getQueryData<Payment[]>(
-                ['payments', merchantPubkey.toString(), isDevnet]
-            ) || [];
-            
-            // If we have existing payments, try incremental fetch first
-            if (existingPayments.length > 0) {
-                console.log('Performing incremental payment refresh...');
-                const newPayments = await fetchNewPayments(
-                    merchantPubkey, 
-                    connection, 
-                    existingPayments, 
-                    isDevnet
-                );
-                
-                if (newPayments.length > 0) {
-                    // Merge new payments with existing ones (new payments first)
-                    const mergedPayments = [...newPayments, ...existingPayments];
-                    
-                    // Apply pruning to keep cache size manageable
-                    const prunedPayments = prunePayments(mergedPayments);
-                    
-                    // Update the cache with pruned data
-                    queryClient.setQueryData(
-                        ['payments', merchantPubkey.toString(), isDevnet],
-                        prunedPayments
-                    );
-                    
-                    // Save to localStorage (which will also apply pruning)
-                    savePaymentsToCache(prunedPayments);
-                    
-                    console.log(`Added ${newPayments.length} new payment(s) to cache (total: ${prunedPayments.length})`);
-                } else {
-                    console.log('No new payments found');
-                }
-            } else {
-                // No existing data, do a full refresh
-                console.log('No existing payments, performing full refresh...');
-                await queryClient.invalidateQueries({
-                    queryKey: ['payments', merchantPubkey.toString(), isDevnet],
-                    refetchType: 'active'
-                });
-                await refetch();
-            }
-            
-            // Always refresh balance as it's lightweight
-            await queryClient.invalidateQueries({
-                queryKey: ['usdc-balance', merchantPubkey.toString(), isDevnet],
-                refetchType: 'active'
-            });
-        } catch (error) {
-            console.error('Error in incremental refresh, falling back to full refresh:', error);
-            // Fallback to full refresh on error
-            await queryClient.invalidateQueries({
-                queryKey: ['payments', merchantPubkey.toString(), isDevnet],
-                refetchType: 'active'
-            });
-            await refetch();
-        }
-    }, [queryClient, merchantPubkey, isDevnet, refetch, connection, savePaymentsToCache]);
-
-    // Expose the force refresh method to parent components
+    // Register force refresh function with forceRefresh ref if provided
     useEffect(() => {
         if (forceRefresh) {
-            forceRefresh.current = handleForceRefresh;
+            forceRefresh.current = async () => {
+                await refetch();
+            };
         }
-    }, [forceRefresh, handleForceRefresh]);
+    }, [forceRefresh, refetch]);
 
-    // Listen for visibility changes to refresh when user returns to app
-    useEffect(() => {
-        const handleVisibilityChange = () => {
-            // If the user returns to the app after being away, force refresh
-            if (!document.hidden && document.visibilityState === 'visible') {
-                // Add a small delay to ensure the connection is stable
-                setTimeout(() => {
-                    handleForceRefresh();
-                }, 1000);
-            }
-        };
-
-        document.addEventListener('visibilitychange', handleVisibilityChange);
-        
-        return () => {
-            document.removeEventListener('visibilitychange', handleVisibilityChange);
-        };
-    }, [handleForceRefresh]);
+    // Filter payments based on maxPayments
+    const displayPayments = maxPayments ? payments.slice(0, maxPayments) : payments;
 
     if (isLoading) {
         return (
             <div className="space-y-4">
-                <h2 className="text-xl font-bold">Payment History</h2>
+                <h2 className="text-xl font-bold">{title}</h2>
                 <div className="flex justify-center items-center h-32">
                     <div className="loading loading-spinner loading-lg"></div>
                 </div>
@@ -815,29 +510,34 @@ export function PaymentHistory({
         <div className="space-y-4">
             <div className="flex justify-between items-center">
                 <h2 className="text-xl font-bold">{title}</h2>
-                <div className="flex items-center gap-2">
-                    <button
-                        onClick={() => setExpanded((prev) => !prev)}
-                        className="btn btn-ghost btn-sm"
-                        title={expanded ? 'Collapse all' : 'Expand all'}
-                    >
-                        {expanded ? <FaChevronUp /> : <FaChevronDown />}
-                    </button>
+                <div className="flex gap-2">
                     <button 
                         onClick={() => refetch()} 
                         className="btn btn-ghost btn-sm"
+                        disabled={isLoading}
+                        title="Manually refresh payment history (reduced automatic updates to save API calls)"
                     >
-                        Refresh
+                        {isLoading ? (
+                            <span className="loading loading-spinner loading-xs"></span>
+                        ) : (
+                            'Refresh'
+                        )}
                     </button>
+                    <div className="text-xs text-gray-400 flex items-center">
+                        <span>Last 50 payments</span>
+                    </div>
                 </div>
             </div>
             {!displayPayments || displayPayments.length === 0 ? (
-                <p className="text-gray-500">No payments received yet</p>
+                <div className="text-center py-8">
+                    <p className="text-gray-500 mb-2">No payments received yet</p>
+                    <p className="text-xs text-gray-400">Payments will appear here when customers pay</p>
+                </div>
             ) : (
                 <div 
-                    className="payment-history-container"
+                    className="payment-history-container" 
                     style={{ 
-                        maxHeight: "410px", 
+                        maxHeight: "400px", 
                         overflowY: "auto", 
                         paddingRight: "8px", 
                         marginTop: "8px",
@@ -846,7 +546,7 @@ export function PaymentHistory({
                         gap: "12px"
                     }}
                 >
-                    {expanded && displayPayments.map((payment: Payment) => (
+                    {displayPayments.map((payment: Payment) => (
                         <div 
                             key={payment.signature} 
                             className="card bg-[#1C1C1C] shadow flex-shrink-0"
@@ -888,9 +588,16 @@ export function PaymentHistory({
                                                 amount: payment.amount,
                                                 recipient: payment.sender
                                             }}
-                                            onSuccess={() => queryClient.invalidateQueries({
-                                                queryKey: ['payments', merchantPubkey.toString(), isDevnet]
-                                            })}
+                                            onSuccess={() => {
+                                                // Remove redundant invalidation since RefundButton already invalidates
+                                                // This prevents double API calls after refunds
+                                                // queryClient.invalidateQueries({
+                                                //     queryKey: ['payments', merchantPubkey.toString(), isDevnet]
+                                                // })
+                                                
+                                                // Optional: Show success feedback without triggering refetch
+                                                console.log('Refund completed successfully');
+                                            }}
                                             isDevnet={isDevnet}
                                         />
                                     </div>
@@ -898,28 +605,8 @@ export function PaymentHistory({
                             </div>
                         </div>
                     ))}
-                    
-                    {/* Load More Button */}
-                    {expanded && shouldShowLoadMore && (
-                        <div className="flex justify-center mt-4">
-                            <button
-                                onClick={loadMorePayments}
-                                disabled={loadingOlder}
-                                className="btn btn-ghost btn-sm"
-                            >
-                                {loadingOlder ? (
-                                    <>
-                                        <span className="loading loading-spinner loading-sm"></span>
-                                        Loading older payments...
-                                    </>
-                                ) : (
-                                    'Load More History'
-                                )}
-                            </button>
-                        </div>
-                    )}
                 </div>
             )}
         </div>
     );
-} 
+}

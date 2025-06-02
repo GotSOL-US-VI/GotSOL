@@ -3,7 +3,7 @@
 import { useWallet } from '@getpara/react-sdk';
 import { PaymentHistory } from '@/components/payments/payment-history';
 import { WithdrawFunds } from '@/components/payments/withdraw-funds';
-import { useMemo, useEffect } from 'react';
+import { useMemo, useEffect, useRef } from 'react';
 import { PublicKey } from '@solana/web3.js';
 import { useConnection } from '@/lib/connection-context';
 import { getGotsolProgram } from '@/utils/gotsol-exports';
@@ -55,17 +55,17 @@ export default function ManageFundsContent({ params }: ManageFundsContentProps) 
     return getGotsolProgram(provider);
   }, [provider]);
 
-  const { forceRefresh: forceRefreshPayments, forceRefreshRef } = usePaymentRefresh(merchantPubkey, true);
+  const { forceRefresh: forceRefreshPayments, setRefreshFunction } = usePaymentRefresh(merchantPubkey, true);
+  const forceRefreshRef = useRef<(() => Promise<void>) | null>(null);
 
-  // Force refresh payment data when component mounts to catch any missed payments
+  // Simplified refresh function registration - avoid circular dependencies
   useEffect(() => {
-    // Add a delay to ensure the component is fully mounted and connections are ready
-    const timer = setTimeout(() => {
-      forceRefreshPayments();
-    }, 1500);
-
-    return () => clearTimeout(timer);
+    // Only set the refresh function, don't call it immediately
+    forceRefreshRef.current = forceRefreshPayments;
   }, [forceRefreshPayments]);
+
+  // Remove the auto-refresh on mount to prevent spam
+  // Users can manually refresh if needed via the refresh button in PaymentHistory
 
   // Use React Query to fetch merchant data
   const { data: merchantData } = useQuery({

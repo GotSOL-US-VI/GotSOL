@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useConnection } from '@/lib/connection-context';
 import { PublicKey } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID } from "@solana/spl-token";
@@ -50,7 +50,7 @@ export function WithdrawFunds({
   } = useUsdcBalance({
     address: merchantPubkey,
     isDevnet,
-    staleTime: 5000 // Consider data stale after 5s
+    staleTime: 30000 // Increased to 30s for consistency
   });
 
   const { 
@@ -60,34 +60,54 @@ export function WithdrawFunds({
   } = useUsdcBalance({
     address: ownerPubkey,
     isDevnet,
-    staleTime: 5000
+    staleTime: 30000 // Increased to 30s for consistency
   });
 
-  // Function to trigger an immediate balance refresh
-  const refreshBalances = async () => {
+  // Optimized balance refresh function with debouncing
+  const refreshBalances = useCallback(async () => {
     try {
-      // Invalidate queries to force fresh fetches
-      await queryClient.invalidateQueries({ 
-        queryKey: ['usdc-balance', merchantPubkey.toString(), isDevnet]
-      });
-      await queryClient.invalidateQueries({ 
-        queryKey: ['usdc-balance', ownerPubkey.toString(), isDevnet]
-      });
+      // Get the USDC mint based on network
+      const usdcMint = isDevnet ? USDC_DEVNET_MINT : USDC_MINT;
       
-      // Also invalidate the general token balance queries
-      await queryClient.invalidateQueries({
-        queryKey: ['token-balance']
-      });
-      
-      // Execute direct refetches
+      // Use Promise.all for efficient parallel invalidation
       await Promise.all([
-        refetchMerchantBalance(),
-        refetchOwnerBalance()
+        // Primary query key invalidation (new format)
+        queryClient.invalidateQueries({ 
+          queryKey: ['token-balance', merchantPubkey.toString(), usdcMint.toString()],
+          refetchType: 'active' // Only refetch active queries
+        }),
+        queryClient.invalidateQueries({ 
+          queryKey: ['token-balance', ownerPubkey.toString(), usdcMint.toString()],
+          refetchType: 'active'
+        }),
+        
+        // Legacy query key invalidation (if still needed)
+        queryClient.invalidateQueries({
+          queryKey: ['usdc-balance', merchantPubkey.toString(), isDevnet],
+          refetchType: 'active'
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ['usdc-balance', ownerPubkey.toString(), isDevnet],
+          refetchType: 'active'
+        })
       ]);
+      
+      // Execute hook-level refetches only if queries are active
+      const queries = queryClient.getQueriesData({ 
+        queryKey: ['token-balance'], 
+        type: 'active' 
+      });
+      
+      if (queries.length > 0) {
+        await Promise.all([
+          refetchMerchantBalance(),
+          refetchOwnerBalance()
+        ]);
+      }
     } catch (err) {
       console.error('Error refreshing balances:', err);
     }
-  };
+  }, [merchantPubkey, ownerPubkey, isDevnet, queryClient, refetchMerchantBalance, refetchOwnerBalance]);
 
   const handleWithdraw = async () => {
     if (!wallet?.address || !connection || !para) {
@@ -163,12 +183,6 @@ export function WithdrawFunds({
       // Trigger immediate balance refresh
       await refreshBalances();
       
-      // Set a short timeout and refresh again to ensure balances are updated
-      // as blockchain transactions might take a moment to finalize
-      setTimeout(async () => {
-        await refreshBalances();
-      }, 2000);
-
       toastUtils.success(
         <div>
           <p>Withdrawal successful!</p>
