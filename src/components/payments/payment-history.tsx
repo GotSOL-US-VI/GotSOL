@@ -2,7 +2,7 @@
 
 import { useWallet } from '@getpara/react-sdk';
 import { PublicKey, ParsedTransactionWithMeta, ParsedInstruction, PartiallyDecodedInstruction, Connection } from '@solana/web3.js';
-import { useEffect, useCallback, useRef } from 'react';
+import { useEffect, useCallback, useRef, useMemo } from 'react';
 import { useConnection } from '@/lib/connection-context';
 import { formatSolscanDevnetLink } from '@/utils/format-transaction-link';
 import { toastUtils } from '@/utils/toast-utils';
@@ -84,7 +84,8 @@ const batchProcess = async <T, R>(
 async function fetchPaymentData(
     merchantPubkey: PublicKey, 
     connection: Connection, 
-    isDevnet: boolean = true
+    isDevnet: boolean = true,
+    lastKnownTimestamp?: number
 ): Promise<Payment[]> {
     if (!merchantPubkey || !connection) return [];
     
@@ -99,17 +100,18 @@ async function fetchPaymentData(
             return [];
         }
 
-        // Reduce the limit to 50 recent transactions instead of 250
+        // Always fetch a reasonable amount for the unified cache
+        // If we have a lastKnownTimestamp, we'll filter after fetching
         const signatures = await connection.getSignaturesForAddress(merchantUsdcAta, {
-            limit: 50 // Reduced from 250 to dramatically cut API calls
+            limit: 50 // Unified fetch limit
         });
 
-        // Process signatures in smaller batches with more delay to reduce rate limiting
+        // Process signatures in batches with optimized settings
         const transactions = await batchProcess<{signature: string}, ParsedTransactionWithMeta | null>(
             signatures,
-            3, // Reduced from 5 to 3 transactions at a time
+            3, // Consistent batch size
             async (sig) => connection.getParsedTransaction(sig.signature, 'confirmed'),
-            500 // Increased delay from 300ms to 500ms between batches
+            400 // Moderate delay
         );
 
         // Process and filter the transactions
@@ -117,11 +119,19 @@ async function fetchPaymentData(
             tx !== null && tx.meta !== null
         );
 
-        // Process transactions into payments (avoiding additional network calls)
+        // Process transactions into payments
         const payments: Payment[] = [];
         
         for (const tx of validTransactions) {
             try {
+                const blockTime = tx.blockTime ? tx.blockTime * 1000 : Date.now();
+                
+                // If we have a lastKnownTimestamp and this transaction is older, skip it
+                // This enables incremental fetching
+                if (lastKnownTimestamp && blockTime <= lastKnownTimestamp) {
+                    continue;
+                }
+
                 // Find the token transfer instruction
                 const transferInstructions = tx.transaction.message.instructions.filter(
                     (instruction: ParsedInstruction | PartiallyDecodedInstruction) => {
@@ -188,7 +198,7 @@ async function fetchPaymentData(
                     signature: tx.transaction.signatures[0],
                     amount: Number(amount) / Math.pow(10, 6),
                     memo,
-                    timestamp: tx.blockTime ? tx.blockTime * 1000 : Date.now(),
+                    timestamp: blockTime,
                     sender: new PublicKey(authority)
                 });
             } catch (err) {
@@ -221,12 +231,36 @@ export function PaymentHistory({
     // Use our custom payment cache hook for localStorage persistence
     const { savePaymentsToCache } = usePaymentCache(merchantPubkey, isDevnet);
 
-    // Use React Query to fetch and cache payment data with optimized caching
-    const { data: payments = [], isLoading, error, refetch } = useQuery({
-        queryKey: ['payments', merchantPubkey?.toString(), isDevnet],
-        queryFn: () => fetchPaymentData(merchantPubkey!, connection, isDevnet),
+    // Unified query key - no more fetchLimit, just one cache for all payment data
+    const unifiedQueryKey = useMemo(() => ['payments', merchantPubkey?.toString(), isDevnet], [merchantPubkey, isDevnet]);
+
+    // Use React Query to fetch and cache payment data with unified caching
+    const { data: allPayments = [], isLoading, error, refetch } = useQuery({
+        queryKey: unifiedQueryKey,
+        queryFn: async () => {
+            // Check if we have existing cached data to enable incremental fetching
+            const existingPayments = queryClient.getQueryData<Payment[]>(unifiedQueryKey) || [];
+            const lastKnownTimestamp = existingPayments.length > 0 
+                ? Math.max(...existingPayments.map(p => p.timestamp))
+                : undefined;
+
+            const newPayments = await fetchPaymentData(merchantPubkey!, connection, isDevnet, lastKnownTimestamp);
+            
+            // If we got new payments, merge them with existing ones
+            if (newPayments.length > 0 && existingPayments.length > 0) {
+                // Combine and deduplicate by signature, sort by timestamp desc
+                const combined = [...newPayments, ...existingPayments];
+                const unique = combined.filter((payment, index, arr) => 
+                    arr.findIndex(p => p.signature === payment.signature) === index
+                );
+                return unique.sort((a, b) => b.timestamp - a.timestamp).slice(0, 50); // Keep latest 50
+            }
+            
+            // If no existing data or no new payments, return what we got
+            return newPayments.length > 0 ? newPayments : existingPayments;
+        },
         enabled: !!merchantPubkey && !!connection,
-        staleTime: 2 * 60 * 1000, // Consider data fresh for 2 minutes (increased from default)
+        staleTime: 2 * 60 * 1000, // Consider data fresh for 2 minutes
         gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes  
         refetchOnWindowFocus: false, // Disable refetch on window focus to reduce API calls
         refetchOnMount: true, // Only refetch on mount if data is stale
@@ -280,28 +314,26 @@ export function PaymentHistory({
     const previousPaymentsRef = useRef<Payment[]>([]);
     useEffect(() => {
         // Only save if the payments data has actually changed
-        if (payments && payments.length > 0) {
+        if (allPayments && allPayments.length > 0) {
             // Compare actual data, not just references
-            const hasChanged = payments.length !== previousPaymentsRef.current.length ||
-                payments.some((payment, index) => {
+            const hasChanged = allPayments.length !== previousPaymentsRef.current.length ||
+                allPayments.some((payment, index) => {
                     const prevPayment = previousPaymentsRef.current[index];
                     return !prevPayment || payment.signature !== prevPayment.signature;
                 });
             
             if (hasChanged) {
-                savePaymentsToCache(payments);
-                previousPaymentsRef.current = payments;
+                savePaymentsToCache(allPayments);
+                previousPaymentsRef.current = allPayments;
             }
         }
-    }, [payments, savePaymentsToCache]);
+    }, [allPayments, savePaymentsToCache]);
     
     // Process a single transaction (for live updates)
     const processNewTransaction = useCallback(async (signature: string): Promise<Payment | null> => {
         try {
-            // Check if we already have this payment in the cache
-            const existingPayments = queryClient.getQueryData<Payment[]>(
-                ['payments', merchantPubkey.toString(), isDevnet]
-            ) || [];
+            // Check if we already have this payment in the unified cache
+            const existingPayments = queryClient.getQueryData<Payment[]>(unifiedQueryKey) || [];
             
             // Skip processing if we already have this signature
             if (existingPayments.some(p => p.signature === signature)) {
@@ -390,7 +422,7 @@ export function PaymentHistory({
             console.error('Error processing new transaction:', err);
             return null;
         }
-    }, [connection, merchantPubkey, isDevnet, queryClient]);
+    }, [connection, merchantPubkey, isDevnet, queryClient, unifiedQueryKey]);
 
     // Set up subscription to merchant's USDC ATA for real-time updates
     const subscriptionRef = useRef<number | null>(null);
@@ -439,14 +471,19 @@ export function PaymentHistory({
                                     lastInvalidationTime.current = now;
                                     
                                     await queryClient.invalidateQueries({
-                                        queryKey: ['payments', merchantPubkey.toString(), isDevnet],
+                                        predicate: (query) => {
+                                            const [queryType, merchantId, devnet] = query.queryKey;
+                                            return queryType === 'payments' && 
+                                                   merchantId === merchantPubkey.toString() && 
+                                                   devnet === isDevnet;
+                                        },
                                         refetchType: 'active'
                                     });
                                 }
                             }
                         }, 2000); // Increased delay to 2 seconds for better debouncing
                     },
-                    'confirmed'
+                    { commitment: 'confirmed' }
                 );
 
                 subscriptionRef.current = subscriptionId;
@@ -485,7 +522,16 @@ export function PaymentHistory({
     }, [forceRefresh, refetch]);
 
     // Filter payments based on maxPayments
-    const displayPayments = maxPayments ? payments.slice(0, maxPayments) : payments;
+    const displayPayments = maxPayments ? allPayments.slice(0, maxPayments) : allPayments;
+
+    // Generate display text based on actual usage
+    const getDisplayText = () => {
+        if (maxPayments) {
+            return `Last ${maxPayments} payments`;
+        } else {
+            return `Last ${allPayments.length} payments`;
+        }
+    };
 
     if (isLoading) {
         return (
@@ -524,7 +570,7 @@ export function PaymentHistory({
                         )}
                     </button>
                     <div className="text-xs text-gray-400 flex items-center">
-                        <span>Last 50 payments</span>
+                        <span>{getDisplayText()}</span>
                     </div>
                 </div>
             </div>

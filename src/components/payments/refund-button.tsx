@@ -287,7 +287,12 @@ export function RefundButton({ program, merchantPubkey, payment, onSuccess, isDe
                 
                 // Payment history queries
                 queryClient.invalidateQueries({
-                    queryKey: ['payments', merchantPubkey.toString(), isDevnet],
+                    predicate: (query) => {
+                        const [queryType, merchantId, devnet] = query.queryKey;
+                        return queryType === 'payments' && 
+                               merchantId === merchantPubkey.toString() && 
+                               devnet === isDevnet;
+                    },
                     refetchType: 'active'
                 }),
                 

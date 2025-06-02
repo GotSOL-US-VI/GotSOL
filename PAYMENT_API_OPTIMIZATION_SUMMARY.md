@@ -80,7 +80,7 @@ retry: (failureCount, error) => {
 
 ### User Experience:
 - ✅ Manual refresh button for immediate updates when needed
-- ✅ Clear indication of "Last 50 payments" in UI
+<!-- - ✅ Clear indication of "Last 50 payments" in UI -->
 - ✅ Loading states for better feedback
 - ✅ Balances still update in real-time
 - ✅ Payment history updates intelligently
