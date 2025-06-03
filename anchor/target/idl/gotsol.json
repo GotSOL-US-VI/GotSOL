@@ -21,21 +21,15 @@
       ],
       "accounts": [
         {
-          "name": "fee_payer",
-          "docs": [
-            "Optional fee payer account. If provided, this account will pay for transaction fees."
-          ],
-          "writable": true,
-          "signer": true,
-          "optional": true
-        },
-        {
           "name": "owner",
           "writable": true,
           "signer": true
         },
         {
           "name": "merchant",
+          "docs": [
+            "Minimal merchant PDA - required for token account authority and signing"
+          ],
           "writable": true,
           "pda": {
             "seeds": [
@@ -64,104 +58,96 @@
           }
         },
         {
-          "name": "usdc_mint"
+          "name": "merkle_tree",
+          "docs": [
+            "Compression accounts - all required for compressed merchant creation",
+            "The Merkle tree account for storing compressed merchant data"
+          ],
+          "writable": true
         },
         {
-          "name": "merchant_usdc_ata",
+          "name": "tree_authority",
+          "docs": [
+            "The tree authority (program PDA)"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  101,
+                  101,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "compressed_merchant_state",
+          "docs": [
+            "The compressed merchant state tracker"
+          ],
           "writable": true,
           "pda": {
             "seeds": [
               {
-                "kind": "account",
-                "path": "merchant"
-              },
-              {
                 "kind": "const",
                 "value": [
-                  6,
-                  221,
-                  246,
-                  225,
-                  215,
+                  99,
+                  111,
+                  109,
+                  112,
+                  114,
                   101,
-                  161,
-                  147,
-                  217,
-                  203,
-                  225,
-                  70,
-                  206,
-                  235,
-                  121,
-                  172,
-                  28,
-                  180,
-                  133,
-                  237,
+                  115,
+                  115,
+                  101,
+                  100,
                   95,
-                  91,
-                  55,
-                  145,
-                  58,
-                  140,
-                  245,
-                  133,
-                  126,
-                  255,
-                  0,
-                  169
+                  109,
+                  101,
+                  114,
+                  99,
+                  104,
+                  97,
+                  110,
+                  116
                 ]
               },
               {
+                "kind": "arg",
+                "path": "name"
+              },
+              {
                 "kind": "account",
-                "path": "usdc_mint"
+                "path": "owner"
               }
-            ],
-            "program": {
-              "kind": "const",
-              "value": [
-                140,
-                151,
-                37,
-                143,
-                78,
-                36,
-                137,
-                241,
-                187,
-                61,
-                16,
-                41,
-                20,
-                142,
-                13,
-                131,
-                11,
-                90,
-                19,
-                153,
-                218,
-                255,
-                16,
-                132,
-                4,
-                142,
-                123,
-                216,
-                219,
-                233,
-                248,
-                89
-              ]
-            }
+            ]
           }
         },
         {
-          "name": "associated_token_program",
-          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+          "name": "noop_program",
+          "docs": [
+            "Noop program for compression logging"
+          ]
         },
         {
-          "name": "token_program"
+          "name": "compression_program",
+          "docs": [
+            "Account compression program"
+          ]
         },
         {
           "name": "system_program",
@@ -172,6 +158,10 @@
         {
           "name": "name",
           "type": "string"
+        },
+        {
+          "name": "fee_eligible",
+          "type": "bool"
         }
       ]
     },
@@ -188,12 +178,6 @@
         46
       ],
       "accounts": [
-        {
-          "name": "fee_payer",
-          "writable": true,
-          "signer": true,
-          "optional": true
-        },
         {
           "name": "owner",
           "writable": true,
@@ -230,7 +214,7 @@
           }
         },
         {
-          "name": "merchant_usdc_ata",
+          "name": "merchant_token_ata",
           "writable": true,
           "pda": {
             "seeds": [
@@ -277,7 +261,7 @@
               },
               {
                 "kind": "account",
-                "path": "usdc_mint"
+                "path": "token_mint"
               }
             ],
             "program": {
@@ -320,7 +304,7 @@
           }
         },
         {
-          "name": "recipient_usdc_ata",
+          "name": "recipient_token_ata",
           "writable": true,
           "pda": {
             "seeds": [
@@ -367,7 +351,7 @@
               },
               {
                 "kind": "account",
-                "path": "usdc_mint"
+                "path": "token_mint"
               }
             ],
             "program": {
@@ -433,7 +417,7 @@
           }
         },
         {
-          "name": "usdc_mint"
+          "name": "token_mint"
         },
         {
           "name": "recipient"
@@ -472,7 +456,6 @@
       "accounts": [
         {
           "name": "auth",
-          "writable": true,
           "signer": true
         },
         {
@@ -486,99 +469,24 @@
       ],
       "args": [
         {
-          "name": "is_active",
+          "name": "fee_eligible",
           "type": "bool"
         }
       ]
     },
     {
-      "name": "update_refund_limit",
+      "name": "withdraw_tokens",
       "discriminator": [
-        212,
-        77,
-        145,
-        232,
-        91,
-        187,
-        156,
-        100
+        2,
+        4,
+        225,
+        61,
+        19,
+        182,
+        106,
+        170
       ],
       "accounts": [
-        {
-          "name": "fee_payer",
-          "docs": [
-            "Optional fee payer account. If provided, this account will pay for transaction fees."
-          ],
-          "writable": true,
-          "signer": true,
-          "optional": true
-        },
-        {
-          "name": "owner",
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "merchant",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  109,
-                  101,
-                  114,
-                  99,
-                  104,
-                  97,
-                  110,
-                  116
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "merchant.entity_name",
-                "account": "Merchant"
-              },
-              {
-                "kind": "account",
-                "path": "owner"
-              }
-            ]
-          }
-        },
-        {
-          "name": "system_program",
-          "address": "11111111111111111111111111111111"
-        }
-      ],
-      "args": [
-        {
-          "name": "new_limit",
-          "type": "u64"
-        }
-      ]
-    },
-    {
-      "name": "withdraw_usdc",
-      "discriminator": [
-        114,
-        49,
-        72,
-        184,
-        27,
-        156,
-        243,
-        155
-      ],
-      "accounts": [
-        {
-          "name": "fee_payer",
-          "writable": true,
-          "signer": true,
-          "optional": true
-        },
         {
           "name": "owner",
           "writable": true,
@@ -614,10 +522,10 @@
           }
         },
         {
-          "name": "usdc_mint"
+          "name": "token_mint"
         },
         {
-          "name": "merchant_usdc_ata",
+          "name": "merchant_token_ata",
           "writable": true,
           "pda": {
             "seeds": [
@@ -664,7 +572,7 @@
               },
               {
                 "kind": "account",
-                "path": "usdc_mint"
+                "path": "token_mint"
               }
             ],
             "program": {
@@ -707,7 +615,7 @@
           }
         },
         {
-          "name": "owner_usdc_ata",
+          "name": "owner_token_ata",
           "writable": true,
           "pda": {
             "seeds": [
@@ -754,7 +662,7 @@
               },
               {
                 "kind": "account",
-                "path": "usdc_mint"
+                "path": "token_mint"
               }
             ],
             "program": {
@@ -801,7 +709,7 @@
           "writable": true
         },
         {
-          "name": "house_usdc_ata",
+          "name": "house_token_ata",
           "writable": true,
           "pda": {
             "seeds": [
@@ -848,7 +756,7 @@
               },
               {
                 "kind": "account",
-                "path": "usdc_mint"
+                "path": "token_mint"
               }
             ],
             "program": {
@@ -911,6 +819,19 @@
     }
   ],
   "accounts": [
+    {
+      "name": "CompressedMerchantState",
+      "discriminator": [
+        123,
+        211,
+        254,
+        41,
+        198,
+        110,
+        69,
+        232
+      ]
+    },
     {
       "name": "Merchant",
       "discriminator": [
@@ -1001,9 +922,59 @@
       "code": 6006,
       "name": "UnauthorizedStatusChange",
       "msg": "Only the HOUSE account can change merchant status"
+    },
+    {
+      "code": 6007,
+      "name": "MissingCompressionAccounts",
+      "msg": "Compression accounts are required when use_compression is true"
+    },
+    {
+      "code": 6008,
+      "name": "InvalidMerkleTreeConfig",
+      "msg": "Invalid Merkle tree configuration"
+    },
+    {
+      "code": 6009,
+      "name": "InvalidMerkleProof",
+      "msg": "Merkle proof verification failed"
+    },
+    {
+      "code": 6010,
+      "name": "CompressionSerializationError",
+      "msg": "Compressed data serialization failed"
+    },
+    {
+      "code": 6011,
+      "name": "InvalidTreeAuthority",
+      "msg": "Tree authority validation failed"
+    },
+    {
+      "code": 6012,
+      "name": "InvalidTokenDecimals",
+      "msg": "Token must have exactly 6 decimals"
     }
   ],
   "types": [
+    {
+      "name": "CompressedMerchantState",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "merkle_tree",
+            "type": "pubkey"
+          },
+          {
+            "name": "leaf_index",
+            "type": "u32"
+          },
+          {
+            "name": "is_compressed",
+            "type": "bool"
+          }
+        ]
+      }
+    },
     {
       "name": "Merchant",
       "type": {
@@ -1026,12 +997,8 @@
             "type": "u64"
           },
           {
-            "name": "is_active",
+            "name": "fee_eligible",
             "type": "bool"
-          },
-          {
-            "name": "refund_limit",
-            "type": "u64"
           },
           {
             "name": "merchant_bump",
@@ -1050,7 +1017,7 @@
             "type": "pubkey"
           },
           {
-            "name": "is_active",
+            "name": "fee_eligible",
             "type": "bool"
           },
           {

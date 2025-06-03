@@ -27,21 +27,15 @@ export type Gotsol = {
       ],
       "accounts": [
         {
-          "name": "feePayer",
-          "docs": [
-            "Optional fee payer account. If provided, this account will pay for transaction fees."
-          ],
-          "writable": true,
-          "signer": true,
-          "optional": true
-        },
-        {
           "name": "owner",
           "writable": true,
           "signer": true
         },
         {
           "name": "merchant",
+          "docs": [
+            "Minimal merchant PDA - required for token account authority and signing"
+          ],
           "writable": true,
           "pda": {
             "seeds": [
@@ -70,104 +64,96 @@ export type Gotsol = {
           }
         },
         {
-          "name": "usdcMint"
+          "name": "merkleTree",
+          "docs": [
+            "Compression accounts - all required for compressed merchant creation",
+            "The Merkle tree account for storing compressed merchant data"
+          ],
+          "writable": true
         },
         {
-          "name": "merchantUsdcAta",
+          "name": "treeAuthority",
+          "docs": [
+            "The tree authority (program PDA)"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  101,
+                  101,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "compressedMerchantState",
+          "docs": [
+            "The compressed merchant state tracker"
+          ],
           "writable": true,
           "pda": {
             "seeds": [
               {
-                "kind": "account",
-                "path": "merchant"
-              },
-              {
                 "kind": "const",
                 "value": [
-                  6,
-                  221,
-                  246,
-                  225,
-                  215,
+                  99,
+                  111,
+                  109,
+                  112,
+                  114,
                   101,
-                  161,
-                  147,
-                  217,
-                  203,
-                  225,
-                  70,
-                  206,
-                  235,
-                  121,
-                  172,
-                  28,
-                  180,
-                  133,
-                  237,
+                  115,
+                  115,
+                  101,
+                  100,
                   95,
-                  91,
-                  55,
-                  145,
-                  58,
-                  140,
-                  245,
-                  133,
-                  126,
-                  255,
-                  0,
-                  169
+                  109,
+                  101,
+                  114,
+                  99,
+                  104,
+                  97,
+                  110,
+                  116
                 ]
               },
               {
+                "kind": "arg",
+                "path": "name"
+              },
+              {
                 "kind": "account",
-                "path": "usdcMint"
+                "path": "owner"
               }
-            ],
-            "program": {
-              "kind": "const",
-              "value": [
-                140,
-                151,
-                37,
-                143,
-                78,
-                36,
-                137,
-                241,
-                187,
-                61,
-                16,
-                41,
-                20,
-                142,
-                13,
-                131,
-                11,
-                90,
-                19,
-                153,
-                218,
-                255,
-                16,
-                132,
-                4,
-                142,
-                123,
-                216,
-                219,
-                233,
-                248,
-                89
-              ]
-            }
+            ]
           }
         },
         {
-          "name": "associatedTokenProgram",
-          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+          "name": "noopProgram",
+          "docs": [
+            "Noop program for compression logging"
+          ]
         },
         {
-          "name": "tokenProgram"
+          "name": "compressionProgram",
+          "docs": [
+            "Account compression program"
+          ]
         },
         {
           "name": "systemProgram",
@@ -178,6 +164,10 @@ export type Gotsol = {
         {
           "name": "name",
           "type": "string"
+        },
+        {
+          "name": "feeEligible",
+          "type": "bool"
         }
       ]
     },
@@ -194,12 +184,6 @@ export type Gotsol = {
         46
       ],
       "accounts": [
-        {
-          "name": "feePayer",
-          "writable": true,
-          "signer": true,
-          "optional": true
-        },
         {
           "name": "owner",
           "writable": true,
@@ -236,7 +220,7 @@ export type Gotsol = {
           }
         },
         {
-          "name": "merchantUsdcAta",
+          "name": "merchantTokenAta",
           "writable": true,
           "pda": {
             "seeds": [
@@ -283,7 +267,7 @@ export type Gotsol = {
               },
               {
                 "kind": "account",
-                "path": "usdcMint"
+                "path": "tokenMint"
               }
             ],
             "program": {
@@ -326,7 +310,7 @@ export type Gotsol = {
           }
         },
         {
-          "name": "recipientUsdcAta",
+          "name": "recipientTokenAta",
           "writable": true,
           "pda": {
             "seeds": [
@@ -373,7 +357,7 @@ export type Gotsol = {
               },
               {
                 "kind": "account",
-                "path": "usdcMint"
+                "path": "tokenMint"
               }
             ],
             "program": {
@@ -439,7 +423,7 @@ export type Gotsol = {
           }
         },
         {
-          "name": "usdcMint"
+          "name": "tokenMint"
         },
         {
           "name": "recipient"
@@ -478,7 +462,6 @@ export type Gotsol = {
       "accounts": [
         {
           "name": "auth",
-          "writable": true,
           "signer": true
         },
         {
@@ -492,99 +475,24 @@ export type Gotsol = {
       ],
       "args": [
         {
-          "name": "isActive",
+          "name": "feeEligible",
           "type": "bool"
         }
       ]
     },
     {
-      "name": "updateRefundLimit",
+      "name": "withdrawTokens",
       "discriminator": [
-        212,
-        77,
-        145,
-        232,
-        91,
-        187,
-        156,
-        100
+        2,
+        4,
+        225,
+        61,
+        19,
+        182,
+        106,
+        170
       ],
       "accounts": [
-        {
-          "name": "feePayer",
-          "docs": [
-            "Optional fee payer account. If provided, this account will pay for transaction fees."
-          ],
-          "writable": true,
-          "signer": true,
-          "optional": true
-        },
-        {
-          "name": "owner",
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "merchant",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  109,
-                  101,
-                  114,
-                  99,
-                  104,
-                  97,
-                  110,
-                  116
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "merchant.entity_name",
-                "account": "merchant"
-              },
-              {
-                "kind": "account",
-                "path": "owner"
-              }
-            ]
-          }
-        },
-        {
-          "name": "systemProgram",
-          "address": "11111111111111111111111111111111"
-        }
-      ],
-      "args": [
-        {
-          "name": "newLimit",
-          "type": "u64"
-        }
-      ]
-    },
-    {
-      "name": "withdrawUsdc",
-      "discriminator": [
-        114,
-        49,
-        72,
-        184,
-        27,
-        156,
-        243,
-        155
-      ],
-      "accounts": [
-        {
-          "name": "feePayer",
-          "writable": true,
-          "signer": true,
-          "optional": true
-        },
         {
           "name": "owner",
           "writable": true,
@@ -620,10 +528,10 @@ export type Gotsol = {
           }
         },
         {
-          "name": "usdcMint"
+          "name": "tokenMint"
         },
         {
-          "name": "merchantUsdcAta",
+          "name": "merchantTokenAta",
           "writable": true,
           "pda": {
             "seeds": [
@@ -670,7 +578,7 @@ export type Gotsol = {
               },
               {
                 "kind": "account",
-                "path": "usdcMint"
+                "path": "tokenMint"
               }
             ],
             "program": {
@@ -713,7 +621,7 @@ export type Gotsol = {
           }
         },
         {
-          "name": "ownerUsdcAta",
+          "name": "ownerTokenAta",
           "writable": true,
           "pda": {
             "seeds": [
@@ -760,7 +668,7 @@ export type Gotsol = {
               },
               {
                 "kind": "account",
-                "path": "usdcMint"
+                "path": "tokenMint"
               }
             ],
             "program": {
@@ -807,7 +715,7 @@ export type Gotsol = {
           "writable": true
         },
         {
-          "name": "houseUsdcAta",
+          "name": "houseTokenAta",
           "writable": true,
           "pda": {
             "seeds": [
@@ -854,7 +762,7 @@ export type Gotsol = {
               },
               {
                 "kind": "account",
-                "path": "usdcMint"
+                "path": "tokenMint"
               }
             ],
             "program": {
@@ -917,6 +825,19 @@ export type Gotsol = {
     }
   ],
   "accounts": [
+    {
+      "name": "compressedMerchantState",
+      "discriminator": [
+        123,
+        211,
+        254,
+        41,
+        198,
+        110,
+        69,
+        232
+      ]
+    },
     {
       "name": "merchant",
       "discriminator": [
@@ -1007,9 +928,59 @@ export type Gotsol = {
       "code": 6006,
       "name": "unauthorizedStatusChange",
       "msg": "Only the HOUSE account can change merchant status"
+    },
+    {
+      "code": 6007,
+      "name": "missingCompressionAccounts",
+      "msg": "Compression accounts are required when use_compression is true"
+    },
+    {
+      "code": 6008,
+      "name": "invalidMerkleTreeConfig",
+      "msg": "Invalid Merkle tree configuration"
+    },
+    {
+      "code": 6009,
+      "name": "invalidMerkleProof",
+      "msg": "Merkle proof verification failed"
+    },
+    {
+      "code": 6010,
+      "name": "compressionSerializationError",
+      "msg": "Compressed data serialization failed"
+    },
+    {
+      "code": 6011,
+      "name": "invalidTreeAuthority",
+      "msg": "Tree authority validation failed"
+    },
+    {
+      "code": 6012,
+      "name": "invalidTokenDecimals",
+      "msg": "Token must have exactly 6 decimals"
     }
   ],
   "types": [
+    {
+      "name": "compressedMerchantState",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "merkleTree",
+            "type": "pubkey"
+          },
+          {
+            "name": "leafIndex",
+            "type": "u32"
+          },
+          {
+            "name": "isCompressed",
+            "type": "bool"
+          }
+        ]
+      }
+    },
     {
       "name": "merchant",
       "type": {
@@ -1032,12 +1003,8 @@ export type Gotsol = {
             "type": "u64"
           },
           {
-            "name": "isActive",
+            "name": "feeEligible",
             "type": "bool"
-          },
-          {
-            "name": "refundLimit",
-            "type": "u64"
           },
           {
             "name": "merchantBump",
@@ -1056,7 +1023,7 @@ export type Gotsol = {
             "type": "pubkey"
           },
           {
-            "name": "isActive",
+            "name": "feeEligible",
             "type": "bool"
           },
           {
