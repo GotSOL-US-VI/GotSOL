@@ -127,6 +127,7 @@ export default function ManageFundsContent({ params }: ManageFundsContentProps) 
                 onPaymentReceived={() => {}}
                 title="Full Payment History"
                 forceRefresh={forceRefreshRef}
+                enablePagination={true}
               />
             </div>
           </div>

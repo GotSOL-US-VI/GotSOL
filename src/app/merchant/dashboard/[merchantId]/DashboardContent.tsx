@@ -161,7 +161,10 @@ export default function DashboardContent({ params }: { params: { merchantId: str
                 merchantPubkey={merchantPubkey}
                 isDevnet={true}
                 onBalanceUpdate={setMerchantBalance}
-                onPaymentReceived={() => setResetSignal(prev => prev + 1)}
+                onPaymentReceived={() => {
+                  console.log('🔔 Payment received callback triggered - resetting QR and updating UI');
+                  setResetSignal(prev => prev + 1);
+                }}
                 title="Recent Payment History"
                 maxPayments={3}
                 forceRefresh={forceRefreshRef}

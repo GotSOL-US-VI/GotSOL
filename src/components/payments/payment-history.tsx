@@ -2,7 +2,7 @@
 
 import { useWallet } from '@getpara/react-sdk';
 import { PublicKey, ParsedTransactionWithMeta, ParsedInstruction, PartiallyDecodedInstruction, Connection } from '@solana/web3.js';
-import { useEffect, useCallback, useRef, useMemo } from 'react';
+import { useEffect, useCallback, useRef, useMemo, useState } from 'react';
 import { useConnection } from '@/lib/connection-context';
 import { formatSolscanDevnetLink } from '@/utils/format-transaction-link';
 import { toastUtils } from '@/utils/toast-utils';
@@ -23,6 +23,7 @@ interface PaymentHistoryProps {
     title?: string;
     maxPayments?: number;
     forceRefresh?: React.MutableRefObject<(() => Promise<void>) | null>;
+    enablePagination?: boolean;
 }
 
 interface Payment {
@@ -85,7 +86,8 @@ async function fetchPaymentData(
     merchantPubkey: PublicKey, 
     connection: Connection, 
     isDevnet: boolean = true,
-    lastKnownTimestamp?: number
+    lastKnownTimestamp?: number,
+    beforeSignature?: string
 ): Promise<Payment[]> {
     if (!merchantPubkey || !connection) return [];
     
@@ -93,18 +95,33 @@ async function fetchPaymentData(
         // Get the merchant's USDC ATA
         const usdcMint = isDevnet ? USDC_DEVNET_MINT : USDC_MINT;
         const merchantUsdcAta = await findAssociatedTokenAddress(merchantPubkey, usdcMint);
+        console.log('🏪 Merchant USDC ATA:', merchantUsdcAta.toString());
+        console.log('🪙 USDC Mint:', usdcMint.toString());
         
         // First check if the ATA exists
         const ataInfo = await connection.getAccountInfo(merchantUsdcAta);
+        console.log('📊 ATA Account Info:', ataInfo ? 'EXISTS' : 'NOT FOUND');
         if (!ataInfo) {
+            console.log('❌ Merchant USDC ATA does not exist');
             return [];
         }
 
-        // Always fetch a reasonable amount for the unified cache
-        // If we have a lastKnownTimestamp, we'll filter after fetching
-        const signatures = await connection.getSignaturesForAddress(merchantUsdcAta, {
-            limit: 50 // Unified fetch limit
-        });
+        // Configure signature fetch - always fetch more initially to ensure we have enough data
+        const fetchConfig: any = {
+            limit: beforeSignature ? 5 : 20 // Fetch 20 for initial load, 5 for pagination
+        };
+        
+        if (beforeSignature) {
+            fetchConfig.before = beforeSignature;
+        }
+
+        const signatures = await connection.getSignaturesForAddress(merchantUsdcAta, fetchConfig);
+        console.log('📝 Found signatures:', signatures.length, signatures.map(s => s.signature.slice(0, 8) + '...'));
+
+        if (signatures.length === 0) {
+            console.log('❌ No signatures found for merchant ATA');
+            return [];
+        }
 
         // Process signatures in batches with optimized settings
         const transactions = await batchProcess<{signature: string}, ParsedTransactionWithMeta | null>(
@@ -118,6 +135,7 @@ async function fetchPaymentData(
         const validTransactions = transactions.filter((tx): tx is ParsedTransactionWithMeta => 
             tx !== null && tx.meta !== null
         );
+        console.log('✅ Valid transactions:', validTransactions.length, 'out of', transactions.length);
 
         // Process transactions into payments
         const payments: Payment[] = [];
@@ -129,6 +147,7 @@ async function fetchPaymentData(
                 // If we have a lastKnownTimestamp and this transaction is older, skip it
                 // This enables incremental fetching
                 if (lastKnownTimestamp && blockTime <= lastKnownTimestamp) {
+                    console.log('⏭️ Skipping old transaction:', tx.transaction.signatures[0].slice(0, 8) + '...');
                     continue;
                 }
 
@@ -157,7 +176,10 @@ async function fetchPaymentData(
                     }
                 );
 
-                if (transferInstructions.length === 0) continue;
+                if (transferInstructions.length === 0) {
+                    console.log('❌ No matching transfer instructions for:', tx.transaction.signatures[0].slice(0, 8) + '...');
+                    continue;
+                }
 
                 // Use the first matching instruction
                 const transferInstruction = transferInstructions[0] as ParsedInstruction;
@@ -166,13 +188,19 @@ async function fetchPaymentData(
                     ? { type: transferInstruction.parsed }
                     : transferInstruction.parsed;
 
-                if (!('info' in parsedData)) continue;
+                if (!('info' in parsedData)) {
+                    console.log('❌ No info in parsed data for:', tx.transaction.signatures[0].slice(0, 8) + '...');
+                    continue;
+                }
 
                 const info = parsedData.info;
                 const authority = info.authority || info.multisigAuthority || info.source;
                 const amount = info.tokenAmount?.amount || info.amount;
 
-                if (!authority || !amount) continue;
+                if (!authority || !amount) {
+                    console.log('❌ Missing authority or amount for:', tx.transaction.signatures[0].slice(0, 8) + '...', { authority, amount });
+                    continue;
+                }
 
                 // Extract memo from transaction logs
                 let memo = null;
@@ -194,19 +222,23 @@ async function fetchPaymentData(
                     }
                 }
 
-                payments.push({
+                const payment = {
                     signature: tx.transaction.signatures[0],
                     amount: Number(amount) / Math.pow(10, 6),
                     memo,
                     timestamp: blockTime,
                     sender: new PublicKey(authority)
-                });
+                };
+                
+                console.log('💰 Processed payment:', payment.signature.slice(0, 8) + '...', payment.amount, 'USDC');
+                payments.push(payment);
             } catch (err) {
                 console.error('Error processing transaction:', err);
                 // Continue to next transaction on error
             }
         }
 
+        console.log('🎉 Final payments array:', payments.length, payments);
         return payments;
     } catch (error) {
         console.error('Error fetching payments:', error);
@@ -222,12 +254,25 @@ export function PaymentHistory({
     onPaymentReceived,
     title = 'Payment History',
     maxPayments,
-    forceRefresh
+    forceRefresh,
+    enablePagination = false
 }: PaymentHistoryProps) {
     const { data: wallet } = useWallet();
     const { connection } = useConnection();
     const queryClient = useQueryClient();
-    
+    const [isLoadingMore, setIsLoadingMore] = useState(false);
+    const [hasMorePayments, setHasMorePayments] = useState(true);
+    // Default to collapsed for both variations
+    const [isExpanded, setIsExpanded] = useState(false);
+
+    // Set appropriate defaults based on pagination mode
+    // Recent version (enablePagination=false): max 2 payments
+    // Full version (enablePagination=true): max 5 payments initially
+    const effectiveMaxPayments = useMemo(() => {
+        if (maxPayments) return maxPayments;
+        return enablePagination ? 5 : 2;
+    }, [maxPayments, enablePagination]);
+
     // Use our custom payment cache hook for localStorage persistence
     const { savePaymentsToCache } = usePaymentCache(merchantPubkey, isDevnet);
 
@@ -238,26 +283,11 @@ export function PaymentHistory({
     const { data: allPayments = [], isLoading, error, refetch } = useQuery({
         queryKey: unifiedQueryKey,
         queryFn: async () => {
-            // Check if we have existing cached data to enable incremental fetching
-            const existingPayments = queryClient.getQueryData<Payment[]>(unifiedQueryKey) || [];
-            const lastKnownTimestamp = existingPayments.length > 0 
-                ? Math.max(...existingPayments.map(p => p.timestamp))
-                : undefined;
-
-            const newPayments = await fetchPaymentData(merchantPubkey!, connection, isDevnet, lastKnownTimestamp);
-            
-            // If we got new payments, merge them with existing ones
-            if (newPayments.length > 0 && existingPayments.length > 0) {
-                // Combine and deduplicate by signature, sort by timestamp desc
-                const combined = [...newPayments, ...existingPayments];
-                const unique = combined.filter((payment, index, arr) => 
-                    arr.findIndex(p => p.signature === payment.signature) === index
-                );
-                return unique.sort((a, b) => b.timestamp - a.timestamp).slice(0, 50); // Keep latest 50
-            }
-            
-            // If no existing data or no new payments, return what we got
-            return newPayments.length > 0 ? newPayments : existingPayments;
+            // Fetch initial payments (up to 20 signatures to ensure we have enough)
+            console.log('🔍 Fetching payment data for merchant:', merchantPubkey?.toString());
+            const newPayments = await fetchPaymentData(merchantPubkey!, connection, isDevnet);
+            console.log('📦 Fetched payments:', newPayments.length, newPayments);
+            return newPayments.sort((a, b) => b.timestamp - a.timestamp);
         },
         enabled: !!merchantPubkey && !!connection,
         staleTime: 2 * 60 * 1000, // Consider data fresh for 2 minutes
@@ -275,6 +305,18 @@ export function PaymentHistory({
         },
         retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
     });
+
+    // Determine if there might be more payments available
+    useEffect(() => {
+        if (enablePagination && allPayments) {
+            // If we have fewer payments than expected for the initial load, there might still be more
+            // Reset hasMorePayments to true when we have less than what we'd expect from a full fetch
+            const expectedMinimum = effectiveMaxPayments;
+            if (allPayments.length < expectedMinimum) {
+                setHasMorePayments(true);
+            }
+        }
+    }, [allPayments, effectiveMaxPayments, enablePagination]);
 
     // Use React Query for fetching balance
     const fetchBalance = useCallback(async () => {
@@ -521,24 +563,119 @@ export function PaymentHistory({
         }
     }, [forceRefresh, refetch]);
 
-    // Filter payments based on maxPayments
-    const displayPayments = maxPayments ? allPayments.slice(0, maxPayments) : allPayments;
+    // Filter payments based on effectiveMaxPayments for display
+    const displayPayments = useMemo(() => {
+        console.log('🎯 Processing display payments:');
+        console.log('  - allPayments:', allPayments?.length || 0, allPayments);
+        console.log('  - effectiveMaxPayments:', effectiveMaxPayments);
+        console.log('  - enablePagination:', enablePagination);
+        
+        if (!allPayments || allPayments.length === 0) {
+            console.log('  - No payments to display');
+            return [];
+        }
+        
+        // For recent version (enablePagination=false): show max 2
+        // For full version (enablePagination=true): show max 5 initially, more when loaded
+        const result = allPayments.slice(0, effectiveMaxPayments);
+        console.log('  - Display payments result:', result.length, result);
+        return result;
+    }, [allPayments, effectiveMaxPayments]);
 
     // Generate display text based on actual usage
     const getDisplayText = () => {
-        if (maxPayments) {
-            return `Last ${maxPayments} payments`;
+        if (enablePagination) {
+            const totalCount = allPayments.length;
+            const displayCount = Math.min(displayPayments.length, effectiveMaxPayments);
+            return `Showing ${displayCount} of ${totalCount}+ payments`;
         } else {
-            return `Last ${allPayments.length} payments`;
+            return `Last ${displayPayments.length} payments`;
         }
     };
+
+    // Load more payments function for pagination
+    const loadMorePayments = useCallback(async () => {
+        if (!enablePagination || !merchantPubkey || !connection || isLoadingMore) {
+            return;
+        }
+
+        setIsLoadingMore(true);
+        
+        try {
+            // Get the oldest payment signature from current data
+            const currentPayments = allPayments;
+            if (currentPayments.length === 0) {
+                return;
+            }
+
+            const oldestPayment = currentPayments[currentPayments.length - 1];
+            const beforeSignature = oldestPayment.signature;
+
+            // Fetch older payments in batches of 5
+            const olderPayments = await fetchPaymentData(merchantPubkey, connection, isDevnet, undefined, beforeSignature);
+
+            // If we got no payments at all, we've reached the true end
+            if (olderPayments.length === 0) {
+                console.log('🏁 No more payments available - disabling load more');
+                setHasMorePayments(false);
+                return;
+            }
+
+            // Filter out any duplicates (shouldn't happen, but safety check)
+            const existingSignatures = new Set(currentPayments.map(p => p.signature));
+            const newPayments = olderPayments.filter(p => !existingSignatures.has(p.signature));
+            
+            // If all payments were duplicates, keep button active for retry
+            if (newPayments.length === 0) {
+                console.log('⚠️ All payments were duplicates - keeping button active');
+                return;
+            }
+
+            // Combine and update the cache and query data
+            const combinedPayments = [...currentPayments, ...newPayments];
+            const sortedPayments = combinedPayments.sort((a, b) => b.timestamp - a.timestamp);
+            
+            savePaymentsToCache(sortedPayments);
+            queryClient.setQueryData(['payments', merchantPubkey.toString(), isDevnet], sortedPayments);
+            
+            console.log(`✅ Successfully loaded ${newPayments.length} more payments`);
+            
+        } catch (error) {
+            console.error('❌ Error loading more payments:', error);
+            toastUtils.error('Failed to load more payments - click to retry');
+            // Keep button active for retry - don't disable hasMorePayments on error
+        } finally {
+            setIsLoadingMore(false);
+        }
+    }, [enablePagination, merchantPubkey, connection, isDevnet, isLoadingMore, allPayments, savePaymentsToCache, queryClient]);
 
     if (isLoading) {
         return (
             <div className="space-y-4">
-                <h2 className="text-xl font-bold">{title}</h2>
-                <div className="flex justify-center items-center h-32">
-                    <div className="loading loading-spinner loading-lg"></div>
+                <div className="flex justify-between items-center">
+                    <h2 className="text-xl font-bold">{title}</h2>
+                    <div className="flex gap-2">
+                        <button 
+                            onClick={() => setIsExpanded(!isExpanded)}
+                            className="btn btn-ghost btn-sm"
+                            title={isExpanded ? "Collapse payment history" : "Expand payment history"}
+                        >
+                            <svg 
+                                className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} 
+                                fill="none" 
+                                stroke="currentColor" 
+                                viewBox="0 0 24 24"
+                            >
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+                        <button 
+                            className="btn btn-ghost btn-sm"
+                            disabled={true}
+                        >
+                            <span className="loading loading-spinner loading-xs"></span>
+                        </button>
+                    </div>
                 </div>
             </div>
         );
@@ -558,6 +695,20 @@ export function PaymentHistory({
                 <h2 className="text-xl font-bold">{title}</h2>
                 <div className="flex gap-2">
                     <button 
+                        onClick={() => setIsExpanded(!isExpanded)}
+                        className="btn btn-ghost btn-sm"
+                        title={isExpanded ? "Collapse payment history" : "Expand payment history"}
+                    >
+                        <svg 
+                            className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} 
+                            fill="none" 
+                            stroke="currentColor" 
+                            viewBox="0 0 24 24"
+                        >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </button>
+                    <button 
                         onClick={() => refetch()} 
                         className="btn btn-ghost btn-sm"
                         disabled={isLoading}
@@ -569,89 +720,120 @@ export function PaymentHistory({
                             'Refresh'
                         )}
                     </button>
-                    <div className="text-xs text-gray-400 flex items-center">
-                        <span>{getDisplayText()}</span>
-                    </div>
+                    {isExpanded && (
+                        <div className="text-xs text-gray-400 flex items-center">
+                            <span>{getDisplayText()}</span>
+                        </div>
+                    )}
                 </div>
             </div>
-            {!displayPayments || displayPayments.length === 0 ? (
-                <div className="text-center py-8">
-                    <p className="text-gray-500 mb-2">No payments received yet</p>
-                    <p className="text-xs text-gray-400">Payments will appear here when customers pay</p>
-                </div>
-            ) : (
-                <div 
-                    className="payment-history-container" 
-                    style={{ 
-                        maxHeight: "400px", 
-                        overflowY: "auto", 
-                        paddingRight: "8px", 
-                        marginTop: "8px",
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: "12px"
-                    }}
-                >
-                    {displayPayments.map((payment: Payment) => (
+            
+            {isExpanded && (
+                <>
+                    {!displayPayments || displayPayments.length === 0 ? (
+                        <div className="text-center py-8">
+                            <p className="text-gray-500 mb-2">No payments received yet</p>
+                            <p className="text-xs text-gray-400">Payments will appear here when customers pay</p>
+                        </div>
+                    ) : (
                         <div 
-                            key={payment.signature} 
-                            className="card bg-[#1C1C1C] shadow flex-shrink-0"
-                            style={{ marginBottom: "0" }}
+                            className="payment-history-container" 
+                            style={{ 
+                                maxHeight: "400px", 
+                                overflowY: "auto", 
+                                paddingRight: "8px", 
+                                marginTop: "8px",
+                                display: "flex",
+                                flexDirection: "column",
+                                gap: "12px"
+                            }}
                         >
-                            <div className="card-body p-4">
-                                <div className="flex justify-between items-start">
-                                    <div className="space-y-1">
-                                        <p className="text-gray font-medium">
-                                            +{formatUSDCAmount(payment.amount)} USDC
-                                        </p>
-                                        <p className="text-gray-400 text-sm">
-                                            {new Date(payment.timestamp).toLocaleString()}
-                                        </p>
-                                        {payment.memo && payment.memo.length > 0 && (
-                                            <p className="text-sm text-gray-300 mt-1">
-                                                Memo: {payment.memo}
-                                            </p>
-                                        )}
-                                        <a 
-                                            href={formatSolscanDevnetLink(payment.signature)}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="text-xs text-mint text-sm hover:opacity-80 block"
-                                        >
-                                            View on Solscan
-                                        </a>
-                                    </div>
-                                    <div className="flex flex-col items-end gap-2">
-                                        <p className="text-gray-400 text-sm">
-                                            From: {payment.sender.toString().slice(0, 4)}...
-                                            {payment.sender.toString().slice(-4)}
-                                        </p>
-                                        <RefundButton
-                                            program={program}
-                                            merchantPubkey={merchantPubkey}
-                                            payment={{
-                                                signature: payment.signature,
-                                                amount: payment.amount,
-                                                recipient: payment.sender
-                                            }}
-                                            onSuccess={() => {
-                                                // Remove redundant invalidation since RefundButton already invalidates
-                                                // This prevents double API calls after refunds
-                                                // queryClient.invalidateQueries({
-                                                //     queryKey: ['payments', merchantPubkey.toString(), isDevnet]
-                                                // })
-                                                
-                                                // Optional: Show success feedback without triggering refetch
-                                                console.log('Refund completed successfully');
-                                            }}
-                                            isDevnet={isDevnet}
-                                        />
+                            {displayPayments.map((payment: Payment) => (
+                                <div 
+                                    key={payment.signature} 
+                                    className="card bg-[#1C1C1C] shadow flex-shrink-0"
+                                    style={{ marginBottom: "0" }}
+                                >
+                                    <div className="card-body p-4">
+                                        <div className="flex justify-between items-start">
+                                            <div className="space-y-1">
+                                                <div 
+                                                    className="text-gray font-medium group cursor-pointer"
+                                                    title="Hover to reveal amount"
+                                                >
+                                                    <span className="group-hover:hidden">+•••••• USDC</span>
+                                                    <span className="hidden group-hover:inline">+{formatUSDCAmount(payment.amount)} USDC</span>
+                                                </div>
+                                                <p className="text-gray-400 text-sm">
+                                                    {new Date(payment.timestamp).toLocaleString()}
+                                                </p>
+                                                {payment.memo && payment.memo.length > 0 && (
+                                                    <p className="text-sm text-gray-300 mt-1">
+                                                        Memo: {payment.memo}
+                                                    </p>
+                                                )}
+                                                <a 
+                                                    href={formatSolscanDevnetLink(payment.signature)}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="text-xs text-mint text-sm hover:opacity-80 block"
+                                                >
+                                                    View on Solscan
+                                                </a>
+                                            </div>
+                                            <div className="flex flex-col items-end gap-2">
+                                                <p className="text-gray-400 text-sm">
+                                                    From: {payment.sender.toString().slice(0, 4)}...
+                                                    {payment.sender.toString().slice(-4)}
+                                                </p>
+                                                <RefundButton
+                                                    program={program}
+                                                    merchantPubkey={merchantPubkey}
+                                                    payment={{
+                                                        signature: payment.signature,
+                                                        amount: payment.amount,
+                                                        recipient: payment.sender
+                                                    }}
+                                                    onSuccess={() => {
+                                                        // Remove redundant invalidation since RefundButton already invalidates
+                                                        // This prevents double API calls after refunds
+                                                        // queryClient.invalidateQueries({
+                                                        //     queryKey: ['payments', merchantPubkey.toString(), isDevnet]
+                                                        // })
+                                                        
+                                                        // Optional: Show success feedback without triggering refetch
+                                                        console.log('Refund completed successfully');
+                                                    }}
+                                                    isDevnet={isDevnet}
+                                                />
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
+                            ))}
+                            
+                            {/* Load More button for pagination - show if we should have more payments or if we actually have more */}
+                            {enablePagination && hasMorePayments && (
+                                <div className="flex justify-center mt-4">
+                                    <button 
+                                        onClick={loadMorePayments}
+                                        disabled={isLoadingMore}
+                                        className="btn btn-outline btn-sm"
+                                    >
+                                        {isLoadingMore ? (
+                                            <>
+                                                <span className="loading loading-spinner loading-xs"></span>
+                                                Loading more...
+                                            </>
+                                        ) : (
+                                            'Load More (5)'
+                                        )}
+                                    </button>
+                                </div>
+                            )}
                         </div>
-                    ))}
-                </div>
+                    )}
+                </>
             )}
         </div>
     );

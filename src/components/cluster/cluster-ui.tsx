@@ -30,6 +30,11 @@ export function ClusterChecker({ children }: { children: ReactNode }) {
     queryKey: ['version', { cluster, endpoint: connection.rpcEndpoint }],
     queryFn: () => connection.getVersion(),
     retry: 1,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes (cluster version rarely changes)
+    gcTime: 30 * 60 * 1000, // Keep in memory for 30 minutes
+    refetchOnMount: false, // Don't refetch on mount - use cache
+    refetchOnWindowFocus: false, // Don't refetch on window focus
+    refetchOnReconnect: false, // Don't refetch on reconnect
   })
   if (query.isLoading) {
     return null

@@ -16,7 +16,6 @@ import { AccountChecker } from '@/components/accounts/account-ui';
 import { ClusterChecker } from '@/components/cluster/cluster-ui';
 import { Footer } from '@/components/ui/footer';
 import { SoundToggle } from '@/components/sound/sound-toggle';
-import { useMerchants } from '@/hooks/find-merchants';
 import { useConnection } from '@/lib/connection-context';
 import { useQueryClient } from '@tanstack/react-query';
 import React from 'react';
@@ -106,7 +105,6 @@ function ClientSideStateHandler({
   const { openModal } = useModal();
   const [mounted, setMounted] = useState(false);
   const { connection } = useConnection();
-  const { merchants } = useMerchants(wallet?.address, connection);
   const queryClient = useQueryClient();
 
   // Enhanced logging for component initialization
@@ -174,7 +172,7 @@ function ClientSideStateHandler({
       setActiveMerchant(null);
       localStorage.removeItem('activeMerchant');
     }
-  }, [pathname, params, mounted]);
+  }, [pathname, params, mounted, activeMerchant]);
 
   const toggleTheme = useCallback(() => {
     const newTheme = theme === 'light' ? 'dark' : 'light';
@@ -197,7 +195,18 @@ function ClientSideStateHandler({
       hasConnection: !!connection
     });
     
-    // Only clear local state - no need to force refresh merchant data
+    // Clear payment cache for current merchant if we have one
+    if (activeMerchant && typeof window !== 'undefined') {
+      try {
+        const paymentCacheKey = `gotsol_payments_${activeMerchant}_true`; // Assuming devnet for now
+        localStorage.removeItem(paymentCacheKey);
+        logClientProvidersCall('Payment cache cleared for merchant', { merchantId: activeMerchant });
+      } catch (error) {
+        console.error('Error clearing payment cache:', error);
+      }
+    }
+    
+    // Clear merchant state
     setActiveMerchant(null);
     localStorage.removeItem('activeMerchant');
     

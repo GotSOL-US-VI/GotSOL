@@ -22,10 +22,10 @@ export function useTokenBalanceQuery({
   address, 
   mintAddress, 
   enabled = true,
-  staleTime = 10000,
-  refetchInterval = 20000,
-  refetchOnMount = true,
-  refetchOnWindowFocus = true
+  staleTime = 60 * 1000, // Increased to 1 minute default
+  refetchInterval = false, // Disabled automatic polling by default
+  refetchOnMount = false, // Don't refetch on mount - use cache
+  refetchOnWindowFocus = false // Don't refetch on window focus
 }: UseTokenBalanceQueryProps) {
   const { connection } = useConnection();
 
@@ -50,6 +50,8 @@ export function useTokenBalanceQuery({
     refetchInterval,
     refetchOnMount,
     refetchOnWindowFocus,
+    gcTime: 5 * 60 * 1000, // Keep in memory for 5 minutes
+    retry: 1, // Reduce retries
   });
 }
 
@@ -61,7 +63,7 @@ interface UseTokenBalanceEffectProps {
   pollingInterval?: number | null;
 }
 
-export function useTokenBalanceEffect({ mintAddress, pollingInterval = 30000 }: UseTokenBalanceEffectProps) {
+export function useTokenBalanceEffect({ mintAddress, pollingInterval = 2 * 60 * 1000 }: UseTokenBalanceEffectProps) {
   const { connection } = useConnection();
   const { data: wallet } = useWallet();
   const [balance, setBalance] = useState<number | null>(null);

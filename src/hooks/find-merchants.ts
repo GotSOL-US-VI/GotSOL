@@ -23,6 +23,8 @@ export interface Merchant {
 }
 
 const MERCHANT_CACHE_KEY = 'gotsol_merchant_cache';
+const CACHE_TIMESTAMP_KEY = 'gotsol_merchant_cache_timestamp';
+const CACHE_FRESHNESS_DURATION = 10 * 60 * 1000; // 10 minutes
 
 // Enhanced logging utility to track component and call location for merchant operations
 function logMerchantCall(operation: string, details?: any, component?: string) {
@@ -57,17 +59,24 @@ function logMerchantCall(operation: string, details?: any, component?: string) {
   );
 }
 
-// Helper function to get cached merchants
-function getCachedMerchants(walletAddress: string): Merchant[] | null {
-  if (typeof window === 'undefined') return null;
+// Helper function to get cached merchants with timestamp check
+function getCachedMerchants(walletAddress: string): { merchants: Merchant[] | null, isFresh: boolean } {
+  if (typeof window === 'undefined') return { merchants: null, isFresh: false };
   
   logMerchantCall('Loading merchants from cache', { walletAddress });
   
   const cached = localStorage.getItem(`${MERCHANT_CACHE_KEY}_${walletAddress}`);
+  const timestampStr = localStorage.getItem(`${CACHE_TIMESTAMP_KEY}_${walletAddress}`);
+  
   if (!cached) {
     logMerchantCall('No cached merchants found', { walletAddress });
-    return null;
+    return { merchants: null, isFresh: false };
   }
+
+  const timestamp = timestampStr ? parseInt(timestampStr) : 0;
+  const now = Date.now();
+  const isFresh = (now - timestamp) < CACHE_FRESHNESS_DURATION;
+  
   try {
     const parsed = JSON.parse(cached);
     // Convert string public keys back to PublicKey objects
@@ -82,21 +91,23 @@ function getCachedMerchants(walletAddress: string): Merchant[] | null {
     logMerchantCall('Cached merchants loaded successfully', { 
       walletAddress, 
       merchantCount: merchants.length,
-      merchantNames: merchants.map((m: Merchant) => m.account.entityName)
+      merchantNames: merchants.map((m: Merchant) => m.account.entityName),
+      isFresh,
+      cacheAge: Math.round((now - timestamp) / 1000 / 60) + ' minutes'
     });
     
-    return merchants;
+    return { merchants, isFresh };
   } catch (e) {
     logMerchantCall('Error parsing cached merchants', { 
       walletAddress, 
       error: e instanceof Error ? e.message : e 
     });
     console.error('Error parsing cached merchants:', e);
-    return null;
+    return { merchants: null, isFresh: false };
   }
 }
 
-// Helper function to cache merchants
+// Helper function to cache merchants with timestamp
 function cacheMerchants(walletAddress: string, merchants: Merchant[]) {
   if (typeof window === 'undefined') return;
   
@@ -107,9 +118,14 @@ function cacheMerchants(walletAddress: string, merchants: Merchant[]) {
   });
   
   try {
+    const now = Date.now();
     localStorage.setItem(
       `${MERCHANT_CACHE_KEY}_${walletAddress}`,
       JSON.stringify(merchants)
+    );
+    localStorage.setItem(
+      `${CACHE_TIMESTAMP_KEY}_${walletAddress}`,
+      now.toString()
     );
     logMerchantCall('Merchants cached successfully', { walletAddress });
   } catch (e) {
@@ -226,6 +242,11 @@ function removeMerchantFromCache(walletAddress: string, merchantPubkey: string) 
       localStorage.setItem(
         `${MERCHANT_CACHE_KEY}_${walletAddress}`,
         JSON.stringify(updatedMerchants)
+      );
+      // Update timestamp when cache is modified
+      localStorage.setItem(
+        `${CACHE_TIMESTAMP_KEY}_${walletAddress}`,
+        Date.now().toString()
       );
       logMerchantCall('Merchant removed from cache successfully', { walletAddress, merchantPubkey });
     }
@@ -394,15 +415,25 @@ export async function fetchMerchantData(walletAddress: string | undefined, conne
   });
 
   const programId = new PublicKey(idl.address);
-  let knownMerchants: Merchant[] = [];
+  
+  // Get cached merchants with freshness check
+  const { merchants: cachedMerchants, isFresh } = getCachedMerchants(walletAddress);
+  
+  // If we have fresh cached data and we're not forcing refresh, return cache immediately
+  if (cachedMerchants && isFresh && !forceRefresh) {
+    logMerchantCall('Returning fresh cached data without RPC calls', { 
+      walletAddress,
+      merchantCount: cachedMerchants.length,
+      merchantNames: cachedMerchants.map(m => m.account.entityName)
+    });
+    return cachedMerchants.sort((a: Merchant, b: Merchant) =>
+      a.account.entityName.localeCompare(b.account.entityName)
+    );
+  }
+
+  let knownMerchants: Merchant[] = cachedMerchants || [];
   let updatedMerchants: Merchant[] = [];
   let newMerchants: Merchant[] = [];
-
-  // Get cached merchants first
-  const cached = getCachedMerchants(walletAddress);
-  if (cached) {
-    knownMerchants = cached;
-  }
 
   if (forceRefresh) {
     logMerchantCall('Performing full refresh', { walletAddress });
@@ -432,8 +463,8 @@ export async function fetchMerchantData(walletAddress: string | undefined, conne
     const currentPubkeys = new Set(allAccounts.map(({ pubkey }: { pubkey: PublicKey }) => pubkey.toString()));
     
     // Remove any cached merchants that no longer exist
-    if (cached) {
-      cached.forEach(merchant => {
+    if (cachedMerchants) {
+      cachedMerchants.forEach(merchant => {
         if (!currentPubkeys.has(merchant.publicKey.toString())) {
           logMerchantCall('Removing deleted merchant from cache', { 
             merchantPubkey: merchant.publicKey.toString(),
@@ -481,12 +512,13 @@ export async function fetchMerchantData(walletAddress: string | undefined, conne
       merchantNames: updatedMerchants.map(m => m.account.entityName)
     });
   } else {
-    logMerchantCall('Performing incremental refresh', { 
+    logMerchantCall('Performing incremental refresh on stale cache', { 
       walletAddress, 
-      knownMerchantsCount: knownMerchants.length 
+      knownMerchantsCount: knownMerchants.length,
+      cacheWasFresh: isFresh
     });
     
-    // Normal refresh - update known accounts and check for new ones
+    // Stale cache refresh - update known accounts and check for new ones
     if (knownMerchants.length > 0) {
       logMerchantCall('Updating known merchant accounts', { 
         knownMerchantsCount: knownMerchants.length,
@@ -573,7 +605,7 @@ export async function fetchMerchantData(walletAddress: string | undefined, conne
     merchantNames: allMerchants.map(m => m.account.entityName)
   });
   
-  // Cache the results
+  // Cache the results with timestamp
   if (allMerchants.length > 0) {
     cacheMerchants(walletAddress, allMerchants);
   } else {
@@ -581,6 +613,7 @@ export async function fetchMerchantData(walletAddress: string | undefined, conne
     if (typeof window !== 'undefined') {
       logMerchantCall('No merchants found, clearing cache', { walletAddress });
       localStorage.removeItem(`${MERCHANT_CACHE_KEY}_${walletAddress}`);
+      localStorage.removeItem(`${CACHE_TIMESTAMP_KEY}_${walletAddress}`);
     }
   }
 
@@ -606,12 +639,13 @@ export function useMerchants(walletAddress?: string, connection?: any) {
       logMerchantCall('React Query fetchMerchantData triggered', { walletAddress });
       return fetchMerchantData(walletAddress, connection, false, false);
     },
-    staleTime: 5 * 60 * 1000, // 5 minutes - data stays fresh for 5 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes - keep in cache for 10 minutes
+    staleTime: CACHE_FRESHNESS_DURATION, // Use same freshness duration as cache (10 minutes)
+    gcTime: 30 * 60 * 1000, // Keep in memory for 30 minutes
     enabled: !!walletAddress && !!connection,
-    refetchOnMount: false, // Don't refetch on every mount - use cache if available
-    refetchOnWindowFocus: false, // Don't refetch when window gains focus
-    refetchOnReconnect: true, // Do refetch when network reconnects
+    refetchOnMount: false, // Never refetch on mount - rely on cache freshness
+    refetchOnWindowFocus: false, // Never refetch on window focus
+    refetchOnReconnect: false, // Never refetch on reconnect - rely on manual refresh
+    retry: 1, // Reduce retries since we have cache fallback
   });
 
   // Add methods to control refresh behavior
@@ -626,8 +660,10 @@ export function useMerchants(walletAddress?: string, connection?: any) {
     
     logMerchantCall('forceRefresh started', { walletAddress });
     
+    // Invalidate and refetch with force refresh
     await queryClient.invalidateQueries({ queryKey: ['merchants', walletAddress] });
-    await fetchMerchantData(walletAddress, connection, true, true);
+    const freshData = await fetchMerchantData(walletAddress, connection, true, true);
+    queryClient.setQueryData(['merchants', walletAddress], freshData);
     
     logMerchantCall('forceRefresh completed', { walletAddress });
   };
@@ -643,8 +679,10 @@ export function useMerchants(walletAddress?: string, connection?: any) {
     
     logMerchantCall('refreshKnownAccounts started', { walletAddress });
     
+    // Invalidate and refetch without force refresh (will update stale cache)
     await queryClient.invalidateQueries({ queryKey: ['merchants', walletAddress] });
-    await fetchMerchantData(walletAddress, connection, false, false);
+    const updatedData = await fetchMerchantData(walletAddress, connection, false, false);
+    queryClient.setQueryData(['merchants', walletAddress], updatedData);
     
     logMerchantCall('refreshKnownAccounts completed', { walletAddress });
   };

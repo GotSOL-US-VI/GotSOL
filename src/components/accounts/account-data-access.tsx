@@ -22,6 +22,12 @@ export function useGetBalance({ address }: { address: PublicKey }) {
   return useQuery({
     queryKey: ['get-balance', { endpoint: connection.rpcEndpoint, address }],
     queryFn: () => connection.getBalance(address),
+    staleTime: 30 * 1000, // Cache for 30 seconds
+    gcTime: 5 * 60 * 1000, // Keep in memory for 5 minutes
+    refetchOnMount: false, // Don't refetch on mount - use cache
+    refetchOnWindowFocus: false, // Don't refetch on window focus
+    refetchOnReconnect: false, // Don't refetch on reconnect
+    retry: 1, // Reduce retries
   })
 }
 
@@ -31,6 +37,12 @@ export function useGetSignatures({ address }: { address: PublicKey }) {
   return useQuery({
     queryKey: ['get-signatures', { endpoint: connection.rpcEndpoint, address }],
     queryFn: () => connection.getSignaturesForAddress(address),
+    staleTime: 60 * 1000, // Cache for 1 minute
+    gcTime: 5 * 60 * 1000, // Keep in memory for 5 minutes
+    refetchOnMount: false, // Don't refetch on mount - use cache
+    refetchOnWindowFocus: false, // Don't refetch on window focus
+    refetchOnReconnect: false, // Don't refetch on reconnect
+    retry: 1, // Reduce retries
   })
 }
 
@@ -50,6 +62,12 @@ export function useGetTokenAccounts({ address }: { address: PublicKey }) {
       ])
       return [...tokenAccounts.value, ...token2022Accounts.value]
     },
+    staleTime: 2 * 60 * 1000, // Cache for 2 minutes (token balances change less frequently)
+    gcTime: 10 * 60 * 1000, // Keep in memory for 10 minutes
+    refetchOnMount: false, // Don't refetch on mount - use cache
+    refetchOnWindowFocus: false, // Don't refetch on window focus
+    refetchOnReconnect: false, // Don't refetch on reconnect
+    retry: 1, // Reduce retries
   })
 }
 
