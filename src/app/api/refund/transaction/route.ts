@@ -242,8 +242,9 @@ export async function POST(request: NextRequest) {
       feePayerSecretLength: FEE_PAYER_SECRET?.length || 0
     });
 
-    if (isFeeEligible && FEE_PAYER_SECRET) {
-      console.log('✅ REFUND: Merchant is eligible and fee payer secret is available');
+    // Smart fee payer logic with automatic fallback for eligible merchants
+    if (FEE_PAYER_SECRET && isFeeEligible) {
+      console.log('✅ REFUND: Fee payer secret available for eligible merchant');
       try {
         const secretKey = bs58.decode(FEE_PAYER_SECRET);
         feePayerKeypair = Keypair.fromSecretKey(secretKey);
@@ -270,10 +271,15 @@ export async function POST(request: NextRequest) {
         } else {
           console.warn(`⚠️ REFUND: Server fee payer balance too low (${feePayerSOL.toFixed(6)} SOL), falling back to owner payment`);
           feePayerKeypair = null; // Don't use server keypair
+          feePayer = ownerPubkey;
+          usingServerFeePayer = false;
         }
         
       } catch (error) {
-        console.warn('❌ REFUND: Server fee payer issue, falling back to owner paying fees:', error);
+        console.warn('❌ REFUND: Invalid fee payer secret key, falling back to owner paying fees:', error);
+        feePayerKeypair = null;
+        feePayer = ownerPubkey;
+        usingServerFeePayer = false;
       }
     } else if (!isFeeEligible) {
       console.log('❌ REFUND: Merchant not eligible for fee-paying service, owner will pay fees');
@@ -351,6 +357,12 @@ export async function POST(request: NextRequest) {
       
       const program = getGotsolProgram(tempProvider);
       
+      // Calculate refund record PDA
+      const [refundRecordPda] = PublicKey.findProgramAddressSync(
+        [Buffer.from("refund"), Buffer.from(txSigParam)],
+        program.programId
+      );
+      
       const refundInstruction = await program.methods
         .refund(txSigParam, new anchor.BN(amountLamports))
         .accounts({
@@ -359,6 +371,7 @@ export async function POST(request: NextRequest) {
           stablecoinMint: usdcMint,
           merchantStablecoinAta: merchantUsdcAta,
           recipientStablecoinAta: recipientUsdcAta,
+          refundRecord: refundRecordPda,
           recipient: recipientPubkey,
           tokenProgram: TOKEN_PROGRAM_ID,
           associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,

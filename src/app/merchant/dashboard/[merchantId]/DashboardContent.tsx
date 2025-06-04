@@ -117,9 +117,8 @@ export default function DashboardContent({ params }: { params: { merchantId: str
 
   return (
     <div className="container mx-auto py-2">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-6xl mx-auto">
-        {/* Left Column - Point of Sale */}
-        <div className="h-[600px]">
+      <div className="flex justify-center">
+        <div className="w-full max-w-md h-[600px]">
           <div className="card bg-base-300 shadow-xl">
             <div className="card-body p-4">
               <div className="relative mb-2">
@@ -134,39 +133,6 @@ export default function DashboardContent({ params }: { params: { merchantId: str
                   merchantPubkey={merchantPubkey}
                   isDevnet={true}
                   resetSignal={resetSignal}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Right Column - Withdraw & History */}
-        <div className="flex flex-col gap-6">
-          {/* Withdraw Funds */}
-          <div>
-            <div className="card bg-base-300 shadow-xl">
-              <div className="card-body p-4">
-                {owner && merchantPubkey && (
-                  <WithdrawFunds
-                    merchantPubkey={merchantPubkey}
-                    ownerPubkey={new PublicKey(owner)}
-                    isDevnet={true}
-                  />
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Payment History */}
-          <div>
-            <div className="card bg-base-300 shadow-xl">
-              <div className="card-body p-4">
-                <PaymentHistory
-                  program={program}
-                  merchantPubkey={merchantPubkey}
-                  isDevnet={true}
-                  onBalanceUpdate={setMerchantBalance}
-                  onPaymentReceived={() => setResetSignal(prev => prev + 1)}
                 />
               </div>
             </div>
