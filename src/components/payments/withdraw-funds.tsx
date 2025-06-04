@@ -7,6 +7,7 @@ import { TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID } from "@solana/spl-token
 import { toastUtils } from '@/utils/toast-utils';
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 import { useUsdcBalance } from '@/hooks/use-usdc-balance';
+import { useBalanceVisibility } from '@/hooks/use-balance-visibility';
 import { useQueryClient } from '@tanstack/react-query';
 import { useWallet, useClient } from "@getpara/react-sdk";
 import * as anchor from "@coral-xyz/anchor";
@@ -34,10 +35,10 @@ export function WithdrawFunds({
   const { data: wallet } = useWallet();
   const para = useClient();
   const queryClient = useQueryClient();
+  const { isBalancesVisible, toggleBalanceVisibility } = useBalanceVisibility();
   const [withdrawAmount, setWithdrawAmount] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [isBalancesVisible, setIsBalancesVisible] = useState(true);
 
   const supabase = createClient();
 
@@ -316,7 +317,7 @@ export function WithdrawFunds({
           <div className="opacity-60 cursor-help" title="1% platform fee on withdrawal amount. 99% to the Merchant&apos;s Owner.">ⓘ</div>
         </div>
         <button
-          onClick={() => setIsBalancesVisible(!isBalancesVisible)}
+          onClick={() => toggleBalanceVisibility()}
           className="btn btn-ghost btn-sm btn-circle"
         >
           {isBalancesVisible ? (

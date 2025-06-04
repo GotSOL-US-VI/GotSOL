@@ -4,6 +4,7 @@ import { AppHero } from '@/components/ui/ui-layout'
 import { useState, useMemo } from 'react'
 import { PublicKey } from '@solana/web3.js'
 import { useWallet } from '@getpara/react-sdk'
+import { useBalanceVisibility } from '@/hooks/use-balance-visibility'
 
 interface YieldPosition {
   name: string
@@ -18,6 +19,8 @@ interface YieldContentProps {
 }
 
 export default function YieldContent({ params }: YieldContentProps) {
+  const { isBalancesVisible: showBalances, toggleBalanceVisibility } = useBalanceVisibility();
+
   // Mock data - in real implementation, these would come from on-chain
   const [positions] = useState<YieldPosition[]>([
     {
@@ -40,12 +43,6 @@ export default function YieldContent({ params }: YieldContentProps) {
       apy: 1.1,
     }
   ])
-
-  const [showBalances, setShowBalances] = useState(true);
-
-  const toggleBalances = () => {
-    setShowBalances(!showBalances);
-  };
 
   // Calculate total balance across all positions
   const totalBalance = useMemo(() => {
@@ -82,7 +79,7 @@ export default function YieldContent({ params }: YieldContentProps) {
           <div className="flex items-center justify-between gap-3">
             <div className="text-sm font-medium opacity-70">Total Treasury Balance</div>
             <button
-              onClick={toggleBalances}
+              onClick={toggleBalanceVisibility}
               className="btn btn-ghost btn-xs"
             >
               {showBalances ? (
