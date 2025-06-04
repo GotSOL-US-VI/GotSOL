@@ -11,7 +11,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "setup-fee-payer": "node scripts/setup-fee-payer.js"
+    "setup-fee-payer": "node scripts/setup-fee-payer.js",
+    "set-merchant-status": "node scripts/set-merchant-status.js"
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.31.1",

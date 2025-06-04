@@ -27,7 +27,7 @@ export function PaymentQR({ merchantPubkey, isDevnet = true, resetSignal }: Paym
   const isFirstRender = useRef(true);
   const prevResetSignal = useRef(resetSignal);
 
-  // Validate USDC amount constraints
+  // Validate amount constraints (generalized for all tokens)
   const isValidAmount = (value: string): boolean => {
     // Don't allow empty strings
     if (!value) return true;
@@ -39,10 +39,10 @@ export function PaymentQR({ merchantPubkey, isDevnet = true, resetSignal }: Paym
     const wholeNum = parts[0];
     const decimals = parts[1] || '';
 
-    // Whole number can't be more than 16 digits (reasonable USDC amount limit)
+    // Whole number can't be more than 16 digits (reasonable amount limit)
     if (wholeNum.length > 16) return false;
 
-    // Decimals can't be more than 6 places (USDC decimal limit)
+    // Decimals can't be more than 6 places (most stablecoins use 6 decimals)
     if (decimals.length > 6) return false;
 
     return true;
@@ -97,7 +97,7 @@ export function PaymentQR({ merchantPubkey, isDevnet = true, resetSignal }: Paym
       }
 
       const trimmedMemo = memo.trim();
-      const result = await generatePaymentQR(numAmount, merchantPubkey, isDevnet, trimmedMemo);
+      const result = await generatePaymentQR(numAmount, merchantPubkey, isDevnet, trimmedMemo, 'USDC');
 
       if (result.error) {
         setError(result.error.message);
@@ -270,7 +270,7 @@ export function PaymentQR({ merchantPubkey, isDevnet = true, resetSignal }: Paym
               className="rounded-lg"
             />
             <p className="text-sm text-gray-500 mt-2">
-              Scan to pay {amount} USDC
+              Scan to pay ${amount} USDC
             </p>
           </div>
         )}

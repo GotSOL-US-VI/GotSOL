@@ -25,10 +25,7 @@ import {
   ACTIONS_CORS_HEADERS 
 } from '@solana/actions';
 import bs58 from 'bs58';
-
-// USDC mint addresses
-const USDC_MINT = new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
-const USDC_DEVNET_MINT = new PublicKey("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU");
+import { getStablecoinMint, getStablecoinDecimals, STABLECOINS, isValidStablecoin } from '@/utils/stablecoin-config';
 
 // RPC URL configuration optimized for your environment
 function getRpcUrl(network: string): string {
@@ -93,7 +90,7 @@ export async function GET(request: NextRequest) {
   const memo = url.searchParams.get('memo');
 
   // Log the incoming request for debugging
-  console.log('GET request for payment action:', {
+  console.log('GET request for USDC payment action:', {
     merchant: merchantParam?.slice(0, 8) + '...',
     amount: amountParam,
     network,
@@ -118,13 +115,11 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get the correct USDC mint for the network
-    const usdcMint = network === 'devnet' ? USDC_DEVNET_MINT : USDC_MINT;
     const networkDisplay = network === 'devnet' ? '(Devnet)' : '';
 
     const response: ActionGetResponse = {
       icon: `${url.origin}/api/payment/icon`,
-      label: "Pay with USDC",
+      label: `Pay $${amount} USDC`,
       title: `Pay $${amount} USDC ${networkDisplay}`,
       description: `Send $${amount} USDC to merchant ${merchantPubkey.toString().slice(0, 4)}...${merchantPubkey.toString().slice(-4)}${memo ? ` - ${memo}` : ''} ${networkDisplay}`,
       links: {
@@ -161,7 +156,7 @@ export async function POST(request: NextRequest) {
     const network = url.searchParams.get('network') || 'devnet';
     const memo = url.searchParams.get('memo');
 
-    console.log('POST request for transaction creation:', {
+    console.log('POST request for USDC transaction creation:', {
       merchant: merchantParam?.slice(0, 8) + '...',
       amount: amountParam,
       network,
@@ -195,15 +190,16 @@ export async function POST(request: NextRequest) {
         { status: 400, headers: ACTIONS_CORS_HEADERS }
       );
     }
-    
-    // Convert amount to lamports (USDC has 6 decimals)
-    const amountLamports = Math.floor(amount * 1_000_000);
+
+    // Get USDC token configuration and convert amount to lamports
+    const tokenDecimals = getStablecoinDecimals('USDC');
+    const amountLamports = Math.floor(amount * Math.pow(10, tokenDecimals));
 
     // Setup optimized connection using your Helius RPC
     const connection = getConnection(network);
     
     // Get USDC mint for the network
-    const usdcMint = network === 'devnet' ? USDC_DEVNET_MINT : USDC_MINT;
+    const tokenMint = getStablecoinMint('USDC', network === 'devnet');
 
     // Get recent blockhash with retry logic
     let blockhash: string;
@@ -254,11 +250,11 @@ export async function POST(request: NextRequest) {
     console.log('Transaction details:', {
       payer: payerPubkey.toString(),
       merchant: merchantPubkey.toString(),
-      amount: `$${amount} (${amountLamports} lamports)`,
+      amount: `$${amount} USDC (${amountLamports} lamports)`,
       feePayer: feePayer.toString(),
       usingFeePayerService: !!feePayerKeypair,
       network,
-      usdcMint: usdcMint.toString()
+      tokenMint: tokenMint.toString()
     });
 
     // Create transaction with optimized settings
@@ -269,8 +265,8 @@ export async function POST(request: NextRequest) {
     });
 
     // Get associated token accounts
-    const payerAta = getAssociatedTokenAddressSync(payerPubkey, usdcMint);
-    const merchantAta = getAssociatedTokenAddressSync(merchantPubkey, usdcMint);
+    const payerAta = getAssociatedTokenAddressSync(payerPubkey, tokenMint);
+    const merchantAta = getAssociatedTokenAddressSync(merchantPubkey, tokenMint);
 
     // Check if payer ATA exists with optimized error handling
     let payerAtaExists = false;
@@ -314,10 +310,10 @@ export async function POST(request: NextRequest) {
         feePayer, // Fee payer pays for ATA creation
         payerAta,
         payerPubkey, // Payer owns the ATA
-        usdcMint
+        tokenMint
       );
       transaction.add(createPayerAtaInstruction);
-      console.log('Added payer ATA creation instruction');
+      console.log(`Added payer USDC ATA creation instruction`);
     }
 
     // If merchant ATA doesn't exist, create it (fee payer pays for this)
@@ -326,16 +322,16 @@ export async function POST(request: NextRequest) {
         feePayer, // Fee payer pays for ATA creation
         merchantAta,
         merchantPubkey, // Merchant owns the ATA
-        usdcMint
+        tokenMint
       );
       transaction.add(createAtaInstruction);
-      console.log('Added merchant ATA creation instruction');
+      console.log(`Added merchant USDC ATA creation instruction`);
     }
 
     // Create the transfer instruction
     const transferInstruction = createTransferInstruction(
-      payerAta,      // From: payer's USDC ATA
-      merchantAta,   // To: merchant's USDC ATA
+      payerAta,      // From: payer's token ATA
+      merchantAta,   // To: merchant's token ATA
       payerPubkey,   // Authority: payer signs for the transfer
       amountLamports // Amount in lamports
     );
@@ -378,8 +374,8 @@ export async function POST(request: NextRequest) {
     
     if (feePayerKeypair) {
       const ataCreations = [];
-      if (!payerAtaExists) ataCreations.push('your USDC account');
-      if (!merchantAtaExists) ataCreations.push('merchant USDC account');
+      if (!payerAtaExists) ataCreations.push(`your USDC account`);
+      if (!merchantAtaExists) ataCreations.push(`merchant USDC account`);
       
       if (ataCreations.length > 0) {
         message += ` (GotSOL will create ${ataCreations.join(' and ')} and cover all fees)`;
@@ -396,30 +392,32 @@ export async function POST(request: NextRequest) {
 
     const response: ActionPostResponse = {
       type: "transaction",
-      transaction: serializedTransaction.toString('base64'),
-      message,
+      transaction: Buffer.from(serializedTransaction).toString('base64'),
+      message
     };
 
-    const processingTime = Date.now() - startTime;
-    console.log(`Transaction created successfully in ${processingTime}ms:`, {
-      transactionSize: serializedTransaction.length,
-      instructionCount: transaction.instructions.length,
-      feePayerUsed: !!feePayerKeypair,
-      ataCreations: {
-        payer: !payerAtaExists,
-        merchant: !merchantAtaExists
-      }
+    console.log('USDC transaction created successfully:', {
+      amount: `$${amount} USDC`,
+      merchant: merchantPubkey.toString().slice(0, 8) + '...',
+      processingTime: `${Date.now() - startTime}ms`,
+      transactionSize: `${serializedTransaction.length} bytes`,
+      feePaidBy: feePayerKeypair ? 'GotSOL' : 'Customer'
     });
 
-    return NextResponse.json(response, {
-      headers: ACTIONS_CORS_HEADERS,
+    return NextResponse.json(response, { 
+      headers: ACTIONS_CORS_HEADERS 
     });
 
   } catch (error) {
-    const processingTime = Date.now() - startTime;
-    console.error(`Error creating transaction after ${processingTime}ms:`, error);
+    console.error('Error in POST handler:', error);
+    
+    let errorMessage = 'An unexpected error occurred';
+    if (error instanceof Error) {
+      errorMessage = error.message;
+    }
+    
     return NextResponse.json(
-      { error: 'Failed to create transaction', details: error instanceof Error ? error.message : 'Unknown error' },
+      { error: errorMessage },
       { status: 500, headers: ACTIONS_CORS_HEADERS }
     );
   }

@@ -125,42 +125,83 @@ export function WithdrawFunds({
         { commitment: 'confirmed' }
       );
 
-      // Get the program using the helper function
+      // Get the program to check merchant eligibility
       const program = getGotsolProgram(provider);
+      let isFeeEligible = false;
+      
+      try {
+        const merchantAccount = await (program.account as any).merchant.fetch(merchantPubkey);
+        isFeeEligible = merchantAccount.feeEligible;
+        console.log('Merchant fee eligible:', isFeeEligible);
+      } catch (error) {
+        console.warn('Failed to check merchant eligibility, using direct call:', error);
+      }
 
-      // Convert amount to USDC decimals (6 decimals)
+      // Calculate amount in lamports for both cases
       const withdrawAmountU64 = Math.floor(parseFloat(withdrawAmount) * 1_000_000);
+      let txid: string;
 
-      // Get the USDC mint based on network
-      const usdcMint = isDevnet ? USDC_DEVNET_MINT : USDC_MINT;
-
-      // Get merchant's USDC ATA
-      const merchantUsdcAta = await findAssociatedTokenAddress(merchantPubkey, usdcMint);
-
-      // Get owner's USDC ATA
-      const ownerUsdcAta = await findAssociatedTokenAddress(ownerPubkey, usdcMint);
-
-      // Get house's USDC ATA
-      const houseUsdcAta = await findAssociatedTokenAddress(HOUSE, usdcMint);
-
-      // Create the method builder with the correct instruction name and accounts
-      const methodBuilder = program.methods
-        .withdraw(new anchor.BN(withdrawAmountU64.toString()))
-        .accountsPartial({
-          owner: ownerPubkey,
-          merchant: merchantPubkey,
-          stablecoinMint: usdcMint,
-          merchantStablecoinAta: merchantUsdcAta,
-          ownerStablecoinAta: ownerUsdcAta,
-          house: HOUSE,
-          houseStablecoinAta: houseUsdcAta,
-          tokenProgram: TOKEN_PROGRAM_ID,
-          associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
-          systemProgram: anchor.web3.SystemProgram.programId,
+      // Smart routing: Use API for eligible merchants, direct call for others
+      if (isFeeEligible) {
+        console.log('Using API route for fee-eligible merchant');
+        
+        // Use the withdraw API route for fee-eligible merchants
+        const network = isDevnet ? 'devnet' : 'mainnet';
+        const apiUrl = `/api/withdraw/transaction?merchant=${merchantPubkey.toString()}&amount=${parseFloat(withdrawAmount)}&network=${network}`;
+        
+        // Get the transaction from API
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ account: wallet.address }),
         });
 
-      // Send the withdraw transaction
-      const txid = await methodBuilder.rpc();
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to create withdraw transaction');
+        }
+
+        const { transaction: base64Transaction } = await response.json();
+        
+        // Deserialize and sign the transaction
+        const transactionBuffer = Buffer.from(base64Transaction, 'base64');
+        const transaction = anchor.web3.Transaction.from(transactionBuffer);
+        
+        // Sign with Para wallet
+        const signedTransaction = await solanaSigner.signTransaction(transaction);
+        
+        // Send the signed transaction
+        txid = await connection.sendRawTransaction(signedTransaction.serialize(), {
+          skipPreflight: false,
+          preflightCommitment: 'confirmed',
+        });
+        
+      } else {
+        console.log('Using direct call for non-eligible merchant');
+        
+        // Direct program call for non-eligible merchants
+        const usdcMint = isDevnet ? USDC_DEVNET_MINT : USDC_MINT;
+        const merchantUsdcAta = await findAssociatedTokenAddress(merchantPubkey, usdcMint);
+        const ownerUsdcAta = await findAssociatedTokenAddress(ownerPubkey, usdcMint);
+        const houseUsdcAta = await findAssociatedTokenAddress(HOUSE, usdcMint);
+
+        const methodBuilder = program.methods
+          .withdraw(new anchor.BN(withdrawAmountU64.toString()))
+          .accountsPartial({
+            owner: ownerPubkey,
+            merchant: merchantPubkey,
+            stablecoinMint: usdcMint,
+            merchantStablecoinAta: merchantUsdcAta,
+            ownerStablecoinAta: ownerUsdcAta,
+            house: HOUSE,
+            houseStablecoinAta: houseUsdcAta,
+            tokenProgram: TOKEN_PROGRAM_ID,
+            associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+            systemProgram: anchor.web3.SystemProgram.programId,
+          });
+
+        txid = await methodBuilder.rpc();
+      }
 
       // Trigger immediate balance refresh
       await refreshBalances();
@@ -194,7 +235,7 @@ export function WithdrawFunds({
       }
 
       // Insert event data into Supabase
-      const decimalAmount = withdrawAmountU64 / 1_000_000;
+      const decimalAmount = parseFloat(withdrawAmount);
 
       await supabase.from('withdrawal_events').insert([
         {

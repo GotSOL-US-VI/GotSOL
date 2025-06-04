@@ -73,6 +73,35 @@ export type Gotsol = {
       "args": []
     },
     {
+      "name": "closeRefund",
+      "discriminator": [
+        255,
+        78,
+        44,
+        58,
+        225,
+        12,
+        134,
+        182
+      ],
+      "accounts": [
+        {
+          "name": "auth",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "refundRecord",
+          "writable": true
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "createMerchant",
       "discriminator": [
         249,

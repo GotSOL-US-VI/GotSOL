@@ -67,6 +67,35 @@
       "args": []
     },
     {
+      "name": "close_refund",
+      "discriminator": [
+        255,
+        78,
+        44,
+        58,
+        225,
+        12,
+        134,
+        182
+      ],
+      "accounts": [
+        {
+          "name": "auth",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "refund_record",
+          "writable": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "create_merchant",
       "discriminator": [
         249,

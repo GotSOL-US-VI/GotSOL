@@ -42,4 +42,9 @@ pub mod gotsol {
         ctx.accounts.close_merchant()?;
         Ok(())
     }
+
+    pub fn close_refund(ctx: Context<CloseRefund>) -> Result<()> {
+        ctx.accounts.close_refund()?;
+        Ok(())
+    }
 }

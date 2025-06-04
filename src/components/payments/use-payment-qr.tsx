@@ -1,30 +1,9 @@
-import { useConnection } from '@/lib/connection-context';
-import { PublicKey } from '@solana/web3.js';
-import { TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { useCallback } from 'react';
-import { encodeURL, createQR } from '@solana/pay';
-import { BigNumber } from 'bignumber.js';
+import { PublicKey } from '@solana/web3.js';
+import { encodeURL } from '@solana/pay';
 import QRCode from 'qrcode';
 import { env } from '@/utils/env';
-
-// Helper function to get associated token address
-async function findAssociatedTokenAddress(
-  walletAddress: PublicKey,
-  tokenMintAddress: PublicKey
-): Promise<PublicKey> {
-  return (await PublicKey.findProgramAddress(
-    [
-      walletAddress.toBuffer(),
-      TOKEN_PROGRAM_ID.toBuffer(),
-      tokenMintAddress.toBuffer(),
-    ],
-    ASSOCIATED_TOKEN_PROGRAM_ID
-  ))[0];
-}
-
-// USDC mint addresses
-const USDC_MINT = new PublicKey(env.usdcMint);
-const USDC_DEVNET_MINT = new PublicKey("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU");
+import { getStablecoinMint, STABLECOINS } from '@/utils/stablecoin-config';
 
 export interface PaymentQRResult {
   qrCode: string;
@@ -34,20 +13,23 @@ export interface PaymentQRResult {
 }
 
 export function usePaymentQR() {
-  const { connection } = useConnection();
-
   const generatePaymentQR = useCallback(async (
     amount: number,
     merchantPubkey: PublicKey,
     isDevnet: boolean = true,
     memo?: string,
+    token: string = 'USDC' // Back to single token
   ): Promise<PaymentQRResult> => {
     try {
-      // Get the correct USDC mint for the network
-      const usdcMint = isDevnet ? USDC_DEVNET_MINT : USDC_MINT;
+      // Get the correct stablecoin mint for the network
+      const tokenMint = getStablecoinMint(token, isDevnet);
+      const tokenConfig = STABLECOINS[token.toUpperCase()];
       
-      // Create the transaction request URL for fee-sponsored USDC transactions
-      // This points to your API that creates the actual transaction
+      if (!tokenConfig) {
+        throw new Error(`Unsupported token: ${token}`);
+      }
+      
+      // Create the transaction request URL for fee-sponsored stablecoin transactions
       const baseUrl = process.env.NODE_ENV === 'production' 
         ? env.productionUrl 
         : 'http://localhost:3000';
@@ -56,6 +38,7 @@ export function usePaymentQR() {
         merchant: merchantPubkey.toString(),
         amount: amount.toString(),
         network: isDevnet ? 'devnet' : 'mainnet-beta',
+        token: token.toUpperCase(), // Add token parameter
         ...(memo && { memo: memo.trim() })
       });
 
@@ -63,22 +46,21 @@ export function usePaymentQR() {
       const transactionRequestUrl = `${baseUrl}/api/payment/transaction?${searchParams}`;
 
       // Create Solana Pay Transaction Request URL
-      // This creates a QR code that when scanned, asks the wallet to request a transaction from your API
-      // Your API will then create a USDC transfer transaction with fee sponsorship
       const url = encodeURL({
         link: new URL(transactionRequestUrl),
-        label: "GotSOL USDC Payment",
-        message: `Pay $${amount} USDC${memo ? ` for ${memo.trim()}` : ''} (GotSOL covers all fees)`,
+        label: `GotSOL ${tokenConfig.name} Payment`,
+        message: `Pay $${amount} ${token}${memo ? ` for ${memo.trim()}` : ''} (GotSOL covers all fees)`,
       });
 
       const urlString = url.toString();
 
       console.log('Transaction Request QR generated:', {
         type: 'Transaction Request (not direct transfer)',
-        amount: `$${amount} USDC`,
+        amount: `$${amount} ${token}`,
         merchant: merchantPubkey.toString(),
         network: isDevnet ? 'devnet' : 'mainnet',
-        usdcMint: usdcMint.toString(),
+        token: token.toUpperCase(),
+        tokenMint: tokenMint.toString(),
         apiEndpoint: transactionRequestUrl,
         feeSponsorship: 'GotSOL fee payer covers all transaction fees',
         memo: memo || 'none'
