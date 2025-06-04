@@ -142,22 +142,24 @@ export function WithdrawFunds({
       // Get house's USDC ATA
       const houseUsdcAta = await findAssociatedTokenAddress(HOUSE, usdcMint);
 
-      // Send the withdraw transaction
-      const txid = await program.methods
-        .withdrawUsdc(new anchor.BN(withdrawAmountU64))
+      // Create the method builder with the correct instruction name and accounts
+      const methodBuilder = program.methods
+        .withdraw(new anchor.BN(withdrawAmountU64.toString()))
         .accountsPartial({
           owner: ownerPubkey,
           merchant: merchantPubkey,
-          merchantUsdcAta: merchantUsdcAta,
-          ownerUsdcAta: ownerUsdcAta,
+          stablecoinMint: usdcMint,
+          merchantStablecoinAta: merchantUsdcAta,
+          ownerStablecoinAta: ownerUsdcAta,
           house: HOUSE,
-          houseUsdcAta: houseUsdcAta,
-          usdcMint: usdcMint,
+          houseStablecoinAta: houseUsdcAta,
           tokenProgram: TOKEN_PROGRAM_ID,
           associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
           systemProgram: anchor.web3.SystemProgram.programId,
-        })
-        .rpc();
+        });
+
+      // Send the withdraw transaction
+      const txid = await methodBuilder.rpc();
 
       // Trigger immediate balance refresh
       await refreshBalances();

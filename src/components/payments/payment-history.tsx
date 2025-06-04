@@ -88,16 +88,16 @@ async function fetchPaymentData(
     try {
         // Get the merchant's USDC ATA
         const usdcMint = isDevnet ? USDC_DEVNET_MINT : USDC_MINT;
-        const merchantUsdcAta = await findAssociatedTokenAddress(merchantPubkey, usdcMint);
+        const merchantStablecoinAta = await findAssociatedTokenAddress(merchantPubkey, usdcMint);
         
         // First check if the ATA exists
-        const ataInfo = await connection.getAccountInfo(merchantUsdcAta);
+        const ataInfo = await connection.getAccountInfo(merchantStablecoinAta);
         if (!ataInfo) {
             return [];
         }
 
         // Get all signatures for the merchant's USDC ATA
-        const signatures = await connection.getSignaturesForAddress(merchantUsdcAta, {
+        const signatures = await connection.getSignaturesForAddress(merchantStablecoinAta, {
             limit: 250
         });
 
@@ -140,7 +140,7 @@ async function fetchPaymentData(
                             destination = parsedData.info.destination;
                         }
 
-                        return destination === merchantUsdcAta.toString();
+                        return destination === merchantStablecoinAta.toString();
                     }
                 );
 
@@ -235,8 +235,8 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
         
         try {
             const usdcMint = isDevnet ? USDC_DEVNET_MINT : USDC_MINT;
-            const merchantUsdcAta = await findAssociatedTokenAddress(merchantPubkey, usdcMint);
-            const balance = await connection.getTokenAccountBalance(merchantUsdcAta).catch(() => null);
+            const merchantStablecoinAta = await findAssociatedTokenAddress(merchantPubkey, usdcMint);
+            const balance = await connection.getTokenAccountBalance(merchantStablecoinAta).catch(() => null);
             return balance ? Number(balance.value.uiAmount || 0) : 0;
         } catch (error) {
             console.error('Error fetching balance:', error);
@@ -287,7 +287,7 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
             if (!tx || !tx.meta) return null;
 
             const usdcMint = isDevnet ? USDC_DEVNET_MINT : USDC_MINT;
-            const merchantUsdcAta = await findAssociatedTokenAddress(merchantPubkey, usdcMint);
+            const merchantStablecoinAta = await findAssociatedTokenAddress(merchantPubkey, usdcMint);
 
             // Find the token transfer instruction
             const transferInstruction = tx.transaction.message.instructions.find(
@@ -313,7 +313,7 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
                             amount = parsedData.info.tokenAmount?.amount || parsedData.info.amount;
                         }
 
-                        return destination === merchantUsdcAta.toString();
+                        return destination === merchantStablecoinAta.toString();
                     }
                     return false;
                 }
@@ -377,7 +377,7 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
         const setupSubscription = async () => {
             try {
                 const usdcMint = isDevnet ? USDC_DEVNET_MINT : USDC_MINT;
-                const merchantUsdcAta = await findAssociatedTokenAddress(merchantPubkey, usdcMint);
+                const merchantStablecoinAta = await findAssociatedTokenAddress(merchantPubkey, usdcMint);
 
                 // Prefill the processed signatures set with existing payment signatures
                 const existingPayments = queryClient.getQueryData<Payment[]>(
@@ -385,16 +385,18 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
                 ) || [];
                 existingPayments.forEach(p => processedSignatures.add(p.signature));
 
+                console.log(`Setting up subscription for merchant ATA: ${merchantStablecoinAta.toString()}`);
+
                 // Subscribe to account changes
                 const subscriptionId = connection.onAccountChange(
-                    merchantUsdcAta,
+                    merchantStablecoinAta,
                     // Add explicit types to callback parameters
                     async (_accountInfo, _context) => {
                         // Add a small delay to avoid rate limiting
                         await new Promise<void>(resolve => setTimeout(resolve, 100));
                         
                         // Get the latest transaction signature
-                        const signatures = await connection.getSignaturesForAddress(merchantUsdcAta, {
+                        const signatures = await connection.getSignaturesForAddress(merchantStablecoinAta, {
                             limit: 1
                         }) as TransactionSignatureResult[];
 

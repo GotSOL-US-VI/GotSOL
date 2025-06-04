@@ -79,26 +79,6 @@ describe("gotsol", () => {
       program.programId
     );
 
-    // Get the merchant's USDC ATA address (FOR DEVNET FOR TESTING)
-    // const [merchantUsdcAta] = web3.PublicKey.findProgramAddressSync(
-    //   [
-    //     merchant.toBuffer(),
-    //     TOKEN_PROGRAM_ID.toBuffer(),
-    //     USDC_DEVNET_MINT.toBuffer(),
-    //   ],
-    //   anchor.utils.token.ASSOCIATED_PROGRAM_ID
-    // );
-
-    // Get the merchant's USDC ATA address (TO MOCK USDC ON LOCALNET)
-    const [merchantMockUsdcAta] = web3.PublicKey.findProgramAddressSync(
-      [
-        merchant.toBuffer(),
-        TOKEN_PROGRAM_ID.toBuffer(),
-        mockUsdcMint.toBuffer(),
-      ],
-      anchor.utils.token.ASSOCIATED_PROGRAM_ID
-    );
-
     // Airdrop 2 SOL to the owner
     const signature = await provider.connection.requestAirdrop(
       owner.publicKey,
@@ -112,8 +92,6 @@ describe("gotsol", () => {
         .accountsPartial({
           owner: owner.publicKey,
           merchant,
-          usdcMint: mockUsdcMint,
-          merchantUsdcAta: merchantMockUsdcAta,
           tokenProgram: TOKEN_PROGRAM_ID,
           associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
           systemProgram: anchor.web3.SystemProgram.programId,

@@ -83,13 +83,13 @@ export default function DashboardContent({ params }: { params: { merchantId: str
       if (!merchantPubkey || !owner || !connection) return { merchantBalance: 0, ownerBalance: 0 };
       try {
         // Merchant USDC ATA
-        const merchantUsdcAta = getAssociatedTokenAddress(merchantPubkey, USDC_DEVNET_MINT);
-        const merchantAtaInfo = await connection.getTokenAccountBalance(merchantUsdcAta).catch(() => null);
+        const merchantStablecoinAta = getAssociatedTokenAddress(merchantPubkey, USDC_DEVNET_MINT);
+        const merchantAtaInfo = await connection.getTokenAccountBalance(merchantStablecoinAta).catch(() => null);
         const mBalance = merchantAtaInfo ? Number(merchantAtaInfo.value.uiAmountString) : 0;
         
         // Owner USDC ATA
-        const ownerUsdcAta = getAssociatedTokenAddress(new PublicKey(owner), USDC_DEVNET_MINT);
-        const ownerAtaInfo = await connection.getTokenAccountBalance(ownerUsdcAta).catch(() => null);
+        const ownerStablecoinAta = getAssociatedTokenAddress(new PublicKey(owner), USDC_DEVNET_MINT);
+        const ownerAtaInfo = await connection.getTokenAccountBalance(ownerStablecoinAta).catch(() => null);
         const oBalance = ownerAtaInfo ? Number(ownerAtaInfo.value.uiAmountString) : 0;
         
         return { merchantBalance: mBalance, ownerBalance: oBalance };

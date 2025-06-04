@@ -252,26 +252,27 @@ export function RefundButton({ program, merchantPubkey, payment, onSuccess, isDe
             //     recipient: payment.recipient.toString()
             // });
 
-            // Send the transaction
-            const txid = await program.methods
+            // Execute the refund
+            const tx = await program.methods
                 .refund(signaturePrefix, refundAmount)
                 .accountsPartial({
-                    owner: publicKey,
+                    owner: merchantAccount.owner,
                     merchant: merchantPda,
-                    merchantUsdcAta: merchantUsdcAta,
-                    recipientUsdcAta: recipientUsdcAta,
-                    refundRecord: refundRecord,
-                    usdcMint: usdcMint,
+                    stablecoinMint: usdcMint,
+                    merchantStablecoinAta: merchantUsdcAta,
+                    recipientStablecoinAta: recipientUsdcAta,
+                    refundRecord,
                     recipient: payment.recipient,
+                    associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
                     tokenProgram: TOKEN_PROGRAM_ID,
-                    systemProgram: anchor.web3.SystemProgram.programId,
+                    systemProgram: anchor.web3.SystemProgram.programId
                 })
                 .rpc();
 
-            // console.log('Refund successful:', txid);
+            // console.log('Refund successful:', tx);
             
             // Wait for confirmation
-            await connection.confirmTransaction(txid, 'confirmed');
+            await connection.confirmTransaction(tx, 'confirmed');
             
             // Invalidate relevant queries for both merchant and recipient balances
             await Promise.all([
@@ -325,7 +326,7 @@ export function RefundButton({ program, merchantPubkey, payment, onSuccess, isDe
                     <p>Refund processed successfully!</p>
                     <p className="text-xs mt-1">
                         <a
-                            href={formatSolscanDevnetLink(txid)}
+                            href={formatSolscanDevnetLink(tx)}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="underline"
@@ -354,7 +355,7 @@ export function RefundButton({ program, merchantPubkey, payment, onSuccess, isDe
                     amount: refundAmountU64,
                     decimal_amount: decimalAmount,
                     original_tx_sig: payment.signature,
-                    refund_tx_sig: txid,
+                    refund_tx_sig: tx,
                     recipient_wallet: payment.recipient.toString(),
                 }
             ]);

@@ -8,44 +8,6 @@ pub struct RefundProcessed {
 }
 
 #[event]
-pub struct MerchantStatusChanged {
+pub struct MerchantClosed {
     pub merchant: Pubkey,
-    pub is_active: bool,
-    pub timestamp: i64,
 }
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////// LEAVING THIS CODE HERE FOR A LATER UPGRADE, SAVING SPACE ON-CHAIN FOR NOW ///////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-// #[event]
-// pub struct EmployeeCreated {
-//     pub merchant: Pubkey,
-//     pub employee: Pubkey,
-//     pub role: String,
-//     pub name: String,
-// }
-
-// #[event]
-// pub struct EmployeeUpdated {
-//     pub merchant: Pubkey,
-//     pub employee: Pubkey,
-//     pub new_role: Option<String>,
-//     pub is_active: Option<bool>,
-// }
-
-// #[event]
-// pub struct EmployeeWithdrawal {
-//     pub merchant: Pubkey,
-//     pub employee: Pubkey,
-//     pub amount: u64,
-//     pub timestamp: i64,
-// }
-
-// #[event]
-// pub struct RevenuePayment {
-//     pub merchant: Pubkey,
-//     pub amount: u64,
-//     pub timestamp: i64,
-//     pub lifetime_paid: u64,
-// }
