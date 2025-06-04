@@ -288,6 +288,24 @@ export function WithdrawFunds({
     setWithdrawAmount(value);
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      // Only trigger withdrawal if form is valid and not loading
+      const isFormValid = merchantPubkey && 
+        ownerPubkey && 
+        withdrawAmount && 
+        parseFloat(withdrawAmount) > 0 && 
+        merchantBalance > 0 && 
+        parseFloat(withdrawAmount) <= merchantBalance && 
+        !isLoading;
+      
+      if (isFormValid) {
+        handleWithdraw();
+      }
+    }
+  };
+
   const isLoadingBalances = isMerchantBalanceLoading || isOwnerBalanceLoading;
 
   return (
@@ -348,6 +366,7 @@ export function WithdrawFunds({
             className="input input-bordered w-full"
             value={withdrawAmount}
             onChange={handleAmountChange}
+            onKeyDown={handleKeyDown}
             disabled={isLoading}
           />
         </div>
