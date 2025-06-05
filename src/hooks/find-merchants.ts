@@ -9,8 +9,6 @@ import bs58 from 'bs58';
 export interface MerchantAccount {
   owner: PublicKey;
   entityName: string;
-  total_withdrawn: number;
-  total_refunded: number;
   merchant_bump: number;
   fee_eligible: boolean;
 }
@@ -59,8 +57,6 @@ export async function fetchMerchantData(walletAddress: string | undefined, conne
           account: {
             owner: decoded.owner,
             entityName: decoded.entity_name,
-            total_withdrawn: decoded.total_withdrawn.toNumber(),
-            total_refunded: decoded.total_refunded.toNumber(),
             merchant_bump: decoded.merchant_bump,
             fee_eligible: decoded.fee_eligible
           },

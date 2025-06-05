@@ -12,7 +12,7 @@ use crate::context::*;
 // use crate::state::{EmployeeRole, RoleLimits};
 // use crate::events::{EmployeeCreated, EmployeeUpdated, EmployeeWithdrawal, RevenuePayment};
 
-declare_id!("DV99G7bowUE4A3MKdnSSpBGKRrUp1PfBfWntuM9Y2vdr");
+declare_id!("7E9eu4fZdpQ1LyrwyBGxcFumDfGdGRw7YSQvZvnLaeLN");
 
 #[program]
 pub mod gotsol {

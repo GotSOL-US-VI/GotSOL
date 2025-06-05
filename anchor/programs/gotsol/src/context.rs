@@ -32,6 +32,7 @@ impl<'info> CreateMerchant<'info> {
         entity_name[..trimmed_name.len().min(32)].copy_from_slice(trimmed_name.as_bytes());
         
         self.merchant.set_inner(Merchant {
+            owner: self.owner.key(),
             entity_name: trimmed_name,
             fee_eligible: true,
             merchant_bump: bumps.merchant,
@@ -181,7 +182,6 @@ impl<'info> RefundPayment<'info> {
         
         // Initialize refund record
         self.refund_record.set_inner(RefundRecord {
-            amount,
             original_tx_sig: original_tx_sig.clone(),
             bump: bumps.refund_record
         });

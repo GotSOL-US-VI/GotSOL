@@ -18,9 +18,8 @@ import { createClient } from '@/utils/supabaseClient';
 export interface MerchantAccount {
     owner: PublicKey;
     entityName: string;
-    totalWithdrawn: BN;
-    totalRefunded: BN;
     merchantBump: number;
+    feeEligible: boolean;
 }
 
 interface RefundButtonProps {
@@ -63,45 +62,8 @@ export function RefundButton({ program, merchantPubkey, payment, onSuccess, isDe
                 throw new Error('Merchant account not found');
             }
 
-            // Log merchant details for debugging
-            // console.log('Fetched Merchant Details:', {
-            //     entityName: merchantAccount.entityName,
-            //     owner: merchantAccount.owner.toString(),
-            //     totalWithdrawn: merchantAccount.totalWithdrawn.toString(),
-            //     totalRefunded: merchantAccount.totalRefunded.toString(),
-            //     bump: merchantAccount.merchantBump
-            // });
-
             // Convert merchant name to bytes properly
             const merchantNameBytes = Buffer.from(merchantAccount.entityName);
-
-            // Debug merchant name bytes
-            // console.log('Merchant Name Debug:', {
-            //     raw: merchantAccount.entityName,
-            //     bytes: Array.from(merchantNameBytes),
-            //     length: merchantNameBytes.length,
-            //     utf8: merchantNameBytes.toString('utf8'),
-            //     hex: merchantNameBytes.toString('hex')
-            // });
-
-            // Debug merchant PDA seeds lengths
-            // console.log('Merchant PDA Seeds Lengths:', {
-            //     seed1: {
-            //         name: 'merchant',
-            //         length: Buffer.from('merchant', 'utf8').length,
-            //         value: Buffer.from('merchant', 'utf8')
-            //     },
-            //     seed2: {
-            //         name: 'merchantName',
-            //         length: merchantNameBytes.length,
-            //         value: merchantNameBytes
-            //     },
-            //     seed3: {
-            //         name: 'ownerPubkey',
-            //         length: merchantAccount.owner.toBuffer().length,
-            //         value: merchantAccount.owner.toBuffer()
-            //     }
-            // });
 
             // Derive merchant PDA using merchant owner's public key
             const [merchantPda] = PublicKey.findProgramAddressSync(
@@ -145,112 +107,6 @@ export function RefundButton({ program, merchantPubkey, payment, onSuccess, isDe
                 ],
                 program.programId
             );
-
-            // Debug PDA derivation
-            // console.log('PDA Derivation Debug:', {
-            //     seeds: {
-            //         seed1: {
-            //             type: 'refund',
-            //             bytes: Array.from(Buffer.from('refund')),
-            //         },
-            //         seed2: {
-            //             type: 'signature_prefix',
-            //             string: signaturePrefix,
-            //             bytes: Array.from(Buffer.from(signaturePrefix)),
-            //         }
-            //     },
-            //     result: {
-            //         address: refundRecord.toString(),
-            //         bump: refundBump,
-            //     }
-            // });
-
-            // Comprehensive debug logging
-            // console.log('=== COMPLETE REFUND TRANSACTION DEBUG ===');
-
-            // // 1. Program and Instruction Details
-            // console.log('Program Details:', {
-            //     programId: program.programId.toString(),
-            //     instruction: 'refund',
-            //     instructionArgs: {
-            //         originalTxSig: signaturePrefix,  // Pass the 8-char string directly
-            //         amount: refundAmount.toString(),
-            //         amountU64: refundAmountU64,
-            //     }
-            // });
-
-            // // 2. All Account Keys and PDAs
-            // console.log('Account Details:', {
-            //     owner: {
-            //         pubkey: publicKey?.toString(),
-            //         isSigner: true,
-            //         isWritable: true
-            //     },
-            //     merchant: {
-            //         pubkey: merchantPda.toString(),
-            //         derivation: {
-            //             seeds: [
-            //                 { name: 'merchant', value: Array.from(Buffer.from('merchant')) },
-            //                 { name: 'entityName', value: Array.from(merchantNameBytes) },
-            //                 { name: 'owner', value: Array.from(merchantAccount.owner.toBuffer()) }
-            //             ],
-            //             bump: merchantAccount.merchantBump
-            //         },
-            //         data: {
-            //             owner: merchantAccount.owner.toString(),
-            //             entityName: merchantAccount.entityName,
-            //             totalWithdrawn: merchantAccount.totalWithdrawn.toString(),
-            //             totalRefunded: merchantAccount.totalRefunded.toString()
-            //         }
-            //     },
-            //     merchantUsdcAta: {
-            //         pubkey: merchantUsdcAta.toString(),
-            //         mint: usdcMint.toString(),
-            //         authority: merchantPda.toString()
-            //     },
-            //     recipientUsdcAta: {
-            //         pubkey: recipientUsdcAta.toString(),
-            //         mint: usdcMint.toString(),
-            //         authority: payment.recipient.toString()
-            //     },
-            //     refundRecord: {
-            //         pubkey: refundRecord.toString(),
-            //         derivation: {
-            //             seeds: [
-            //                 { name: 'refund', value: Array.from(Buffer.from('refund')) },
-            //                 {
-            //                     name: 'signaturePrefix',
-            //                     raw: signaturePrefix,
-            //                     asString: signaturePrefix
-            //                 }
-            //             ],
-            //             bump: refundBump
-            //         }
-            //     },
-            //     recipient: payment.recipient.toString(),
-            //     usdcMint: usdcMint.toString()
-            // });
-
-            // // 3. Expected Account Order from IDL
-            // console.log('Expected Account Order from IDL:', [
-            //     'owner (signer)',
-            //     'merchant (pda)',
-            //     'merchantUsdcAta',
-            //     'recipientUsdcAta',
-            //     'refundRecord (pda)',
-            //     'usdcMint',
-            //     'recipient',
-            //     'tokenProgram',
-            //     'systemProgram'
-            // ]);
-
-            // // 4. Original Transaction Details
-            // console.log('Original Transaction:', {
-            //     signature: payment.signature,
-            //     truncatedSignature: signaturePrefix,
-            //     amount: payment.amount,
-            //     recipient: payment.recipient.toString()
-            // });
 
             // Execute the refund
             const tx = await program.methods

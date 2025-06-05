@@ -354,8 +354,8 @@ export function WithdrawFunds({
     <div className="space-y-6 rounded-lg border border-base-content/10 p-6 mb-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <h2 className="text-xl">Withdraw Funds</h2>
-          <div className="opacity-60 cursor-help" title="1% platform fee on withdrawal amount. 99% to the Merchant&apos;s Owner.">ⓘ</div>
+          <h2 className="text-xl">Withdraw to Owner</h2>
+          <div className="opacity-60 cursor-help" title="1% platform fee on withdrawal amount. 99% to the Merchant&apos;s Owner. You must withdraw here first before withdrawing to a bank or card.">ⓘ</div>
         </div>
         <button
           onClick={() => toggleBalanceVisibility()}

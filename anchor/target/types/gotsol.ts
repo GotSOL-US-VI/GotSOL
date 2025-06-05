@@ -5,7 +5,7 @@
  * IDL can be found at `target/idl/gotsol.json`.
  */
 export type Gotsol = {
-  "address": "DV99G7bowUE4A3MKdnSSpBGKRrUp1PfBfWntuM9Y2vdr",
+  "address": "7E9eu4fZdpQ1LyrwyBGxcFumDfGdGRw7YSQvZvnLaeLN",
   "metadata": {
     "name": "gotsol",
     "version": "0.1.0",
@@ -60,10 +60,6 @@ export type Gotsol = {
               }
             ]
           }
-        },
-        {
-          "name": "house",
-          "writable": true
         },
         {
           "name": "systemProgram",
@@ -890,43 +886,18 @@ export type Gotsol = {
     },
     {
       "code": 6001,
-      "name": "notMerchantOwner",
-      "msg": "Only the Merchant's Owner can call this instruction!"
-    },
-    {
-      "code": 6002,
       "name": "zeroAmountWithdrawal",
       "msg": "Withdrawal amount must be greater than 0!"
     },
     {
-      "code": 6003,
+      "code": 6002,
       "name": "invalidMerchantName",
       "msg": "Invalid merchant name: cannot be empty!"
     },
     {
-      "code": 6004,
-      "name": "feeIneligibleMerchant",
-      "msg": "This merchant account is currently not eligible for our fee-paying service. You can still operate your Merchant accounts, but you will have to pay your own fees."
-    },
-    {
-      "code": 6005,
+      "code": 6003,
       "name": "unauthorizedStatusChange",
       "msg": "Only the AUTH can change a Merchant fee eligibility status!"
-    },
-    {
-      "code": 6006,
-      "name": "invalidTransactionSignature",
-      "msg": "Invalid transaction signature format!"
-    },
-    {
-      "code": 6007,
-      "name": "excessiveRefundAmount",
-      "msg": "Refund amount exceeds maximum allowed per transaction!"
-    },
-    {
-      "code": 6008,
-      "name": "arithmeticOverflow",
-      "msg": "Arithmetic operation resulted in overflow!"
     }
   ],
   "types": [
@@ -942,14 +913,6 @@ export type Gotsol = {
           {
             "name": "entityName",
             "type": "string"
-          },
-          {
-            "name": "totalWithdrawn",
-            "type": "u64"
-          },
-          {
-            "name": "totalRefunded",
-            "type": "u64"
           },
           {
             "name": "feeEligible",
@@ -999,10 +962,6 @@ export type Gotsol = {
       "type": {
         "kind": "struct",
         "fields": [
-          {
-            "name": "amount",
-            "type": "u64"
-          },
           {
             "name": "originalTxSig",
             "type": "string"
