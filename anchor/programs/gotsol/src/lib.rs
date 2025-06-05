@@ -9,10 +9,8 @@ mod events;
 mod state;
 
 use crate::context::*;
-// use crate::state::{EmployeeRole, RoleLimits};
-// use crate::events::{EmployeeCreated, EmployeeUpdated, EmployeeWithdrawal, RevenuePayment};
 
-declare_id!("7E9eu4fZdpQ1LyrwyBGxcFumDfGdGRw7YSQvZvnLaeLN");
+declare_id!("E6MRtJg483SVLY7EvryXJXPSLybRZyCCTsDY4BhNQYb");
 
 #[program]
 pub mod gotsol {

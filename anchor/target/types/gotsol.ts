@@ -5,7 +5,7 @@
  * IDL can be found at `target/idl/gotsol.json`.
  */
 export type Gotsol = {
-  "address": "7E9eu4fZdpQ1LyrwyBGxcFumDfGdGRw7YSQvZvnLaeLN",
+  "address": "E6MRtJg483SVLY7EvryXJXPSLybRZyCCTsDY4BhNQYb",
   "metadata": {
     "name": "gotsol",
     "version": "0.1.0",
