@@ -3,16 +3,13 @@ use anchor_lang::prelude::*;
 
 #[account]
 pub struct Merchant {
-    pub owner: Pubkey,
     pub entity_name: String,
-    pub total_withdrawn: u64,
-    pub total_refunded: u64,
     pub fee_eligible: bool,
     pub merchant_bump: u8,
 }
 
 impl Merchant {
-    pub const LEN: usize = 8 + 32 + (4 + 32) + 8 + 8 + 1 + 1;
+    pub const LEN: usize = 8 + (4 + 32) + 1 + 1;
 }
 
 #[account]

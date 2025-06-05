@@ -32,10 +32,7 @@ impl<'info> CreateMerchant<'info> {
         entity_name[..trimmed_name.len().min(32)].copy_from_slice(trimmed_name.as_bytes());
         
         self.merchant.set_inner(Merchant {
-            owner: self.owner.key(),
             entity_name: trimmed_name,
-            total_withdrawn: 0,
-            total_refunded: 0,
             fee_eligible: true,
             merchant_bump: bumps.merchant,
         });
@@ -53,7 +50,6 @@ pub struct Withdraw<'info> {
     #[account(mut,
         seeds = [b"merchant", merchant.entity_name.as_str().as_bytes(), owner.key().as_ref()], 
         bump = merchant.merchant_bump,
-        constraint = owner.key() == merchant.owner @ CustomError::NotMerchantOwner
     )]
     pub merchant: Box<Account<'info, Merchant>>,
 
@@ -133,11 +129,6 @@ impl<'info> Withdraw<'info> {
             house_amount,
             self.stablecoin_mint.decimals,
         )?;
-
-        self.merchant.total_withdrawn = self.merchant.total_withdrawn
-            .checked_add(amount)
-            .ok_or(CustomError::ArithmeticOverflow)?;
-
         Ok(())
     }
 }
@@ -151,8 +142,7 @@ pub struct RefundPayment<'info> {
 
     #[account(mut, 
         seeds = [b"merchant", merchant.entity_name.as_str().as_bytes(), owner.key().as_ref()], 
-        bump = merchant.merchant_bump,
-        constraint = owner.key() == merchant.owner @ CustomError::NotMerchantOwner)]
+        bump = merchant.merchant_bump)]
     pub merchant: Box<Account<'info, Merchant>>,
 
     pub stablecoin_mint: Box<InterfaceAccount<'info, Mint>>,
@@ -220,11 +210,6 @@ impl<'info> RefundPayment<'info> {
             self.stablecoin_mint.decimals,
         )?;
 
-        // Update merchant state with overflow check
-        self.merchant.total_refunded = self.merchant.total_refunded
-            .checked_add(amount)
-            .ok_or(CustomError::ArithmeticOverflow)?;
-
         // Emit event
         emit!(RefundProcessed {
             original_tx_sig,
@@ -264,13 +249,8 @@ pub struct CloseMerchant<'info> {
     #[account(mut, 
         seeds = [b"merchant", merchant.entity_name.as_str().as_bytes(), owner.key().as_ref()], 
         bump = merchant.merchant_bump,
-        constraint = owner.key() == merchant.owner @ CustomError::NotMerchantOwner,
-        close = house)]
+        close = owner)]
     pub merchant: Box<Account<'info, Merchant>>,
-
-    /// CHECK: This is the house multi-sig
-    #[account(mut, constraint = house.key() == Pubkey::from_str(HOUSE).unwrap())]
-    pub house: AccountInfo<'info>,
 
     pub system_program: Program<'info, System>,
 }

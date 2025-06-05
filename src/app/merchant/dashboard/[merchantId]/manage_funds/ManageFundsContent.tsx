@@ -75,13 +75,13 @@ export default function ManageFundsContent({ merchantId }: ManageFundsContentPro
       <div className="container mx-auto py-8 text-center">
         <div className="loading loading-spinner loading-lg"></div>
         <p className="text-lg mt-4">Loading...</p>
-        <div className="text-sm text-gray-500 mt-2">
+        {/* <div className="text-sm text-gray-500 mt-2">
           <p>Merchant ID: {merchantId}</p>
           <p>Merchant Pubkey: {merchantPubkey ? '✓' : '✗'}</p>
           <p>Program: {program ? '✓' : '✗'}</p>
           <p>Merchant Data: {merchantData ? '✓' : '✗'}</p>
           <p>Owner: {merchantData?.owner ? '✓' : '✗'}</p>
-        </div>
+        </div> */}
       </div>
     );
   }
