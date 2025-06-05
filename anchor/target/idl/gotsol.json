@@ -177,7 +177,6 @@
         },
         {
           "name": "merchant",
-          "writable": true,
           "pda": {
             "seeds": [
               {
@@ -491,7 +490,6 @@
         },
         {
           "name": "merchant",
-          "writable": true,
           "pda": {
             "seeds": [
               {
@@ -703,8 +701,7 @@
           }
         },
         {
-          "name": "house",
-          "writable": true
+          "name": "house"
         },
         {
           "name": "house_stablecoin_ata",

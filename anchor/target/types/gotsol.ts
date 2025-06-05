@@ -183,7 +183,6 @@ export type Gotsol = {
         },
         {
           "name": "merchant",
-          "writable": true,
           "pda": {
             "seeds": [
               {
@@ -497,7 +496,6 @@ export type Gotsol = {
         },
         {
           "name": "merchant",
-          "writable": true,
           "pda": {
             "seeds": [
               {
@@ -709,8 +707,7 @@ export type Gotsol = {
           }
         },
         {
-          "name": "house",
-          "writable": true
+          "name": "house"
         },
         {
           "name": "houseStablecoinAta",

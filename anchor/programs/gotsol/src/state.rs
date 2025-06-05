@@ -1,5 +1,4 @@
 use anchor_lang::prelude::*;
-// use crate::constants::*;
 
 #[account]
 pub struct Merchant {
@@ -10,7 +9,7 @@ pub struct Merchant {
 }
 
 impl Merchant {
-    pub const LEN: usize = 8 + 32 + (4 + 32) + 1 + 1; // 8 + 32 + 36 + 1 + 1 = 78 bytes
+    pub const LEN: usize = 8 + 32 + (4 + 32) + 1 + 1;
 }
 
 #[account]

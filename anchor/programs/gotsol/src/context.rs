@@ -48,7 +48,7 @@ pub struct Withdraw<'info> {
     constraint = amount > 0 @ CustomError::ZeroAmountWithdrawal)]
     pub owner: Signer<'info>,
 
-    #[account(mut,
+    #[account(
         seeds = [b"merchant", merchant.entity_name.as_str().as_bytes(), owner.key().as_ref()], 
         bump = merchant.merchant_bump,
     )]
@@ -71,7 +71,7 @@ pub struct Withdraw<'info> {
     pub owner_stablecoin_ata: Box<InterfaceAccount<'info, TokenAccount>>,
 
     /// CHECK: This is the HOUSE Squads multi-sig
-    #[account(mut, constraint = house.key() == Pubkey::from_str(HOUSE).unwrap())]
+    #[account(constraint = house.key() == Pubkey::from_str(HOUSE).unwrap())]
     pub house: AccountInfo<'info>,
 
     #[account(mut,
@@ -141,7 +141,7 @@ pub struct RefundPayment<'info> {
         constraint = amount > 0 @ CustomError::ZeroAmountWithdrawal)]
     pub owner: Signer<'info>,
 
-    #[account(mut, 
+    #[account(
         seeds = [b"merchant", merchant.entity_name.as_str().as_bytes(), owner.key().as_ref()], 
         bump = merchant.merchant_bump)]
     pub merchant: Box<Account<'info, Merchant>>,
