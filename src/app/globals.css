@@ -79,6 +79,15 @@ body {
   outline: none !important;
 }
 
+/* Deletion mode styles */
+[data-theme="light"] .hover\:border-red-500:hover {
+  border-color: #ef4444 !important;
+}
+
+[data-theme="dark"] .hover\:border-red-500:hover {
+  border-color: #ef4444 !important;
+}
+
 /* Dashboard container cards - thinner borders */
 [data-theme="dark"] .bg-base-300.card,
 [data-theme="dark"] .card.bg-base-300,
