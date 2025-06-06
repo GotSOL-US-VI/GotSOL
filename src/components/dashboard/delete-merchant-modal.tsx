@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Merchant } from '@/hooks/find-merchants';
 import { useWallet, useClient } from '@getpara/react-sdk';
 import { PublicKey, SystemProgram } from '@solana/web3.js';
@@ -140,9 +140,16 @@ export function DeleteMerchantModal({ merchant, onConfirm, onCancel }: DeleteMer
     }
   };
 
+  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    // Only close if clicking on the backdrop itself, not the modal content
+    if (e.target === e.currentTarget) {
+      onCancel();
+    }
+  };
+
   return (
-    <div className="modal modal-open">
-      <div className="modal-box">
+    <div className="modal modal-open" onClick={handleBackdropClick}>
+      <div className="modal-box" onClick={(e) => e.stopPropagation()}>
         
         <div className="py-4">
           <div className="alert alert-error mb-4">
@@ -151,7 +158,7 @@ export function DeleteMerchantModal({ merchant, onConfirm, onCancel }: DeleteMer
             </svg>
             <div>
               <h4 className="font-semibold">This action cannot be undone!</h4>
-              <p className="text-sm">This will close the Merchant account and reclaim the SOL rent.</p>
+              <p className="text-sm">This will close the Merchant account and prevent withdrawing from its token accounts!</p>
             </div>
           </div>
 
