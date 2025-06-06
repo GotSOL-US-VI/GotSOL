@@ -3,19 +3,25 @@ import { useState, useEffect, useCallback } from 'react';
 const BALANCE_VISIBILITY_KEY = 'gotsol-balance-visibility';
 
 export function useBalanceVisibility() {
-  const [isBalancesVisible, setIsBalancesVisible] = useState<boolean>(true);
+  const [isBalancesVisible, setIsBalancesVisible] = useState<boolean>(false);
 
   // Initialize state from localStorage on mount
   useEffect(() => {
     try {
       const savedVisibility = localStorage.getItem(BALANCE_VISIBILITY_KEY);
+      
       if (savedVisibility !== null) {
-        setIsBalancesVisible(JSON.parse(savedVisibility));
+        const parsedValue = JSON.parse(savedVisibility);
+        setIsBalancesVisible(parsedValue);
+      } else {
+        // If no saved preference, default to hidden and save this preference
+        setIsBalancesVisible(false);
+        localStorage.setItem(BALANCE_VISIBILITY_KEY, JSON.stringify(false));
       }
     } catch (error) {
       console.warn('Failed to read balance visibility from localStorage:', error);
-      // Fallback to default (true)
-      setIsBalancesVisible(true);
+      // Fallback to default (false)
+      setIsBalancesVisible(false);
     }
   }, []);
 

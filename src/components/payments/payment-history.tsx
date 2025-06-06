@@ -2,7 +2,7 @@
 
 import { useWallet } from '@getpara/react-sdk';
 import { PublicKey, ParsedTransactionWithMeta, ParsedInstruction, PartiallyDecodedInstruction, Connection } from '@solana/web3.js';
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useState } from 'react';
 import { useConnection } from '@/lib/connection-context';
 import { formatSolscanDevnetLink } from '@/utils/format-transaction-link';
 import { toastUtils } from '@/utils/toast-utils';
@@ -13,6 +13,7 @@ import { retryWithBackoff } from '@/utils/para';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { usePaymentCache } from '@/hooks/use-payment-cache';
 import { USDC_MINT, USDC_DEVNET_MINT, findAssociatedTokenAddress, formatUSDCAmount } from '@/utils/token-utils';
+import { useBalanceVisibility } from '@/hooks/use-balance-visibility';
 
 interface PaymentHistoryProps {
     program: Program<Gotsol>;
@@ -205,6 +206,10 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
     const { data: wallet } = useWallet();
     const { connection } = useConnection();
     const queryClient = useQueryClient();
+    const { isBalancesVisible } = useBalanceVisibility();
+    
+    // State to track which payment cards are locked open (by signature)
+    const [lockedPayments, setLockedPayments] = useState<Set<string>>(new Set());
     
     // Use our custom payment cache hook for localStorage persistence
     const { savePaymentsToCache } = usePaymentCache(merchantPubkey, isDevnet);
@@ -488,6 +493,19 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
         };
     }, [connection, merchantPubkey, isDevnet, processNewTransaction, queryClient, savePaymentsToCache, onPaymentReceived]);
 
+    // Function to toggle lock state for a specific payment
+    const togglePaymentLock = (signature: string) => {
+        setLockedPayments(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(signature)) {
+                newSet.delete(signature);
+            } else {
+                newSet.add(signature);
+            }
+            return newSet;
+        });
+    };
+
     if (isLoading) {
         return (
             <div className="space-y-4">
@@ -533,7 +551,11 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
                         gap: "12px"
                     }}
                 >
-                    {payments.map((payment: Payment) => (
+                    {payments.map((payment: Payment) => {
+                        const isLocked = lockedPayments.has(payment.signature);
+                        const shouldShowAmount = isBalancesVisible || isLocked;
+                        
+                        return (
                         <div 
                             key={payment.signature} 
                             className="card bg-[#1C1C1C] shadow flex-shrink-0"
@@ -543,7 +565,35 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
                                 <div className="flex justify-between items-start">
                                     <div className="space-y-1">
                                         <p className="text-gray font-medium">
-                                            +{formatUSDCAmount(payment.amount)} USDC
+                                            {shouldShowAmount ? (
+                                                <span 
+                                                    className="cursor-pointer select-none"
+                                                    onClick={() => togglePaymentLock(payment.signature)}
+                                                    title={isLocked ? "Click to unlock and hide amount" : "Click to lock amount visible"}
+                                                >
+                                                    +{formatUSDCAmount(payment.amount)} USDC {isLocked}
+                                                </span>
+                                            ) : (
+                                                <span 
+                                                    className="cursor-pointer hover:opacity-75 transition-opacity select-none"
+                                                    title={`+${formatUSDCAmount(payment.amount)} USDC - Click to lock visible`}
+                                                    onClick={() => togglePaymentLock(payment.signature)}
+                                                    onMouseEnter={(e) => {
+                                                        // Only show on hover if not locked
+                                                        if (!isLocked) {
+                                                            e.currentTarget.textContent = `+${formatUSDCAmount(payment.amount)} USDC`;
+                                                        }
+                                                    }}
+                                                    onMouseLeave={(e) => {
+                                                        // Only hide on mouse leave if not locked
+                                                        if (!isLocked) {
+                                                            e.currentTarget.textContent = '+••••••• USDC';
+                                                        }
+                                                    }}
+                                                >
+                                                    +••••••• USDC
+                                                </span>
+                                            )}
                                         </p>
                                         <p className="text-gray-400 text-sm">
                                             {new Date(payment.timestamp).toLocaleString()}
@@ -584,7 +634,8 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
                                 </div>
                             </div>
                         </div>
-                    ))}
+                        );
+                    })}
                 </div>
             )}
         </div>

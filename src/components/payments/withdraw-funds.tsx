@@ -257,7 +257,7 @@ export function WithdrawFunds({
         parsedError.message?.includes('BelowMinimumWithdrawal') ||
         parsedError.code === 'BELOW_MINIMUM_WITHDRAWAL'
       ) {
-        setError('Amount is below the minimum withdrawal of 0.000100 for stablecoins.');
+        setError('0.000100 minimum');
       } else if (
         parsedError.message?.toLowerCase().includes('insufficient') ||
         parsedError.code === 'INSUFFICIENT_FUNDS'
