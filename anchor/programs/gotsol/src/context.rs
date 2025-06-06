@@ -14,7 +14,7 @@ use crate::events::*;
 #[derive(Accounts)]
 #[instruction(name: String)]
 pub struct CreateMerchant<'info> {
-    #[account(mut, constraint = !name.trim().is_empty() @ CustomError::InvalidMerchantName)]
+    #[account(mut, constraint = !name.trim().is_empty() && name.len() <= 32 @ CustomError::InvalidMerchantName)]
     pub owner: Signer<'info>,
 
     #[account(init, payer = owner, seeds = [b"merchant", name.as_str().as_bytes(), owner.key().as_ref()], space = Merchant::LEN, bump)]
@@ -45,7 +45,8 @@ impl<'info> CreateMerchant<'info> {
 #[instruction(amount: u64)]
 pub struct Withdraw<'info> {
     #[account(mut,
-    constraint = amount > 0 @ CustomError::ZeroAmountWithdrawal)]
+    constraint = amount > 0 @ CustomError::ZeroAmountWithdrawal,
+    constraint = amount >= 100 @ CustomError::BelowMinimumWithdrawal)]  // 100 raw units ensures house gets 1 raw unit (1%) with 99/1 split
     pub owner: Signer<'info>,
 
     #[account(
@@ -87,9 +88,16 @@ pub struct Withdraw<'info> {
 
 impl<'info> Withdraw<'info> {
     pub fn withdraw(&mut self, amount: u64) -> Result<()> {
-    
-        let owner_amount = (amount * OWNER_SHARE) / 1000;
-        let house_amount = amount - owner_amount;
+        // Use checked math operations to prevent overflow/underflow
+        let owner_amount = amount
+            .checked_mul(OWNER_SHARE)
+            .ok_or(CustomError::ArithmeticOverflow)?
+            .checked_div(1000)
+            .ok_or(CustomError::ArithmeticOverflow)?;
+            
+        let house_amount = amount
+            .checked_sub(owner_amount)
+            .ok_or(CustomError::ArithmeticOverflow)?;
 
         let owner_key = self.owner.key();
         let seeds = &[

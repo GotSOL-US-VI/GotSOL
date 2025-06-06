@@ -889,6 +889,16 @@
       "code": 6003,
       "name": "UnauthorizedStatusChange",
       "msg": "Only the AUTH can change a Merchant fee eligibility status!"
+    },
+    {
+      "code": 6004,
+      "name": "ArithmeticOverflow",
+      "msg": "Arithmetic operation resulted in overflow or underflow!"
+    },
+    {
+      "code": 6005,
+      "name": "BelowMinimumWithdrawal",
+      "msg": "Withdrawal amount is below minimum allowed amount!"
     }
   ],
   "types": [

@@ -895,6 +895,16 @@ export type Gotsol = {
       "code": 6003,
       "name": "unauthorizedStatusChange",
       "msg": "Only the AUTH can change a Merchant fee eligibility status!"
+    },
+    {
+      "code": 6004,
+      "name": "arithmeticOverflow",
+      "msg": "Arithmetic operation resulted in overflow or underflow!"
+    },
+    {
+      "code": 6005,
+      "name": "belowMinimumWithdrawal",
+      "msg": "Withdrawal amount is below minimum allowed amount!"
     }
   ],
   "types": [

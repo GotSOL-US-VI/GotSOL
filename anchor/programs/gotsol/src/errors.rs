@@ -13,4 +13,10 @@ pub enum CustomError {
 
     #[msg("Only the AUTH can change a Merchant fee eligibility status!")]
     UnauthorizedStatusChange,
+
+    #[msg("Arithmetic operation resulted in overflow or underflow!")]
+    ArithmeticOverflow,
+
+    #[msg("Withdrawal amount is below minimum allowed amount!")]
+    BelowMinimumWithdrawal,
 }
