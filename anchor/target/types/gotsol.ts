@@ -883,8 +883,8 @@ export type Gotsol = {
     },
     {
       "code": 6001,
-      "name": "zeroAmountWithdrawal",
-      "msg": "Withdrawal amount must be greater than 0!"
+      "name": "zeroAmountRefund",
+      "msg": "Refund amount must be greater than 0!"
     },
     {
       "code": 6002,

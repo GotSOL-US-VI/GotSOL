@@ -45,7 +45,6 @@ impl<'info> CreateMerchant<'info> {
 #[instruction(amount: u64)]
 pub struct Withdraw<'info> {
     #[account(mut,
-    constraint = amount > 0 @ CustomError::ZeroAmountWithdrawal,
     constraint = amount >= 100 @ CustomError::BelowMinimumWithdrawal)]  // 100 raw units ensures house gets 1 raw unit (1%) with 99/1 split
     pub owner: Signer<'info>,
 
@@ -146,7 +145,7 @@ impl<'info> Withdraw<'info> {
 #[instruction(original_tx_sig: String, amount: u64)]
 pub struct RefundPayment<'info> {
     #[account(mut, 
-        constraint = amount > 0 @ CustomError::ZeroAmountWithdrawal)]
+        constraint = amount > 0 @ CustomError::ZeroAmountRefund)]
     pub owner: Signer<'info>,
 
     #[account(

@@ -5,8 +5,8 @@ pub enum CustomError {
     #[msg("Insufficient funds for withdrawal; input amount is greater than available balance!")]
     InsufficientFunds,
 
-    #[msg("Withdrawal amount must be greater than 0!")]
-    ZeroAmountWithdrawal,
+    #[msg("Refund amount must be greater than 0!")]
+    ZeroAmountRefund,
 
     #[msg("Invalid merchant name: cannot be empty!")]
     InvalidMerchantName,

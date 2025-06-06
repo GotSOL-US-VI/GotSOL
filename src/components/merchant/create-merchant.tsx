@@ -10,6 +10,7 @@ import { toastUtils } from '@/utils/toast-utils';
 import { formatSolscanDevnetLink } from '@/utils/format-transaction-link';
 import type { Program } from '@coral-xyz/anchor';
 import type { Gotsol } from '@/utils/gotsol-exports';
+import { useRouter } from 'next/navigation';
 
 interface CreateMerchantProps {
     program: Program<Gotsol>;
@@ -20,6 +21,7 @@ export function CreateMerchant({ program, onSuccess }: CreateMerchantProps) {
     const [name, setName] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
+    const router = useRouter();
     
     const { data: wallet } = useWallet();
     const para = useClient();
@@ -101,7 +103,12 @@ export function CreateMerchant({ program, onSuccess }: CreateMerchantProps) {
 
             // Reset form
             setName('');
+            
+            // Call onSuccess callback if provided
             onSuccess?.();
+
+            // Navigate to the merchant dashboard
+            router.push(`/merchant/dashboard/${merchantPda.toString()}`);
 
         } catch (error: any) {
             console.error('Error creating merchant:', error);

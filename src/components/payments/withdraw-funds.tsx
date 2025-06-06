@@ -252,42 +252,29 @@ export function WithdrawFunds({
       
       // Parse the error to get a more user-friendly message
       const parsedError = parseAnchorError(err);
-      setError(parsedError.message);
 
-      // Display appropriate error message based on the error code
-      switch (parsedError.code) {
-        case 'INSUFFICIENT_FUNDS':
-          toastUtils.error(
-            <ErrorToastContent 
-              title="Insufficient funds" 
-              message="The merchant account doesn't have enough USDC for this withdrawal" 
-            />
-          );
-          break;
-        case 'NOT_MERCHANT_OWNER':
-          toastUtils.error(
-            <ErrorToastContent 
-              title="Unauthorized" 
-              message="Only the merchant owner can withdraw funds" 
-            />
-          );
-          break;
-        case 'INACTIVE_MERCHANT':
-          toastUtils.error(
-            <ErrorToastContent 
-              title="Inactive merchant" 
-              message="This merchant account is currently inactive" 
-            />
-          );
-          break;
-        default:
-          // Generic error message with details if available
-          toastUtils.error(
-            <ErrorToastContent 
-              title="Failed to withdraw funds" 
-              message={parsedError.message} 
-            />
-          );
+      if (
+        parsedError.message?.includes('BelowMinimumWithdrawal') ||
+        parsedError.code === 'BELOW_MINIMUM_WITHDRAWAL'
+      ) {
+        setError('Amount is below the minimum withdrawal of 0.000100 for stablecoins.');
+      } else if (
+        parsedError.message?.toLowerCase().includes('insufficient') ||
+        parsedError.code === 'INSUFFICIENT_FUNDS'
+      ) {
+        setError('Insufficient balance.');
+      } else if (parsedError.code === 'NOT_MERCHANT_OWNER') {
+        setError('Only the merchant owner can withdraw funds.');
+      } else if (parsedError.code === 'INACTIVE_MERCHANT') {
+        setError('This merchant account is currently inactive.');
+      } else {
+        setError('Failed to withdraw funds.');
+        toastUtils.error(
+          <ErrorToastContent 
+            title="Failed to withdraw funds" 
+            message={parsedError.message} 
+          />
+        );
       }
       
       // Still refresh balances in case of partial success
@@ -328,6 +315,7 @@ export function WithdrawFunds({
     }
 
     setWithdrawAmount(value);
+    setError(null);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
