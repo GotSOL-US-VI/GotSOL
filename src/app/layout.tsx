@@ -43,7 +43,7 @@ const defaultLinks: NavigationLink[] = [
 const merchantLinks: NavigationLink[] = [
   { label: 'Point of Sale', path: '/merchant/dashboard/:merchantId' },
   { label: 'Manage Funds', path: '/merchant/dashboard/:merchantId/manage_funds' },
-  { label: 'Inventory', path: '/merchant/dashboard/:merchantId/inventory_management' },
+  // { label: 'Inventory', path: '/merchant/dashboard/:merchantId/inventory_management' },
   // { label: 'Treasury', path: '/merchant/dashboard/:merchantId/yield' },
   // { label: 'Withdraw USD', path: '/merchant/dashboard/:merchantId/off-ramps' },
   // { label: 'Roadmap', path: '/merchant/dashboard/:merchantId/roadmap' },
