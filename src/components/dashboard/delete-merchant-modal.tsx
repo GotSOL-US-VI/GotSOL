@@ -171,8 +171,8 @@ export function DeleteMerchantModal({ merchant, onConfirm, onCancel }: DeleteMer
             <h4 className="font-semibold mb-2">Important Notes:</h4>
             <ul className="list-disc list-inside space-y-1 text-sm">
               <li>All funds should be withdrawn before deletion</li>
-              <li>You can recreate a merchant with the same name later if needed</li>
-              <li>Your token accounts will be the same if you use the exact same name</li>
+              <li>You can recreate a Merchant with the same name later if needed</li>
+              <li>Your accounts will be the same if you use the exact same name: <strong>{merchantName}</strong></li>
             </ul>
           </div>
 

@@ -10,4 +10,10 @@ pub struct RefundProcessed {
 #[event]
 pub struct MerchantClosed {
     pub merchant: Pubkey,
+    pub entity_name: String,
+}
+
+#[event]
+pub struct WithdrawalProcessed {
+    pub amount: u64,
 }

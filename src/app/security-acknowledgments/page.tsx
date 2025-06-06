@@ -110,7 +110,7 @@ export default function SecurityAcknowledgments() {
                 <h2 className="text-2xl font-bold text-gray-800 mb-4">Our Commitment</h2>
                 <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg p-6">
                   <p className="text-gray-700 mb-4">
-                    At Gotsol, we believe that security is a collaborative effort. We're committed to:
+                    At Gotsol, we believe that security is a collaborative effort. We&apos;re committed to:
                   </p>
                   <ul className="list-disc list-inside text-gray-600 space-y-2">
                     <li>Acknowledging researchers who help improve our security</li>

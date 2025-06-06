@@ -267,7 +267,8 @@ impl<'info> CloseMerchant<'info> {
 
         // Emit event for Merchant closure
         emit!(MerchantClosed {
-            merchant: self.merchant.key()
+            merchant: self.merchant.key(),
+            entity_name: self.merchant.entity_name.clone()
         });
 
         Ok(())

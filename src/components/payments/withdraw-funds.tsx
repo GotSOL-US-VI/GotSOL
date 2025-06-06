@@ -53,15 +53,15 @@ export function WithdrawFunds({
     staleTime: 5000 // Consider data stale after 5s
   });
 
-  const { 
-    data: ownerBalance = 0, 
-    isLoading: isOwnerBalanceLoading,
-    refetch: refetchOwnerBalance
-  } = useUsdcBalance({
-    address: ownerPubkey,
-    isDevnet,
-    staleTime: 5000
-  });
+  // const { 
+  //   data: ownerBalance = 0, 
+  //   isLoading: isOwnerBalanceLoading,
+  //   refetch: refetchOwnerBalance
+  // } = useUsdcBalance({
+  //   address: ownerPubkey,
+  //   isDevnet,
+  //   staleTime: 5000
+  // });
 
   // Function to trigger an immediate balance refresh
   const refreshBalances = async () => {
@@ -70,9 +70,9 @@ export function WithdrawFunds({
       await queryClient.invalidateQueries({ 
         queryKey: ['usdc-balance', merchantPubkey.toString(), isDevnet]
       });
-      await queryClient.invalidateQueries({ 
-        queryKey: ['usdc-balance', ownerPubkey.toString(), isDevnet]
-      });
+      // await queryClient.invalidateQueries({ 
+      //   queryKey: ['usdc-balance', ownerPubkey.toString(), isDevnet]
+      // });
       
       // Also invalidate the general token balance queries
       await queryClient.invalidateQueries({
@@ -82,7 +82,7 @@ export function WithdrawFunds({
       // Execute direct refetches
       await Promise.all([
         refetchMerchantBalance(),
-        refetchOwnerBalance()
+        // refetchOwnerBalance()
       ]);
     } catch (err) {
       console.error('Error refreshing balances:', err);
@@ -336,7 +336,7 @@ export function WithdrawFunds({
     }
   };
 
-  const isLoadingBalances = isMerchantBalanceLoading || isOwnerBalanceLoading;
+  const isLoadingBalances = isMerchantBalanceLoading;
 
   return (
     <div className="space-y-6 rounded-lg border border-base-content/10 p-6 mb-6">
@@ -359,20 +359,20 @@ export function WithdrawFunds({
 
       <div className="space-y-4">
         <div className="flex justify-between items-center">
-          <span className="text-sm">Merchant&apos;s USDC Balance</span>
+          <span className="text-sm">Merchant&apos;s total balance</span>
           {isLoadingBalances ? (
             <span className="loading loading-spinner loading-xs" />
           ) : (
             <span>
               {isBalancesVisible 
-                ? (merchantBalance > 0 ? `${merchantBalance.toFixed(6)} USDC` : '0.000000 USDC')
-                : '••••••• USDC'
+                ? (merchantBalance > 0 ? `${merchantBalance.toFixed(6)}` : '0.000000')
+                : '•••••••'
               }
             </span>
           )}
         </div>
-
-        <div className="flex justify-between items-center">
+ 
+        {/* <div className="flex justify-between items-center">
           <span className="text-sm">Owner&apos;s USDC Balance</span>
           {isLoadingBalances ? (
             <span className="loading loading-spinner loading-xs" />
@@ -384,7 +384,7 @@ export function WithdrawFunds({
               }
             </span>
           )}
-        </div>
+        </div> */}
 
         <div className="space-y-2">
           <label className="text-sm opacity-80">

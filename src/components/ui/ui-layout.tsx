@@ -67,7 +67,7 @@ export function AppHero({
       <div className="hero-content text-center">
         <div className="max-w-2xl">
           {title}
-          {typeof subtitle === 'string' ? <p className="py-2 text-white/80">{subtitle}</p> : subtitle}
+          {typeof subtitle === 'string' ? <p className="py-2 text-base-content/80">{subtitle}</p> : subtitle}
           {children}
         </div>
       </div>

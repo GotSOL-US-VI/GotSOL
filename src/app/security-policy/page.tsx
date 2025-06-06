@@ -17,7 +17,7 @@ export default function SecurityPolicy() {
               <section className="mb-8">
                 <h2 className="text-2xl font-bold text-gray-800 mb-4">Reporting Security Vulnerabilities</h2>
                 <p className="text-gray-600 mb-4">
-                  At Gotsol, we take security seriously. We appreciate the security community's efforts to 
+                  At Gotsol, we take security seriously. We appreciate the security community&apos;s efforts to 
                   help us maintain the security of our platform and protect our users.
                 </p>
                 <p className="text-gray-600 mb-4">
@@ -70,7 +70,7 @@ export default function SecurityPolicy() {
                 <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                   <h3 className="text-lg font-semibold text-red-800 mb-2">Please DO NOT:</h3>
                   <ul className="list-disc list-inside text-red-700 space-y-1">
-                    <li>Publicly disclose the vulnerability before we've had a chance to fix it</li>
+                    <li>Publicly disclose the vulnerability before we&apos;ve had a chance to fix it</li>
                     <li>Access, modify, or delete user data</li>
                     <li>Perform actions that could harm our users or services</li>
                     <li>Use social engineering, phishing, or physical attacks</li>
