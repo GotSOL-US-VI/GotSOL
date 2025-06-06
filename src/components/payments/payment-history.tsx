@@ -13,7 +13,6 @@ import { retryWithBackoff } from '@/utils/para';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { usePaymentCache } from '@/hooks/use-payment-cache';
 import { USDC_MINT, USDC_DEVNET_MINT, findAssociatedTokenAddress, formatUSDCAmount } from '@/utils/token-utils';
-import { useBalanceVisibility } from '@/hooks/use-balance-visibility';
 
 interface PaymentHistoryProps {
     program: Program<Gotsol>;
@@ -206,7 +205,6 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
     const { data: wallet } = useWallet();
     const { connection } = useConnection();
     const queryClient = useQueryClient();
-    const { isBalancesVisible } = useBalanceVisibility();
     
     // State to track which payment cards are locked open (by signature)
     const [lockedPayments, setLockedPayments] = useState<Set<string>>(new Set());
@@ -553,7 +551,8 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
                 >
                     {payments.map((payment: Payment) => {
                         const isLocked = lockedPayments.has(payment.signature);
-                        const shouldShowAmount = isBalancesVisible || isLocked;
+                        // Payment history amounts are independent - only show if individually locked
+                        const shouldShowAmount = isLocked;
                         
                         return (
                         <div 
@@ -569,7 +568,7 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
                                                 <span 
                                                     className="cursor-pointer select-none"
                                                     onClick={() => togglePaymentLock(payment.signature)}
-                                                    title={isLocked ? "Click to unlock and hide amount" : "Click to lock amount visible"}
+                                                    title="Click to unlock and hide amount"
                                                 >
                                                     +{formatUSDCAmount(payment.amount)} USDC {isLocked}
                                                 </span>
@@ -579,16 +578,12 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
                                                     title={`+${formatUSDCAmount(payment.amount)} USDC - Click to lock visible`}
                                                     onClick={() => togglePaymentLock(payment.signature)}
                                                     onMouseEnter={(e) => {
-                                                        // Only show on hover if not locked
-                                                        if (!isLocked) {
-                                                            e.currentTarget.textContent = `+${formatUSDCAmount(payment.amount)} USDC`;
-                                                        }
+                                                        // Show on hover when not locked
+                                                        e.currentTarget.textContent = `+${formatUSDCAmount(payment.amount)} USDC`;
                                                     }}
                                                     onMouseLeave={(e) => {
-                                                        // Only hide on mouse leave if not locked
-                                                        if (!isLocked) {
-                                                            e.currentTarget.textContent = '+••••••• USDC';
-                                                        }
+                                                        // Hide on mouse leave when not locked
+                                                        e.currentTarget.textContent = '+••••••• USDC';
                                                     }}
                                                 >
                                                     +••••••• USDC
