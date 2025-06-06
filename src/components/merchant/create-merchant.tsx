@@ -11,6 +11,7 @@ import { formatSolscanDevnetLink } from '@/utils/format-transaction-link';
 import type { Program } from '@coral-xyz/anchor';
 import type { Gotsol } from '@/utils/gotsol-exports';
 import { useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface CreateMerchantProps {
     program: Program<Gotsol>;
@@ -22,6 +23,7 @@ export function CreateMerchant({ program, onSuccess }: CreateMerchantProps) {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
     const router = useRouter();
+    const queryClient = useQueryClient();
     
     const { data: wallet } = useWallet();
     const para = useClient();
@@ -100,6 +102,11 @@ export function CreateMerchant({ program, onSuccess }: CreateMerchantProps) {
 
             console.log('Merchant created successfully:', txSignature);
             toastUtils.success(`Merchant "${name}" created successfully!`);
+
+            // Invalidate merchants cache to ensure fresh data on home page
+            await queryClient.invalidateQueries({ 
+                queryKey: ['merchants'] 
+            });
 
             // Reset form
             setName('');

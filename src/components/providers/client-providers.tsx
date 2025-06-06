@@ -16,6 +16,7 @@ import { AccountChecker } from '@/components/accounts/account-ui';
 import { ClusterChecker } from '@/components/cluster/cluster-ui';
 import { Footer } from '@/components/ui/footer';
 import { SoundToggle } from '@/components/sound/sound-toggle';
+import { useQueryClient } from '@tanstack/react-query';
 
 // Define proper types for links
 export interface NavigationLink {
@@ -69,6 +70,7 @@ function ClientSideStateHandler({
   const { data: account } = useAccount();
   const { openModal } = useModal();
   const [mounted, setMounted] = useState(false);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     setMounted(true);
@@ -115,6 +117,12 @@ function ClientSideStateHandler({
   const handleLogoClick = () => {
     setActiveMerchant(null);
     localStorage.removeItem('activeMerchant');
+    
+    // Invalidate merchants cache to ensure fresh data when navigating home
+    queryClient.invalidateQueries({ 
+      queryKey: ['merchants'] 
+    });
+    
     router.push('/');
   };
 

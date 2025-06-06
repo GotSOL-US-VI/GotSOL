@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, usePathname, useRouter } from 'next/navigation';
 import { useMounted } from './use-mounted';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface UseMerchantReturn {
   activeMerchant: string | null;
@@ -19,6 +20,7 @@ export function useMerchant(): UseMerchantReturn {
   const pathname = usePathname();
   const router = useRouter();
   const mounted = useMounted();
+  const queryClient = useQueryClient();
 
   // Initialize from localStorage and update based on URL
   useEffect(() => {
@@ -59,6 +61,12 @@ export function useMerchant(): UseMerchantReturn {
   // Handle logo click to clear merchant state and redirect to home
   const handleLogoClick = () => {
     setActiveMerchant(null);
+    
+    // Invalidate merchants cache to ensure fresh data when navigating home
+    queryClient.invalidateQueries({ 
+      queryKey: ['merchants'] 
+    });
+    
     router.push('/');
   };
 

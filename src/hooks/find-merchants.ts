@@ -80,9 +80,11 @@ export function useMerchants(walletAddress?: string, connection?: any) {
   const { data: merchants = [], isLoading: loading, error } = useQuery({
     queryKey: ['merchants', walletAddress],
     queryFn: () => fetchMerchantData(walletAddress, connection),
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 30 * 1000, // Consider data stale after 30 seconds (reduced from 5 minutes)
     gcTime: 10 * 60 * 1000, // 10 minutes
     enabled: !!walletAddress && !!connection,
+    refetchOnWindowFocus: true, // Refetch when window gains focus
+    refetchOnMount: true, // Refetch when component mounts
   });
 
   return { 
