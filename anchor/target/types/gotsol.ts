@@ -873,6 +873,19 @@ export type Gotsol = {
         57,
         161
       ]
+    },
+    {
+      "name": "withdrawalProcessed",
+      "discriminator": [
+        127,
+        92,
+        169,
+        199,
+        212,
+        241,
+        193,
+        65
+      ]
     }
   ],
   "errors": [
@@ -940,6 +953,10 @@ export type Gotsol = {
           {
             "name": "merchant",
             "type": "pubkey"
+          },
+          {
+            "name": "entityName",
+            "type": "string"
           }
         ]
       }
@@ -976,6 +993,18 @@ export type Gotsol = {
           {
             "name": "bump",
             "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "withdrawalProcessed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "amount",
+            "type": "u64"
           }
         ]
       }

@@ -18,7 +18,7 @@ declare_id!("E6MRtJg483SVLY7EvryXJXPSLybRZyCCTsDY4BhNQYb");
 security_txt! {
     name: "GotSOL",
     project_url: "https://gotsol-dev.vercel.app",
-    contacts: "email:gotsol-dev@protonmail.com,link:https://github.com/GotSOL-US-VI/GotSOL/security",
+    contacts: "email:gotsol-dev@protonmail.com",
     policy: "https://gotsol-dev.vercel.app/security-policy",
     preferred_languages: "en",
     source_code: "https://github.com/GotSOL-US-VI/GotSOL",

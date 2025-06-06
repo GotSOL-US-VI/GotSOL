@@ -137,6 +137,12 @@ impl<'info> Withdraw<'info> {
             house_amount,
             self.stablecoin_mint.decimals,
         )?;
+
+        // Emit event
+        emit!(WithdrawalProcessed {
+            amount
+        });
+
         Ok(())
     }
 }

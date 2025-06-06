@@ -867,6 +867,19 @@
         57,
         161
       ]
+    },
+    {
+      "name": "WithdrawalProcessed",
+      "discriminator": [
+        127,
+        92,
+        169,
+        199,
+        212,
+        241,
+        193,
+        65
+      ]
     }
   ],
   "errors": [
@@ -934,6 +947,10 @@
           {
             "name": "merchant",
             "type": "pubkey"
+          },
+          {
+            "name": "entity_name",
+            "type": "string"
           }
         ]
       }
@@ -970,6 +987,18 @@
           {
             "name": "bump",
             "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "WithdrawalProcessed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "amount",
+            "type": "u64"
           }
         ]
       }

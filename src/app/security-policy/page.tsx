@@ -32,7 +32,6 @@ export default function SecurityPolicy() {
                   <h3 className="text-lg font-semibold text-blue-800 mb-2">Contact Methods:</h3>
                   <ul className="text-blue-700 space-y-2">
                     <li>📧 Email: <a href="mailto:gotsol-dev@protonmail.com" className="underline">gotsol-dev@protonmail.com</a></li>
-                    <li>🔒 GitHub Security Advisories: <a href="https://github.com/gotsol-dev/gotsol/security/advisories/new" className="underline" target="_blank" rel="noopener noreferrer">Create Advisory</a></li>
                   </ul>
                 </div>
               </section>

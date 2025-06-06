@@ -202,7 +202,7 @@ export function PaymentQR({ merchantPubkey, isDevnet = true, resetSignal }: Paym
       <div className="form-control w-full max-w-xs">
         <div className="flex justify-between items-center mb-2">
           <label className="label py-1">
-            <span className="label-text">Enter $ Amount in USDC</span>
+            <span className="label-text">Enter $ Amount</span>
           </label>
           <button
             className="btn btn-sm btn-ghost text-[#00b5ff]"

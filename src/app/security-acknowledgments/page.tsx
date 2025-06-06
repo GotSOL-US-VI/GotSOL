@@ -101,7 +101,7 @@ export default function SecurityAcknowledgments() {
                   </p>
                   <ul className="text-blue-600 space-y-2">
                     <li>📧 Email: <a href="mailto:gotsol-dev@protonmail.com" className="underline font-medium">gotsol-dev@protonmail.com</a></li>
-                    <li>🔒 GitHub: <a href="https://github.com/gotsol-dev/gotsol/security/advisories/new" className="underline font-medium" target="_blank" rel="noopener noreferrer">Create Security Advisory</a></li>
+                    <li>🔒 GitHub: <a href="https://github.com/gotsol-dev" className="underline font-medium" target="_blank" rel="noopener noreferrer">Create Security Advisory</a></li>
                   </ul>
                 </div>
               </section>
