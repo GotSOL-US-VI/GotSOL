@@ -1,6 +1,7 @@
 #![allow(unexpected_cfgs)]
 
 use anchor_lang::prelude::*;
+use solana_security_txt::security_txt;
 
 mod constants;
 mod context;
@@ -11,6 +12,18 @@ mod state;
 use crate::context::*;
 
 declare_id!("E6MRtJg483SVLY7EvryXJXPSLybRZyCCTsDY4BhNQYb");
+
+// Security contact information embedded in the smart contract
+#[cfg(not(feature = "no-entrypoint"))]
+security_txt! {
+    name: "GotSOL",
+    project_url: "https://gotsol-dev.vercel.app",
+    contacts: "email:gotsol-dev@protonmail.com,link:https://github.com/GotSOL-US-VI/GotSOL/security",
+    policy: "https://gotsol-dev.vercel.app/security-policy",
+    preferred_languages: "en",
+    source_code: "https://github.com/GotSOL-US-VI/GotSOL",
+    acknowledgements: "https://gotsol-dev.vercel.app/security-acknowledgments"
+}
 
 #[program]
 pub mod gotsol {
