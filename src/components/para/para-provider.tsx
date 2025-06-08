@@ -16,6 +16,7 @@ import { ParaSolanaWeb3Signer } from "@getpara/solana-web3.js-v1-integration";
 import * as anchor from '@coral-xyz/anchor';
 import { PublicKey } from '@solana/web3.js';
 import { env } from '@/utils/env';
+import { toParaSignerCompatible } from '@/types/para';
 
 const ParaContext = createContext({
   openModal: () => { },
@@ -34,15 +35,32 @@ export function ParaProvider({ children }: { children: React.ReactNode }) {
 
   const paraApiKey = process.env.NEXT_PUBLIC_PARA_API_KEY;
 
-  // Validate API key
+  // Validate API key with enhanced error messaging
   if (!paraApiKey) {
-    console.error('Para API key is missing. Please check your environment variables.');
+    const errorMessage = 'Para API key is missing. Please check your environment variables.';
+    console.error(errorMessage);
     console.log('Available env variables:', {
       NEXT_PUBLIC_PARA_API_KEY: process.env.NEXT_PUBLIC_PARA_API_KEY,
       environment,
       NODE_ENV: process.env.NODE_ENV
     });
+    
+    if (process.env.NODE_ENV === 'development') {
+      console.warn(`
+🔧 DEVELOPMENT SETUP REQUIRED:
+1. Create a .env.local file in your project root
+2. Add: NEXT_PUBLIC_PARA_API_KEY=your_api_key_here
+3. Get your API key from: https://developer.getpara.com
+4. Restart your development server
+      `);
+    }
+    
     throw new Error('Para API key is required');
+  }
+
+  // Validate API key format (basic check)
+  if (paraApiKey.length < 10 || !paraApiKey.startsWith('para_')) {
+    console.warn('Para API key format appears invalid. Expected format: para_xxxxx...');
   }
 
   const openModal = () => setIsOpen(true);
@@ -113,8 +131,8 @@ export function ParaAnchorProvider({ children }: { children: React.ReactNode }) 
     }
 
     try {
-      // Create Para Solana signer
-      const solanaSigner = new ParaSolanaWeb3Signer(para, connection);
+      // Create Para Solana signer - use type-safe conversion
+      const solanaSigner = new ParaSolanaWeb3Signer(toParaSignerCompatible(para), connection);
 
       // Create the provider with Para signer
       const provider = new anchor.AnchorProvider(

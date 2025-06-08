@@ -3,12 +3,13 @@
 import { PublicKey } from '@solana/web3.js'
 import { useWallet } from '@getpara/react-sdk'
 import { useParaModal } from '../para/para-provider'
+import { getWalletEmail } from '@/types/wallet'
 
 export default function AccountListFeature() {
   const { data: wallet } = useWallet();
   const { openModal } = useParaModal();
   const address = wallet?.address;
-  const email = (wallet as any)?.email;
+  const email = getWalletEmail(wallet);
   const isConnected = !!address;
 
   if (!address) {

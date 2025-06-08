@@ -17,6 +17,7 @@ import { getGotsolProgram } from '@/utils/gotsol-exports';
 import { USDC_MINT, USDC_DEVNET_MINT, HOUSE, findAssociatedTokenAddress } from '@/utils/token-utils';
 import { parseAnchorError, ErrorToastContent } from '@/utils/error-parser';
 import { createClient } from '@/utils/supabaseClient';
+import { fetchMerchantAccount } from '@/types/anchor';
 
 interface WithdrawFundsProps {
   merchantPubkey: PublicKey;
@@ -109,8 +110,8 @@ export function WithdrawFunds({
     setError(null);
 
     try {
-      // Create Para Solana signer
-      const solanaSigner = new ParaSolanaWeb3Signer(para, connection);
+      // Create Para Solana signer - use consistent type assertion pattern
+      const solanaSigner = new ParaSolanaWeb3Signer(para as any, connection);
 
       // Create the provider with Para signer
       const provider = new anchor.AnchorProvider(
@@ -130,7 +131,7 @@ export function WithdrawFunds({
       let isFeeEligible = false;
       
       try {
-        const merchantAccount = await (program.account as any).merchant.fetch(merchantPubkey);
+        const merchantAccount = await fetchMerchantAccount(program, merchantPubkey);
         isFeeEligible = merchantAccount.feeEligible;
         console.log('Merchant fee eligible:', isFeeEligible);
       } catch (error) {

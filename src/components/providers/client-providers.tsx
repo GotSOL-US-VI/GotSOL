@@ -5,6 +5,7 @@ import { ReactQueryProvider } from '@/app/react-query-provider';
 import { ClusterProvider } from '@/components/cluster/cluster-data-access';
 import { ConnectionProvider } from '@/lib/devnet-connection-provider';
 import { ParaProvider } from '@/components/para/para-provider';
+import { ParaErrorBoundary } from '@/components/para/para-error-boundary';
 import { DisclaimerProvider } from '@/components/ui/disclaimer-provider';
 import { SoundProvider } from '@/components/sound/sound-context';
 import Link from 'next/link';
@@ -36,13 +37,15 @@ export function ClientProviders({ children, defaultLinks, merchantLinks }: Clien
       <ClusterProvider>
         <ConnectionProvider>
           <ParaProvider>
-            <DisclaimerProvider>
-              <SoundProvider>
-                <ClientSideStateHandler defaultLinks={defaultLinks} merchantLinks={merchantLinks}>
-                  {children}
-                </ClientSideStateHandler>
-              </SoundProvider>
-            </DisclaimerProvider>
+            <ParaErrorBoundary>
+              <DisclaimerProvider>
+                <SoundProvider>
+                  <ClientSideStateHandler defaultLinks={defaultLinks} merchantLinks={merchantLinks}>
+                    {children}
+                  </ClientSideStateHandler>
+                </SoundProvider>
+              </DisclaimerProvider>
+            </ParaErrorBoundary>
           </ParaProvider>
         </ConnectionProvider>
       </ClusterProvider>

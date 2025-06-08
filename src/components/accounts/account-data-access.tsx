@@ -16,6 +16,7 @@ import { toastUtils } from '@/utils/toast-utils'
 import { useTransactionToast } from '@/hooks/use-transaction-toast'
 import { formatSolscanDevnetLink } from '@/utils/format-transaction-link'
 import { useWallet } from "@getpara/react-sdk"
+import { canSendTransaction } from '@/types/wallet'
 
 export function useGetBalance({ address }: { address: PublicKey }) {
   const { connection } = useConnection()
@@ -71,9 +72,12 @@ export function useTransferSol({ address }: { address: PublicKey }) {
           connection,
         })
 
-        if (!wallet) throw new Error("Wallet not connected.");
+        if (!wallet || !canSendTransaction(wallet)) {
+          throw new Error("Wallet not connected or cannot send transactions.");
+        }
+        
         // Send transaction and await for signature
-        signature = await (wallet as any).sendTransaction(transaction);
+        signature = await wallet.sendTransaction(transaction);
 
         // Send transaction and await for signature
         await connection.confirmTransaction({ signature, ...latestBlockhash }, 'confirmed')

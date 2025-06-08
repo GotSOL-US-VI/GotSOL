@@ -12,6 +12,8 @@ import type { Program } from '@coral-xyz/anchor';
 import type { Gotsol } from '@/utils/gotsol-exports';
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
+import { createClient } from '@/utils/supabaseClient';
+import { toParaSignerCompatible } from '@/types/para';
 
 interface CreateMerchantProps {
     program: Program<Gotsol>;
@@ -56,6 +58,10 @@ export function CreateMerchant({ program, onSuccess }: CreateMerchantProps) {
             setIsLoading(true);
             setError('');
 
+            if (!para) {
+                throw new Error('Para client not available');
+            }
+
             // Find the merchant PDA
             const [merchantPda] = PublicKey.findProgramAddressSync(
                 [
@@ -85,11 +91,8 @@ export function CreateMerchant({ program, onSuccess }: CreateMerchantProps) {
             transaction.recentBlockhash = blockhash;
             transaction.feePayer = publicKey;
 
-            // Create Para Solana signer
-            if (!para) {
-                throw new Error("Para client not initialized");
-            }
-            const solanaSigner = new ParaSolanaWeb3Signer(para, program.provider.connection);
+            // Create Para Solana signer - use type-safe conversion
+            const solanaSigner = new ParaSolanaWeb3Signer(toParaSignerCompatible(para), program.provider.connection);
 
             // Sign and send the transaction
             const signedTransaction = await solanaSigner.signTransaction(transaction);

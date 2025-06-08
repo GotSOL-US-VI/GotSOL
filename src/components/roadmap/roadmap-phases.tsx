@@ -19,6 +19,7 @@ const phases: Phase[] = [
     items: [
       { text: 'MVP Point of Sale on devnet', completed: true },
       { text: 'Multi-platform, offline-capable bespoke front end', completed: true },
+      // Personnel
       { text: 'Founder, CEO', completed: false },
       { text: 'Co-Founder, CPO/HoP', completed: false },
     ],
@@ -35,13 +36,13 @@ const phases: Phase[] = [
       // { text: 'Integrate Jupiter Swap API for USDC to Perena USD* swap on main net (our first in-app DeFi yield opportunity, front-end integration only)', completed: true },
       { text: 'Rain', completed: false },
       // { text: 'Onboard Merchants 20+', completed: false },
-      { text: 'Audit', completed: false },
+      {text: 'Audit', completed: false },
       // Personnel
-      { text: 'CTO/CISO/Lead Engineer, 3-5% program net revenue', completed: false },
-      { text: '2-man Dev Team 1, 1% program net revenue each', completed: false },
+      { text: 'CTO/CISO/Lead Engineer', completed: false },
+      { text: '2-man Dev Team 1', completed: false },
       { text: '2-5 Sales, 30% commission on net volume for 3 years', completed: false },
-      { text: 'CFO, 0.5% program net revenue', completed: false },
-      { text: 'CLO, 0.5% program net revenue', completed: false },
+      { text: 'CFO', completed: false },
+      { text: 'CLO', completed: false },
     ],
     active: true,
   },
@@ -56,7 +57,7 @@ const phases: Phase[] = [
       { text: 'Jupiter API', completed: false },
       { text: 'Audit', completed: false },
       // Personnel
-      { text: '2-3-man Dev Team 2, 0.25% program net revenue each', completed: false },
+      { text: '2-3-man Dev Team 2', completed: false },
       { text: 'More Sales', completed: false },
     ],
     active: true,

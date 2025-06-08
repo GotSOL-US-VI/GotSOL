@@ -11,6 +11,7 @@ import { useConnection } from '@/lib/connection-context';
 import { useWallet, useClient } from '@getpara/react-sdk';
 import { ParaSolanaWeb3Signer } from "@getpara/solana-web3.js-v1-integration";
 import { getGotsolProgram } from '@/utils/gotsol-exports';
+import { toParaSignerCompatible } from '@/types/para';
 
 export default function MerchantSetupPage() {
   // const provider = useAnchorProvider();
@@ -31,8 +32,8 @@ export default function MerchantSetupPage() {
     }
 
     try {
-      // Create Para Solana signer
-      const solanaSigner = new ParaSolanaWeb3Signer(para, connection);
+      // Create Para Solana signer - use type-safe conversion
+      const solanaSigner = new ParaSolanaWeb3Signer(toParaSignerCompatible(para), connection);
 
       // Create the provider directly with Para signer
       const provider = new anchor.AnchorProvider(

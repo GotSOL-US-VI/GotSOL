@@ -133,7 +133,8 @@ function SwapPageInner() {
     }
 
     try {
-      const signer = new ParaSolanaWeb3Signer(para, connection, wallet.id);
+      // Create Para Solana signer - use consistent type assertion pattern
+      const signer = new ParaSolanaWeb3Signer(para as any, connection, wallet.id);
       setSolanaSigner(signer);
     } catch (err) {
       console.error('Error creating signer:', err);

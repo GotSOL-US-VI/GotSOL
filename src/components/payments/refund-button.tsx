@@ -14,13 +14,7 @@ import { findAssociatedTokenAddress, USDC_MINT, USDC_DEVNET_MINT } from '@/utils
 import { parseAnchorError, ErrorToastContent } from '@/utils/error-parser';
 import { useClient } from "@getpara/react-sdk";
 import { createClient } from '@/utils/supabaseClient';
-
-export interface MerchantAccount {
-    owner: PublicKey;
-    entityName: string;
-    merchantBump: number;
-    feeEligible: boolean;
-}
+import { fetchMerchantAccount, type MerchantAccount } from '@/types/anchor';
 
 interface RefundButtonProps {
     program: Program<Gotsol>;
@@ -54,13 +48,9 @@ export function RefundButton({ program, merchantPubkey, payment, onSuccess, isDe
 
             const usdcMint = isDevnet ? USDC_DEVNET_MINT : USDC_MINT;
 
-            // Fetch merchant account data first
-            // console.log('Fetching merchant account from:', merchantPubkey.toString());
-            const merchantAccount = await (program.account as any).merchant.fetch(merchantPubkey) as MerchantAccount;
-
-            if (!merchantAccount) {
-                throw new Error('Merchant account not found');
-            }
+            // Check if the merchant is eligible for reduced fees
+            const merchantAccount = await fetchMerchantAccount(program, merchantPubkey);
+            const isFeeEligible = merchantAccount.feeEligible;
 
             // Convert merchant name to bytes properly
             const merchantNameBytes = Buffer.from(merchantAccount.entityName);

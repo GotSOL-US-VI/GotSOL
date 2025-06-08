@@ -10,6 +10,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { toastUtils } from '@/utils/toast-utils';
 import * as anchor from '@coral-xyz/anchor';
 import { ParaSolanaWeb3Signer } from '@getpara/solana-web3.js-v1-integration';
+import { toParaSignerCompatible } from '@/types/para';
 
 interface DeleteMerchantModalProps {
   merchant: Merchant;
@@ -57,8 +58,8 @@ export function DeleteMerchantModal({ merchant, onConfirm, onCancel }: DeleteMer
         merchantName: merchant.account.entityName
       });
 
-      // Create Para Solana signer
-      const solanaSigner = new ParaSolanaWeb3Signer(para, connection);
+      // Create Para Solana signer - use type-safe conversion
+      const solanaSigner = new ParaSolanaWeb3Signer(toParaSignerCompatible(para), connection);
 
       // Create the provider with Para signer
       const provider = new anchor.AnchorProvider(
@@ -113,15 +114,14 @@ export function DeleteMerchantModal({ merchant, onConfirm, onCancel }: DeleteMer
       // Call the onConfirm callback to close the modal and update state
       onConfirm();
 
-    } catch (err) {
-      console.error('Error closing merchant:', err);
+    } catch (err: unknown) {
+      console.error('Error deleting merchant:', err);
       
-      // Parse error message
-      let errorMessage = 'Failed to delete merchant account';
+      let errorMessage = 'Failed to delete merchant';
       if (err instanceof Error) {
         errorMessage = err.message;
-      } else if (typeof err === 'object' && err !== null && 'message' in err) {
-        errorMessage = (err as any).message;
+      } else if (typeof err === 'string') {
+        errorMessage = err;
       }
       
       setError(errorMessage);
