@@ -19,4 +19,10 @@ pub enum CustomError {
 
     #[msg("Withdrawal amount is below minimum allowed amount!")]
     BelowMinimumWithdrawal,
+
+    #[msg("Invalid withdrawal amount: calculated amount is zero!")]
+    InvalidWithdrawalAmount,
+
+    #[msg("Insufficient balance: withdrawal would leave vault below rent-exempt threshold!")]
+    InsufficientRentBalance,
 }

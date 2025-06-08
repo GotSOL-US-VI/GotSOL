@@ -1,4 +1,7 @@
-use anchor_lang::prelude::*;
+use anchor_lang::{
+    prelude::*,
+    system_program::{transfer, Transfer},
+};
 use std::str::FromStr;
 
 use anchor_spl::{
@@ -11,6 +14,12 @@ use crate::errors::*;
 use crate::state::*;
 use crate::events::*;
 
+const OWNER_SHARE_BASIS_POINTS: u64 = 9900; // 99%
+const HOUSE_SHARE_BASIS_POINTS: u64 = 100;  // 1%
+const BASIS_POINTS_DIVISOR: u64 = 10000;
+const MINIMUM_WITHDRAWAL_SOL_LAMPORTS: u64 = 1000; // 1000 lamports = 0.000001 SOL
+const MINIMUM_WITHDRAWAL_SPL_UNITS: u64 = 100; // 100 units = 0.0001 USDC (6 decimals)
+
 #[derive(Accounts)]
 #[instruction(name: String)]
 pub struct CreateMerchant<'info> {
@@ -19,6 +28,9 @@ pub struct CreateMerchant<'info> {
 
     #[account(init, payer = owner, seeds = [b"merchant", name.as_str().as_bytes(), owner.key().as_ref()], space = Merchant::LEN, bump)]
     pub merchant: Box<Account<'info, Merchant>>,
+
+    #[account(mut, seeds = [b"vault", merchant.key().as_ref()], bump)]
+    pub vault: SystemAccount<'info>,
 
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub token_program: Interface<'info, TokenInterface>,
@@ -36,6 +48,7 @@ impl<'info> CreateMerchant<'info> {
             entity_name: trimmed_name,
             fee_eligible: true,
             merchant_bump: bumps.merchant,
+            vault_bump: bumps.vault,
         });
         Ok(())
     }
@@ -43,9 +56,9 @@ impl<'info> CreateMerchant<'info> {
 
 #[derive(Accounts)]
 #[instruction(amount: u64)]
-pub struct Withdraw<'info> {
+pub struct WithdrawSpl<'info> {
     #[account(mut,
-    constraint = amount >= 100 @ CustomError::BelowMinimumWithdrawal)]  // 100 raw units ensures house gets 1 raw unit (1%) with 99/1 split
+        constraint = amount >= MINIMUM_WITHDRAWAL_SPL_UNITS @ CustomError::BelowMinimumWithdrawal)]
     pub owner: Signer<'info>,
 
     #[account(
@@ -85,18 +98,25 @@ pub struct Withdraw<'info> {
     pub system_program: Program<'info, System>,
 }
 
-impl<'info> Withdraw<'info> {
-    pub fn withdraw(&mut self, amount: u64) -> Result<()> {
-        // Use checked math operations to prevent overflow/underflow
+impl<'info> WithdrawSpl<'info> {
+    pub fn withdraw_spl(&mut self, amount: u64) -> Result<()> {
+        // Calculate shares using basis points for better precision
         let owner_amount = amount
-            .checked_mul(OWNER_SHARE)
+            .checked_mul(OWNER_SHARE_BASIS_POINTS)
             .ok_or(CustomError::ArithmeticOverflow)?
-            .checked_div(1000)
+            .checked_div(BASIS_POINTS_DIVISOR)
             .ok_or(CustomError::ArithmeticOverflow)?;
             
         let house_amount = amount
-            .checked_sub(owner_amount)
+            .checked_mul(HOUSE_SHARE_BASIS_POINTS)
+            .ok_or(CustomError::ArithmeticOverflow)?
+            .checked_div(BASIS_POINTS_DIVISOR)
             .ok_or(CustomError::ArithmeticOverflow)?;
+
+        // Validate amounts
+        require!(owner_amount > 0, CustomError::InvalidWithdrawalAmount);
+        require!(house_amount > 0, CustomError::InvalidWithdrawalAmount);
+        require!(owner_amount.checked_add(house_amount).unwrap() <= amount, CustomError::ArithmeticOverflow);
 
         let owner_key = self.owner.key();
         let seeds = &[
@@ -107,43 +127,124 @@ impl<'info> Withdraw<'info> {
         ];
 
         // Transfer the owner's share
-        anchor_spl::token_interface::transfer_checked(
-            CpiContext::new_with_signer(
-                self.token_program.to_account_info(),
-                anchor_spl::token_interface::TransferChecked {
-                    from: self.merchant_stablecoin_ata.to_account_info(),
-                    mint: self.stablecoin_mint.to_account_info(),
-                    to: self.owner_stablecoin_ata.to_account_info(),
-                    authority: self.merchant.to_account_info(),
-                },
-                &[seeds],
-            ),
-            owner_amount,
-            self.stablecoin_mint.decimals,
-        )?;
+        self.transfer_spl_tokens(&self.owner_stablecoin_ata.to_account_info(), owner_amount, seeds)?;
 
         // Transfer house's share
-        anchor_spl::token_interface::transfer_checked(
-            CpiContext::new_with_signer(
-                self.token_program.to_account_info(),
-                anchor_spl::token_interface::TransferChecked {
-                    from: self.merchant_stablecoin_ata.to_account_info(),
-                    mint: self.stablecoin_mint.to_account_info(),
-                    to: self.house_stablecoin_ata.to_account_info(),
-                    authority: self.merchant.to_account_info(),
-                },
-                &[seeds],
-            ),
-            house_amount,
-            self.stablecoin_mint.decimals,
-        )?;
+        self.transfer_spl_tokens(&self.house_stablecoin_ata.to_account_info(), house_amount, seeds)?;
 
         // Emit event
-        emit!(WithdrawalProcessed {
-            amount
+        emit!(WithdrawalSplProcessed {
+            amount,
+            owner_amount,
+            house_amount,
         });
 
         Ok(())
+    }
+
+    /// Helper function to reduce code duplication for SPL token transfers
+    fn transfer_spl_tokens(&self, to: &AccountInfo<'info>, amount: u64, seeds: &[&[u8]]) -> Result<()> {
+        anchor_spl::token_interface::transfer_checked(
+            CpiContext::new_with_signer(
+                self.token_program.to_account_info(),
+                anchor_spl::token_interface::TransferChecked {
+                    from: self.merchant_stablecoin_ata.to_account_info(),
+                    mint: self.stablecoin_mint.to_account_info(),
+                    to: to.clone(),
+                    authority: self.merchant.to_account_info(),
+                },
+                &[seeds],
+            ),
+            amount,
+            self.stablecoin_mint.decimals,
+        )
+    }
+}
+
+#[derive(Accounts)]
+#[instruction(amount: u64)]
+pub struct WithdrawSol<'info> {
+    #[account(mut,
+        constraint = amount >= MINIMUM_WITHDRAWAL_SOL_LAMPORTS @ CustomError::BelowMinimumWithdrawal)]
+    pub owner: Signer<'info>,
+
+    #[account(
+        seeds = [b"merchant", merchant.entity_name.as_str().as_bytes(), owner.key().as_ref()], 
+        bump = merchant.merchant_bump,
+    )]
+    pub merchant: Box<Account<'info, Merchant>>,
+
+    #[account(mut, 
+        seeds = [b"vault", merchant.key().as_ref()], 
+        bump = merchant.vault_bump,
+        constraint = vault.lamports() >= amount @ CustomError::InsufficientFunds,
+        constraint = vault.lamports().checked_sub(amount).unwrap() >= Rent::get()?.minimum_balance(0) @ CustomError::InsufficientRentBalance)]
+    pub vault: SystemAccount<'info>,
+
+    /// CHECK: This is the HOUSE Squads multi-sig
+    #[account(mut, constraint = house.key() == Pubkey::from_str(HOUSE).unwrap())]
+    pub house: AccountInfo<'info>,
+
+    pub system_program: Program<'info, System>,
+}
+
+impl<'info> WithdrawSol<'info> {
+    pub fn withdraw_sol(&mut self, amount: u64) -> Result<()> {
+        // Calculate shares using basis points for better precision
+        let owner_amount = amount
+            .checked_mul(OWNER_SHARE_BASIS_POINTS)
+            .ok_or(CustomError::ArithmeticOverflow)?
+            .checked_div(BASIS_POINTS_DIVISOR)
+            .ok_or(CustomError::ArithmeticOverflow)?;
+            
+        let house_amount = amount
+            .checked_mul(HOUSE_SHARE_BASIS_POINTS)
+            .ok_or(CustomError::ArithmeticOverflow)?
+            .checked_div(BASIS_POINTS_DIVISOR)
+            .ok_or(CustomError::ArithmeticOverflow)?;
+
+        // Validate amounts
+        require!(owner_amount > 0, CustomError::InvalidWithdrawalAmount);
+        require!(house_amount > 0, CustomError::InvalidWithdrawalAmount);
+        require!(owner_amount.checked_add(house_amount).unwrap() <= amount, CustomError::ArithmeticOverflow);
+
+        // Transfer to owner
+        self.transfer_from_vault(&self.owner.to_account_info(), owner_amount)?;
+
+        // Transfer to house
+        self.transfer_from_vault(&self.house.to_account_info(), house_amount)?;
+
+        // Emit event
+        emit!(WithdrawalSolProcessed {
+            amount,
+            owner_amount,
+            house_amount,
+        });
+
+        Ok(())
+    }
+
+    /// Helper function to reduce code duplication
+    fn transfer_from_vault(&self, to: &AccountInfo<'info>, amount: u64) -> Result<()> {
+        let cpi_accounts = Transfer {
+            from: self.vault.to_account_info(),
+            to: to.clone(),
+        };
+
+        let seeds = &[
+            b"vault",
+            self.merchant.to_account_info().key.as_ref(),
+            &[self.merchant.vault_bump],
+        ];
+        let signer = &[&seeds[..]];
+
+        let cpi_ctx = CpiContext::new_with_signer(
+            self.system_program.to_account_info(),
+            cpi_accounts,
+            signer
+        );
+
+        transfer(cpi_ctx, amount)
     }
 }
 

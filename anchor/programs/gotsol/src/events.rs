@@ -14,6 +14,15 @@ pub struct MerchantClosed {
 }
 
 #[event]
-pub struct WithdrawalProcessed {
+pub struct WithdrawalSplProcessed {
     pub amount: u64,
+    pub owner_amount: u64,
+    pub house_amount: u64,
+}
+
+#[event]
+pub struct WithdrawalSolProcessed {
+    pub amount: u64,
+    pub owner_amount: u64,
+    pub house_amount: u64,
 }

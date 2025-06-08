@@ -20,8 +20,8 @@ const phases: Phase[] = [
       { text: 'MVP Point of Sale on devnet', completed: true },
       { text: 'Multi-platform, offline-capable bespoke front end', completed: true },
       // Personnel
-      { text: 'Founder, CEO', completed: false },
-      { text: 'Co-Founder, CPO/HoP', completed: false },
+      { text: 'Founder, CEO', completed: true },
+      { text: 'Co-Founder, CPO/HoP', completed: true },
     ],
     active: true,
   },
@@ -38,9 +38,9 @@ const phases: Phase[] = [
       // { text: 'Onboard Merchants 20+', completed: false },
       {text: 'Audit', completed: false },
       // Personnel
-      { text: 'CTO/CISO/Lead Engineer', completed: false },
+      { text: 'Lead Engineer', completed: false },
       { text: '2-man Dev Team 1', completed: false },
-      { text: '2-5 Sales, 30% commission on net volume for 3 years', completed: false },
+      { text: '2-5 Sales', completed: false },
       { text: 'CFO', completed: false },
       { text: 'CLO', completed: false },
     ],
@@ -96,7 +96,7 @@ export function RoadmapPhases() {
             <ul className="space-y-3">
               {phase.items.map((item, itemIndex) => {
                 // Detect if this is the start of a personnel section by looking for personnel-related terms
-                const personnelTerms = ['Engineer', 'Sales', 'CFO', 'Dev Team', 'Support Staff', 'Team'];
+                const personnelTerms = ['Engineer', 'Sales', 'CFO', 'CLO', 'CPO', 'CEO', 'Founder', 'Co-Founder', 'Dev Team', 'Support Staff', 'Team'];
                 const isPersonnelItem = personnelTerms.some(term => 
                   item.text.includes(term)
                 );

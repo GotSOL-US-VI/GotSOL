@@ -117,6 +117,16 @@ export default function DashboardContent({ params }: { params: { merchantId: str
 
   return (
     <div className="container mx-auto py-2">
+      {/* Hidden PaymentHistory component for payment detection */}
+      <div className="hidden">
+        <PaymentHistory
+          program={program}
+          merchantPubkey={merchantPubkey}
+          isDevnet={true}
+          onPaymentReceived={() => setResetSignal(prev => prev + 1)}
+        />
+      </div>
+      
       <div className="flex justify-center">
         <div className="w-full max-w-md h-[600px]">
           <div className="card bg-base-300 shadow-xl">

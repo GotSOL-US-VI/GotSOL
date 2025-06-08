@@ -34,8 +34,13 @@ pub mod gotsol {
         Ok(())
     }
 
-    pub fn withdraw(ctx: Context<Withdraw>, amount: u64) -> Result<()> {
-        ctx.accounts.withdraw(amount)?;
+    pub fn withdraw_spl(ctx: Context<WithdrawSpl>, amount: u64) -> Result<()> {
+        ctx.accounts.withdraw_spl(amount)?;
+        Ok(())
+    }
+
+    pub fn withdraw_sol(ctx: Context<WithdrawSol>, amount: u64) -> Result<()> {
+        ctx.accounts.withdraw_sol(amount)?;
         Ok(())
     }
 

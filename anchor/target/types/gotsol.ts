@@ -145,6 +145,28 @@ export type Gotsol = {
           }
         },
         {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "merchant"
+              }
+            ]
+          }
+        },
+        {
           "name": "associatedTokenProgram",
           "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
         },
@@ -477,16 +499,101 @@ export type Gotsol = {
       ]
     },
     {
-      "name": "withdraw",
+      "name": "withdrawSol",
       "discriminator": [
-        183,
-        18,
-        70,
-        156,
-        148,
-        109,
-        161,
-        34
+        145,
+        131,
+        74,
+        136,
+        65,
+        137,
+        42,
+        38
+      ],
+      "accounts": [
+        {
+          "name": "owner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "merchant",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  101,
+                  114,
+                  99,
+                  104,
+                  97,
+                  110,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "merchant.entity_name",
+                "account": "merchant"
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "merchant"
+              }
+            ]
+          }
+        },
+        {
+          "name": "house",
+          "writable": true
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "withdrawSpl",
+      "discriminator": [
+        181,
+        154,
+        94,
+        86,
+        62,
+        115,
+        6,
+        186
       ],
       "accounts": [
         {
@@ -875,16 +982,29 @@ export type Gotsol = {
       ]
     },
     {
-      "name": "withdrawalProcessed",
+      "name": "withdrawalSolProcessed",
       "discriminator": [
-        127,
+        165,
+        58,
+        75,
+        98,
+        50,
+        119,
+        151,
+        167
+      ]
+    },
+    {
+      "name": "withdrawalSplProcessed",
+      "discriminator": [
         92,
-        169,
-        199,
-        212,
-        241,
-        193,
-        65
+        120,
+        143,
+        16,
+        126,
+        239,
+        85,
+        172
       ]
     }
   ],
@@ -918,6 +1038,16 @@ export type Gotsol = {
       "code": 6005,
       "name": "belowMinimumWithdrawal",
       "msg": "Withdrawal amount is below minimum allowed amount!"
+    },
+    {
+      "code": 6006,
+      "name": "invalidWithdrawalAmount",
+      "msg": "Invalid withdrawal amount: calculated amount is zero!"
+    },
+    {
+      "code": 6007,
+      "name": "insufficientRentBalance",
+      "msg": "Insufficient balance: withdrawal would leave vault below rent-exempt threshold!"
     }
   ],
   "types": [
@@ -940,6 +1070,10 @@ export type Gotsol = {
           },
           {
             "name": "merchantBump",
+            "type": "u8"
+          },
+          {
+            "name": "vaultBump",
             "type": "u8"
           }
         ]
@@ -998,12 +1132,40 @@ export type Gotsol = {
       }
     },
     {
-      "name": "withdrawalProcessed",
+      "name": "withdrawalSolProcessed",
       "type": {
         "kind": "struct",
         "fields": [
           {
             "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "ownerAmount",
+            "type": "u64"
+          },
+          {
+            "name": "houseAmount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "withdrawalSplProcessed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "ownerAmount",
+            "type": "u64"
+          },
+          {
+            "name": "houseAmount",
             "type": "u64"
           }
         ]
