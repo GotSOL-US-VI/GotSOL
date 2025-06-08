@@ -17,7 +17,7 @@ pub enum CustomError {
     #[msg("Arithmetic operation resulted in overflow or underflow!")]
     ArithmeticOverflow,
 
-    #[msg("Withdrawal amount is below minimum allowed amount!")]
+    #[msg("Withdrawal amount is below minimum amount!")]
     BelowMinimumWithdrawal,
 
     #[msg("Invalid withdrawal amount: calculated amount is zero!")]

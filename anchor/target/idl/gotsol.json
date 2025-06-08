@@ -180,16 +180,128 @@
       ]
     },
     {
-      "name": "refund",
+      "name": "refund_sol",
       "discriminator": [
-        2,
-        96,
-        183,
-        251,
-        63,
-        208,
-        46,
-        46
+        158,
+        68,
+        131,
+        114,
+        106,
+        77,
+        56,
+        13
+      ],
+      "accounts": [
+        {
+          "name": "owner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "merchant",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  101,
+                  114,
+                  99,
+                  104,
+                  97,
+                  110,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "merchant.entity_name",
+                "account": "Merchant"
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "merchant"
+              }
+            ]
+          }
+        },
+        {
+          "name": "refund_record",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  102,
+                  117,
+                  110,
+                  100
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "original_tx_sig"
+              }
+            ]
+          }
+        },
+        {
+          "name": "recipient",
+          "writable": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "original_tx_sig",
+          "type": "string"
+        },
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "refund_spl",
+      "discriminator": [
+        121,
+        79,
+        57,
+        29,
+        6,
+        199,
+        238,
+        125
       ],
       "accounts": [
         {
@@ -1031,7 +1143,7 @@
     {
       "code": 6005,
       "name": "BelowMinimumWithdrawal",
-      "msg": "Withdrawal amount is below minimum allowed amount!"
+      "msg": "Withdrawal amount is below minimum amount!"
     },
     {
       "code": 6006,

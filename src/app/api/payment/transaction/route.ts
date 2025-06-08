@@ -25,7 +25,7 @@ import {
   ACTIONS_CORS_HEADERS 
 } from '@solana/actions';
 import bs58 from 'bs58';
-import { getStablecoinMint, getStablecoinDecimals, STABLECOINS, isValidStablecoin } from '@/utils/stablecoin-config';
+import { getStablecoinMint, getStablecoinDecimals, STABLECOINS, isValidStablecoin, isNativeToken } from '@/utils/stablecoin-config';
 
 // RPC URL configuration optimized for your environment
 function getRpcUrl(network: string): string {
@@ -87,12 +87,14 @@ export async function GET(request: NextRequest) {
   const merchantParam = url.searchParams.get('merchant');
   const amountParam = url.searchParams.get('amount');
   const network = url.searchParams.get('network') || 'devnet';
+  const token = url.searchParams.get('token') || 'USDC';
   const memo = url.searchParams.get('memo');
 
   // Log the incoming request for debugging
-  console.log('GET request for USDC payment action:', {
+  console.log('GET request for payment action:', {
     merchant: merchantParam?.slice(0, 8) + '...',
     amount: amountParam,
+    token: token.toUpperCase(),
     network,
     hasMemo: !!memo
   });
@@ -107,6 +109,7 @@ export async function GET(request: NextRequest) {
   try {
     const merchantPubkey = new PublicKey(merchantParam);
     const amount = parseFloat(amountParam);
+    const tokenUpper = token.toUpperCase();
 
     if (isNaN(amount) || amount <= 0) {
       return NextResponse.json(
@@ -115,17 +118,26 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Validate token
+    if (!isValidStablecoin(tokenUpper)) {
+      return NextResponse.json(
+        { error: `Unsupported token: ${tokenUpper}` },
+        { status: 400, headers: ACTIONS_CORS_HEADERS }
+      );
+    }
+
+    const tokenConfig = STABLECOINS[tokenUpper];
     const networkDisplay = network === 'devnet' ? '(Devnet)' : '';
 
     const response: ActionGetResponse = {
       icon: `${url.origin}/api/payment/icon`,
-      label: `Pay $${amount} USDC`,
-      title: `Pay $${amount} USDC ${networkDisplay}`,
-      description: `Send $${amount} USDC to merchant ${merchantPubkey.toString().slice(0, 4)}...${merchantPubkey.toString().slice(-4)}${memo ? ` - ${memo}` : ''} ${networkDisplay}`,
+      label: `Pay $${amount} ${tokenUpper}`,
+      title: `Pay $${amount} ${tokenConfig.name} ${networkDisplay}`,
+      description: `Send $${amount} ${tokenUpper} to merchant ${merchantPubkey.toString().slice(0, 4)}...${merchantPubkey.toString().slice(-4)}${memo ? ` - ${memo}` : ''} ${networkDisplay}`,
       links: {
         actions: [
           {
-            label: `Pay $${amount} USDC`,
+            label: `Pay $${amount} ${tokenUpper}`,
             href: url.toString(),
             type: "transaction"
           }
@@ -154,11 +166,13 @@ export async function POST(request: NextRequest) {
     const merchantParam = url.searchParams.get('merchant');
     const amountParam = url.searchParams.get('amount');
     const network = url.searchParams.get('network') || 'devnet';
+    const token = url.searchParams.get('token') || 'USDC';
     const memo = url.searchParams.get('memo');
 
-    console.log('POST request for USDC transaction creation:', {
+    console.log('POST request for transaction creation:', {
       merchant: merchantParam?.slice(0, 8) + '...',
       amount: amountParam,
+      token: token.toUpperCase(),
       network,
       hasMemo: !!memo,
       rpcUrl: getRpcUrl(network)
@@ -183,6 +197,7 @@ export async function POST(request: NextRequest) {
     const merchantPubkey = new PublicKey(merchantParam);
     const payerPubkey = new PublicKey(body.account);
     const amount = parseFloat(amountParam);
+    const tokenUpper = token.toUpperCase();
     
     if (isNaN(amount) || amount <= 0) {
       return NextResponse.json(
@@ -191,15 +206,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get USDC token configuration and convert amount to lamports
-    const tokenDecimals = getStablecoinDecimals('USDC');
+    // Validate token
+    if (!isValidStablecoin(tokenUpper)) {
+      return NextResponse.json(
+        { error: `Unsupported token: ${tokenUpper}` },
+        { status: 400, headers: ACTIONS_CORS_HEADERS }
+      );
+    }
+
+    // Get token configuration and convert amount to lamports
+    const tokenDecimals = getStablecoinDecimals(tokenUpper);
     const amountLamports = Math.floor(amount * Math.pow(10, tokenDecimals));
+    const isNative = isNativeToken(tokenUpper);
 
     // Setup optimized connection using your Helius RPC
     const connection = getConnection(network);
     
-    // Get USDC mint for the network
-    const tokenMint = getStablecoinMint('USDC', network === 'devnet');
+    // Get token mint for the network (only needed for SPL tokens)
+    const tokenMint = isNative ? null : getStablecoinMint(tokenUpper, network === 'devnet');
 
     // Get recent blockhash with retry logic
     let blockhash: string;
@@ -250,11 +274,13 @@ export async function POST(request: NextRequest) {
     console.log('Transaction details:', {
       payer: payerPubkey.toString(),
       merchant: merchantPubkey.toString(),
-      amount: `$${amount} USDC (${amountLamports} lamports)`,
+      amount: `$${amount} ${tokenUpper} (${amountLamports} lamports)`,
       feePayer: feePayer.toString(),
       usingFeePayerService: !!feePayerKeypair,
       network,
-      tokenMint: tokenMint.toString()
+      token: tokenUpper,
+      isNative,
+      tokenMint: tokenMint?.toString() || 'N/A (native SOL)'
     });
 
     // Create transaction with optimized settings
@@ -264,79 +290,94 @@ export async function POST(request: NextRequest) {
       lastValidBlockHeight,
     });
 
-    // Get associated token accounts
-    const payerAta = getAssociatedTokenAddressSync(payerPubkey, tokenMint);
-    const merchantAta = getAssociatedTokenAddressSync(merchantPubkey, tokenMint);
-
-    // Check if payer ATA exists with optimized error handling
-    let payerAtaExists = false;
-    try {
-      await getAccount(connection, payerAta);
-      payerAtaExists = true;
-    } catch (error) {
-      if (error instanceof TokenAccountNotFoundError || error instanceof TokenInvalidAccountOwnerError) {
-        payerAtaExists = false;
-      } else {
-        console.error('Unexpected error checking payer ATA:', error);
-        throw error;
+    if (isNative) {
+      // Handle native SOL transfer
+      const transferInstruction = SystemProgram.transfer({
+        fromPubkey: payerPubkey,
+        toPubkey: merchantPubkey,
+        lamports: amountLamports,
+      });
+      transaction.add(transferInstruction);
+      console.log(`Added native SOL transfer instruction: ${amountLamports} lamports`);
+    } else {
+      // Handle SPL token transfer
+      if (!tokenMint) {
+        throw new Error('Token mint is required for SPL token transfers');
       }
-    }
 
-    // Check if merchant ATA exists with optimized error handling
-    let merchantAtaExists = false;
-    try {
-      await getAccount(connection, merchantAta);
-      merchantAtaExists = true;
-    } catch (error) {
-      if (error instanceof TokenAccountNotFoundError || error instanceof TokenInvalidAccountOwnerError) {
-        merchantAtaExists = false;
-      } else {
-        console.error('Unexpected error checking merchant ATA:', error);
-        throw error;
+      // Get associated token accounts
+      const payerAta = getAssociatedTokenAddressSync(payerPubkey, tokenMint);
+      const merchantAta = getAssociatedTokenAddressSync(merchantPubkey, tokenMint);
+
+      // Check if payer ATA exists with optimized error handling
+      let payerAtaExists = false;
+      try {
+        await getAccount(connection, payerAta);
+        payerAtaExists = true;
+      } catch (error) {
+        if (error instanceof TokenAccountNotFoundError || error instanceof TokenInvalidAccountOwnerError) {
+          payerAtaExists = false;
+        } else {
+          console.error('Unexpected error checking payer ATA:', error);
+          throw error;
+        }
       }
-    }
 
-    console.log('ATA existence check:', {
-      payerAta: payerAta.toString(),
-      payerAtaExists,
-      merchantAta: merchantAta.toString(),
-      merchantAtaExists,
-      checkDuration: `${Date.now() - startTime}ms`
-    });
+      // Check if merchant ATA exists with optimized error handling
+      let merchantAtaExists = false;
+      try {
+        await getAccount(connection, merchantAta);
+        merchantAtaExists = true;
+      } catch (error) {
+        if (error instanceof TokenAccountNotFoundError || error instanceof TokenInvalidAccountOwnerError) {
+          merchantAtaExists = false;
+        } else {
+          console.error('Unexpected error checking merchant ATA:', error);
+          throw error;
+        }
+      }
 
-    // If payer ATA doesn't exist, create it (fee payer pays for this)
-    if (!payerAtaExists) {
-      const createPayerAtaInstruction = createAssociatedTokenAccountInstruction(
-        feePayer, // Fee payer pays for ATA creation
-        payerAta,
-        payerPubkey, // Payer owns the ATA
-        tokenMint
+      console.log('ATA existence check:', {
+        payerAta: payerAta.toString(),
+        payerAtaExists,
+        merchantAta: merchantAta.toString(),
+        merchantAtaExists,
+        checkDuration: `${Date.now() - startTime}ms`
+      });
+
+      // If payer ATA doesn't exist, create it (fee payer pays for this)
+      if (!payerAtaExists) {
+        const createPayerAtaInstruction = createAssociatedTokenAccountInstruction(
+          feePayer, // Fee payer pays for ATA creation
+          payerAta,
+          payerPubkey, // Payer owns the ATA
+          tokenMint
+        );
+        transaction.add(createPayerAtaInstruction);
+        console.log(`Added payer ${tokenUpper} ATA creation instruction`);
+      }
+
+      // If merchant ATA doesn't exist, create it (fee payer pays for this)
+      if (!merchantAtaExists) {
+        const createAtaInstruction = createAssociatedTokenAccountInstruction(
+          feePayer, // Fee payer pays for ATA creation
+          merchantAta,
+          merchantPubkey, // Merchant owns the ATA
+          tokenMint
+        );
+        transaction.add(createAtaInstruction);
+        console.log(`Added merchant ${tokenUpper} ATA creation instruction`);
+      }
+
+      // Create the SPL token transfer instruction
+      const transferInstruction = createTransferInstruction(
+        payerAta,      // From: payer's token ATA
+        merchantAta,   // To: merchant's token ATA
+        payerPubkey,   // Authority: payer signs for the transfer
+        amountLamports // Amount in lamports
       );
-      transaction.add(createPayerAtaInstruction);
-      console.log(`Added payer USDC ATA creation instruction`);
+      transaction.add(transferInstruction);
     }
-
-    // If merchant ATA doesn't exist, create it (fee payer pays for this)
-    if (!merchantAtaExists) {
-      const createAtaInstruction = createAssociatedTokenAccountInstruction(
-        feePayer, // Fee payer pays for ATA creation
-        merchantAta,
-        merchantPubkey, // Merchant owns the ATA
-        tokenMint
-      );
-      transaction.add(createAtaInstruction);
-      console.log(`Added merchant USDC ATA creation instruction`);
-    }
-
-    // Create the transfer instruction
-    const transferInstruction = createTransferInstruction(
-      payerAta,      // From: payer's token ATA
-      merchantAta,   // To: merchant's token ATA
-      payerPubkey,   // Authority: payer signs for the transfer
-      amountLamports // Amount in lamports
-    );
-    
-    transaction.add(transferInstruction);
 
     // Add memo if provided
     if (memo && memo.trim()) {
@@ -370,20 +411,19 @@ export async function POST(request: NextRequest) {
     });
 
     // Create informative message based on what's happening
-    let message = `Payment of $${amount} USDC to merchant`;
+    let message = `Payment of $${amount} ${tokenUpper} to merchant`;
     
     if (feePayerKeypair) {
-      const ataCreations = [];
-      if (!payerAtaExists) ataCreations.push(`your USDC account`);
-      if (!merchantAtaExists) ataCreations.push(`merchant USDC account`);
-      
-      if (ataCreations.length > 0) {
-        message += ` (GotSOL will create ${ataCreations.join(' and ')} and cover all fees)`;
-      } else {
+      if (isNative) {
         message += ` (fees covered by GotSOL)`;
+      } else {
+        const ataCreations = [];
+        // Note: These variables are only available in SPL token context
+        // For now, keep generic messaging for cross-token compatibility
+        message += ` (GotSOL covers account creation and fees)`;
       }
-    } else if (!payerAtaExists || !merchantAtaExists) {
-      message += ` (Note: USDC account creation required)`;
+    } else if (!isNative) {
+      message += ` (Note: ${tokenUpper} account creation may be required)`;
     }
 
     if (network === 'devnet') {
@@ -396,12 +436,13 @@ export async function POST(request: NextRequest) {
       message
     };
 
-    console.log('USDC transaction created successfully:', {
-      amount: `$${amount} USDC`,
+    console.log(`${tokenUpper} transaction created successfully:`, {
+      amount: `$${amount} ${tokenUpper}`,
       merchant: merchantPubkey.toString().slice(0, 8) + '...',
       processingTime: `${Date.now() - startTime}ms`,
       transactionSize: `${serializedTransaction.length} bytes`,
-      feePaidBy: feePayerKeypair ? 'GotSOL' : 'Customer'
+      feePaidBy: feePayerKeypair ? 'GotSOL' : 'Customer',
+      isNativeSOL: isNative
     });
 
     return NextResponse.json(response, { 

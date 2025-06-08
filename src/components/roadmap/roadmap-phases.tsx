@@ -15,40 +15,38 @@ interface Phase {
 const phases: Phase[] = [
   {
     number: 1,
-    title: 'Solana Breakout Hackathon v0',
+    title: 'Solana Breakout Hackathon v0; 2 members',
     items: [
       { text: 'MVP Point of Sale on devnet', completed: true },
       { text: 'Multi-platform, offline-capable bespoke front end', completed: true },
       // Personnel
-      { text: 'Founder, CEO', completed: true },
-      { text: 'Co-Founder, CPO/HoP', completed: true },
+      { text: 'Chief Executive', completed: true },
+      { text: 'Chief Product', completed: true },
     ],
     active: true,
   },
   {
     number: 2,
-    title: 'Road to Mainnet v1',
+    title: 'Road to Mainnet v1, 8-12 members',
     items: [
       // Product
       { text: 'Multi-asset Point of Sale', completed: false },
       { text: 'Send funds with whitelist', completed: false },
       { text: 'Off-ramp', completed: true },
-      // { text: 'Integrate Jupiter Swap API for USDC to Perena USD* swap on main net (our first in-app DeFi yield opportunity, front-end integration only)', completed: true },
       { text: 'Rain', completed: false },
-      // { text: 'Onboard Merchants 20+', completed: false },
-      {text: 'Audit', completed: false },
+      { text: 'Audit', completed: false },
       // Personnel
-      { text: 'Lead Engineer', completed: false },
-      { text: '2-man Dev Team 1', completed: false },
-      { text: '2-5 Sales', completed: false },
-      { text: 'CFO', completed: false },
-      { text: 'CLO', completed: false },
+      { text: 'Chief Tech/Info-sec', completed: false },
+      { text: 'Engineering, 1-2', completed: false },
+      { text: '100% commission Sales reps, 2-5 (30% of net for 3 years)', completed: false },
+      { text: 'Chief Finance', completed: false },
+      { text: 'Chief Legal', completed: false },
     ],
     active: true,
   },
   {
     number: 3,
-    title: 'Mainnet v2',
+    title: 'Mainnet v2, 15-20 members',
     items: [
       // Product
       { text: 'Existing Point of Sale integrations', completed: false },
@@ -57,7 +55,7 @@ const phases: Phase[] = [
       { text: 'Jupiter API', completed: false },
       { text: 'Audit', completed: false },
       // Personnel
-      { text: '2-3-man Dev Team 2', completed: false },
+      { text: 'Dev Team 2, 2-3', completed: false },
       { text: 'More Sales', completed: false },
     ],
     active: true,
@@ -95,20 +93,20 @@ export function RoadmapPhases() {
             </div>
             <ul className="space-y-3">
               {phase.items.map((item, itemIndex) => {
-                // Detect if this is the start of a personnel section by looking for personnel-related terms
-                const personnelTerms = ['Engineer', 'Sales', 'CFO', 'CLO', 'CPO', 'CEO', 'Founder', 'Co-Founder', 'Dev Team', 'Support Staff', 'Team'];
+                                // Detect if this is the start of a personnel section by looking for personnel-related terms
+                const personnelTerms = ['Chief', 'Executive', 'Engineer', 'Engineering', 'Sales', 'CFO', 'CLO', 'CPO', 'CEO', 'Founder', 'Co-Founder', 'Dev Team', 'Support Staff', 'Team'];
                 const isPersonnelItem = personnelTerms.some(term => 
                   item.text.includes(term)
                 );
-                
+
                 // Check if this is the first personnel item (no previous personnel items before this one)
                 const previousItems = phase.items.slice(0, itemIndex);
-                const hasPreviousPersonnelItems = previousItems.some(prevItem => 
+                const hasPreviousPersonnelItems = previousItems.some(prevItem =>
                   personnelTerms.some(term => prevItem.text.includes(term))
                 );
-                
+
                 const isPersonnelStart = isPersonnelItem && !hasPreviousPersonnelItems && item.text.trim() !== '';
-                
+
                 return (
                   <React.Fragment key={itemIndex}>
                     {isPersonnelStart && (

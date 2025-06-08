@@ -34,7 +34,7 @@ export const STABLECOINS: Record<string, StablecoinConfig> = {
     name: 'Tether USD',
     decimals: 6,
     mainnetMint: new PublicKey('Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB'),
-    devnetMint: new PublicKey('EJwZgeZrdC8TXTQbQBoL6bfuAnFUUy1PVCMB4DYPzVaS'), // Example devnet USDT
+    devnetMint: new PublicKey('BcCSBRdBkPY3jBjZtokc8MmUH2kpJ5Rm81r28KmBteB'), // Mock USDT devnet mint
     icon: '🟢'
   },
   PYUSD: {
@@ -44,6 +44,22 @@ export const STABLECOINS: Record<string, StablecoinConfig> = {
     mainnetMint: new PublicKey('2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo'),
     devnetMint: new PublicKey('CXk2AMBfi3TwaEL2468s6zP8xq9NxTXjp9gjMgzeUynM'), // Example devnet PYUSD
     icon: '🔵'
+  },
+  FDUSD: {
+    symbol: 'FDUSD',
+    name: 'First Digital USD',
+    decimals: 6,
+    mainnetMint: new PublicKey('3dXiUBM6cqFSvJ2f8XnQEq2hPfNqjGzW4HQKo54fCzf8'), // FDUSD mainnet mint
+    devnetMint: new PublicKey('HhYomDuTuBjPUpQX6mBJe8LoJBcg5MFdGSnqLAeiushg'), // Mock FDUSD devnet mint
+    icon: '🟡'
+  },
+  USDG: {
+    symbol: 'USDG',
+    name: 'USDG Stablecoin',
+    decimals: 6,
+    mainnetMint: new PublicKey('2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH'),
+    devnetMint: new PublicKey('yubLhmuwu83LcRdXJxvKG4RZkXYeeaL3wGjc8XAUVY9'), // Mock USDG devnet mint
+    icon: '🟢'
   }
 };
 

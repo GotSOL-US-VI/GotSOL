@@ -44,8 +44,13 @@ pub mod gotsol {
         Ok(())
     }
 
-    pub fn refund(ctx: Context<RefundPayment>, original_tx_sig: String, amount: u64) -> Result<()> {
-        ctx.accounts.refund(original_tx_sig, amount, &ctx.bumps)?;
+    pub fn refund_spl(ctx: Context<RefundSpl>, original_tx_sig: String, amount: u64) -> Result<()> {
+        ctx.accounts.refund_spl(original_tx_sig, amount, &ctx.bumps)?;
+        Ok(())
+    }
+
+    pub fn refund_sol(ctx: Context<RefundSol>, original_tx_sig: String, amount: u64) -> Result<()> {
+        ctx.accounts.refund_sol(original_tx_sig, amount, &ctx.bumps)?;
         Ok(())
     }
 

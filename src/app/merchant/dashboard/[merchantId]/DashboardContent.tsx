@@ -116,9 +116,9 @@ export default function DashboardContent({ params }: { params: { merchantId: str
   }
 
   return (
-    <div className="container mx-auto py-2">
+    <main className="container mx-auto py-2">
       {/* Hidden PaymentHistory component for payment detection */}
-      <div className="hidden">
+      <div className="hidden" aria-hidden="true">
         <PaymentHistory
           program={program}
           merchantPubkey={merchantPubkey}
@@ -128,17 +128,21 @@ export default function DashboardContent({ params }: { params: { merchantId: str
       </div>
       
       <div className="flex justify-center">
-        <div className="w-full max-w-md h-[600px]">
+        <section className="w-full max-w-lg h-[660px]" aria-labelledby="pos-title">
           <div className="card bg-base-300 shadow-xl">
-            <div className="card-body p-4">
-              <div className="relative mb-2">
-                <h1 className="text-2xl font-bold text-center">Point of Sale</h1>
-                <SoundToggle className="absolute top-0 right-0" />
-              </div>
+            <div className="card-body p-5">
+              <header className="relative mb-3">
+                <h1 id="pos-title" className="text-3xl font-bold text-center">Point of Sale</h1>
+                <div className="absolute top-0 right-0" aria-label="Sound settings">
+                  <SoundToggle className="" />
+                </div>
+              </header>
               {merchantName && (
-                <h2 className="text-lg text-center text-gray-400 mt-1">{merchantName}</h2>
+                <h2 className="text-xl text-center text-gray-400 mt-1" aria-label={`Merchant: ${merchantName}`}>
+                  {merchantName}
+                </h2>
               )}
-              <div className="flex-1 flex items-center justify-center">
+              <div className="flex-1 flex items-center justify-center" role="region" aria-label="Payment interface">
                 <PaymentQR
                   merchantPubkey={merchantPubkey}
                   isDevnet={true}
@@ -147,8 +151,8 @@ export default function DashboardContent({ params }: { params: { merchantId: str
               </div>
             </div>
           </div>
-        </div>
+        </section>
       </div>
-    </div>
+    </main>
   );
 } 

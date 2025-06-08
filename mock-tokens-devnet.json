@@ -1,0 +1,26 @@
+[
+  {
+    "symbol": "USDT",
+    "name": "Mock USDT",
+    "mint": "BcCSBRdBkPY3jBjZtokc8MmUH2kpJ5Rm81r28KmBteB",
+    "decimals": 6,
+    "tokenAccount": "FXWKLmJokD1PAFsksqsJf2LJvnbAHQsErhezf1zG7qjh",
+    "mintSignature": "2kYjeAsPbuGSkmFecaVWuQ5whtXUC1LFULtjHJpwFzpMinzv9att8XiE8AaqNdHUgnrhvPgfACn4sasK4eqC6P8f"
+  },
+  {
+    "symbol": "USDG",
+    "name": "Mock USDG",
+    "mint": "yubLhmuwu83LcRdXJxvKG4RZkXYeeaL3wGjc8XAUVY9",
+    "decimals": 6,
+    "tokenAccount": "D8EDaXpYAmn3VAWwB1EHrFgoePDPi1nC8TzeY2soJqFj",
+    "mintSignature": "CUTMQqBPdis8BhLr7NnswVk1whEX6tZifK4aEtGFvPdwH78oSpQKCPNPPNJe3tF85p8gT8uDu9ELa323115vmKy"
+  },
+  {
+    "symbol": "FDUSD",
+    "name": "Mock FDUSD",
+    "mint": "HhYomDuTuBjPUpQX6mBJe8LoJBcg5MFdGSnqLAeiushg",
+    "decimals": 6,
+    "tokenAccount": "GfkAr5s3n2Z5QvAohsCXR1Ere7YVDwbiAQMnBQ7N7JuS",
+    "mintSignature": "4K3iriTpAB5TjWthbaX5eNpHg9frvJjT9Qtbsn8YsveuzYGVANAged667rqvHajAyKEif2sZn7fK2Ru6vG64xbcm"
+  }
+]

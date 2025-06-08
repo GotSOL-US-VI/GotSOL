@@ -186,16 +186,128 @@ export type Gotsol = {
       ]
     },
     {
-      "name": "refund",
+      "name": "refundSol",
       "discriminator": [
-        2,
-        96,
-        183,
-        251,
-        63,
-        208,
-        46,
-        46
+        158,
+        68,
+        131,
+        114,
+        106,
+        77,
+        56,
+        13
+      ],
+      "accounts": [
+        {
+          "name": "owner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "merchant",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  101,
+                  114,
+                  99,
+                  104,
+                  97,
+                  110,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "merchant.entity_name",
+                "account": "merchant"
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "merchant"
+              }
+            ]
+          }
+        },
+        {
+          "name": "refundRecord",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  102,
+                  117,
+                  110,
+                  100
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "originalTxSig"
+              }
+            ]
+          }
+        },
+        {
+          "name": "recipient",
+          "writable": true
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "originalTxSig",
+          "type": "string"
+        },
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "refundSpl",
+      "discriminator": [
+        121,
+        79,
+        57,
+        29,
+        6,
+        199,
+        238,
+        125
       ],
       "accounts": [
         {
@@ -1037,7 +1149,7 @@ export type Gotsol = {
     {
       "code": 6005,
       "name": "belowMinimumWithdrawal",
-      "msg": "Withdrawal amount is below minimum allowed amount!"
+      "msg": "Withdrawal amount is below minimum amount!"
     },
     {
       "code": 6006,
