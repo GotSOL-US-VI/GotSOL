@@ -31,8 +31,8 @@ const phases: Phase[] = [
     items: [
       // Product
       { text: 'Multi-asset Point of Sale', completed: false },
-      { text: 'Send funds with whitelist', completed: false },
-      { text: 'Off-ramp', completed: true },
+      { text: 'Send to Contacts', completed: false },
+      { text: 'Connect to bank account', completed: true },
       { text: 'Rain', completed: false },
       { text: 'Audit', completed: false },
       // Personnel
@@ -50,7 +50,7 @@ const phases: Phase[] = [
     items: [
       // Product
       { text: 'Existing Point of Sale integrations', completed: false },
-      { text: 'Bookeeping', completed: false },
+      { text: 'Inventory Management', completed: false },
       { text: 'Perena', completed: false },
       { text: 'Jupiter API', completed: false },
       { text: 'Audit', completed: false },
@@ -65,7 +65,7 @@ const phases: Phase[] = [
     title: 'Mainnet v3',
     items: [
       // Product
-      { text: 'Inventory Management', completed: false },
+      { text: 'Bookkeeping', completed: false },
       { text: 'Payroll', completed: false },
       { text: 'CRM', completed: false },
       { text: 'Audits', completed: false },

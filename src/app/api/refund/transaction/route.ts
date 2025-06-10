@@ -61,12 +61,14 @@ export async function GET(request: NextRequest) {
   const recipientParam = url.searchParams.get('recipient');
   const txSigParam = url.searchParams.get('txSig');
   const network = url.searchParams.get('network') || 'devnet';
+  const token = url.searchParams.get('token') || 'USDC';
 
   console.log('GET request for refund action:', {
     merchant: merchantParam?.slice(0, 8) + '...',
     amount: amountParam,
     recipient: recipientParam?.slice(0, 8) + '...',
     txSig: txSigParam?.slice(0, 8) + '...',
+    token: token.toUpperCase(),
     network
   });
 
@@ -79,6 +81,8 @@ export async function GET(request: NextRequest) {
 
   try {
     const amount = parseFloat(amountParam);
+    const tokenUpper = token.toUpperCase();
+    
     if (isNaN(amount) || amount <= 0) {
       return NextResponse.json(
         { error: 'Invalid amount: must be a positive number' },
@@ -86,17 +90,22 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const tokenDisplay = tokenUpper === 'SOL' ? `${amount} SOL` : `$${amount} ${tokenUpper}`;
+    const description = tokenUpper === 'SOL' 
+      ? `Refund ${amount} SOL to customer from merchant account`
+      : `Refund $${amount} ${tokenUpper} to customer from merchant account`;
+
     const response: ActionGetResponse = {
       type: "action",
-      title: `Refund $${amount} USDC`,
+      title: `Refund ${tokenDisplay}`,
       icon: `${process.env.NEXT_PUBLIC_PRODUCTION_URL || 'http://localhost:3000'}/gotsol-logo.png`,
-      description: `Refund $${amount} USDC to customer from merchant account`,
+      description,
       label: "Process Refund",
       links: {
         actions: [
           {
             label: "Confirm Refund",
-            href: `/api/refund/transaction?merchant=${merchantParam}&amount=${amountParam}&recipient=${recipientParam}&txSig=${txSigParam}&network=${network}`,
+            href: `/api/refund/transaction?merchant=${merchantParam}&amount=${amountParam}&recipient=${recipientParam}&txSig=${txSigParam}&network=${network}&token=${tokenUpper}`,
             type: "post",
           }
         ]
@@ -125,12 +134,14 @@ export async function POST(request: NextRequest) {
     const recipientParam = url.searchParams.get('recipient');
     const txSigParam = url.searchParams.get('txSig');
     const network = url.searchParams.get('network') || 'devnet';
+    const token = url.searchParams.get('token') || 'USDC';
 
     console.log('POST request for refund transaction creation:', {
       merchant: merchantParam?.slice(0, 8) + '...',
       amount: amountParam,
       recipient: recipientParam?.slice(0, 8) + '...',
       txSig: txSigParam?.slice(0, 8) + '...',
+      token: token.toUpperCase(),
       network,
       rpcUrl: getRpcUrl(network)
     });
@@ -155,6 +166,7 @@ export async function POST(request: NextRequest) {
     const ownerPubkey = new PublicKey(body.account);
     const recipientPubkey = new PublicKey(recipientParam);
     const amount = parseFloat(amountParam);
+    const tokenUpper = token.toUpperCase();
     
     if (isNaN(amount) || amount <= 0) {
       return NextResponse.json(
@@ -163,15 +175,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Convert amount to USDC lamports (6 decimals)
-    const amountLamports = Math.floor(amount * 1_000_000);
+    // Determine if this is a SOL or SPL token refund
+    const isSOLRefund = tokenUpper === 'SOL';
+    let amountLamports: number;
+    let tokenMint: PublicKey | null = null;
+
+    if (isSOLRefund) {
+      // Convert SOL amount to lamports (9 decimals)
+      amountLamports = Math.floor(amount * LAMPORTS_PER_SOL);
+    } else {
+      // Convert SPL token amount to token lamports (6 decimals for stablecoins)
+      amountLamports = Math.floor(amount * 1_000_000);
+      tokenMint = network === 'devnet' ? USDC_DEVNET_MINT : USDC_MINT;
+    }
 
     // Setup connection
     const connection = getConnection(network);
     
-    // Get USDC mint for the network
-    const usdcMint = network === 'devnet' ? USDC_DEVNET_MINT : USDC_MINT;
-
     // Get recent blockhash
     let blockhash: string;
     let lastValidBlockHeight: number;
@@ -291,12 +311,13 @@ export async function POST(request: NextRequest) {
       owner: ownerPubkey.toString(),
       merchant: merchantPubkey.toString(),
       recipient: recipientPubkey.toString(),
-      amount: `$${amount} USDC (${amountLamports} lamports)`,
+      amount: isSOLRefund ? `${amount} SOL (${amountLamports} lamports)` : `$${amount} ${tokenUpper} (${amountLamports} lamports)`,
       feePayer: feePayer.toString(),
       usingServerFeePayer,
       merchantFeeEligible: isFeeEligible,
       network,
-      usdcMint: usdcMint.toString(),
+      isSOLRefund,
+      tokenMint: tokenMint?.toString(),
       originalTxSig: txSigParam
     });
 
@@ -307,40 +328,47 @@ export async function POST(request: NextRequest) {
       lastValidBlockHeight,
     });
 
-    // Get associated token accounts
-    const merchantUsdcAta = await findAssociatedTokenAddress(merchantPubkey, usdcMint);
-    const recipientUsdcAta = await findAssociatedTokenAddress(recipientPubkey, usdcMint);
+    // Only handle ATA creation and account checks for SPL tokens
+    let merchantTokenAta: PublicKey | undefined;
+    let recipientTokenAta: PublicKey | undefined;
+    let recipientAtaExists = true; // Default to true for SOL (no ATA needed)
 
-    // Check if recipient's USDC ATA exists
-    let recipientAtaExists = false;
-    try {
-      await getAccount(connection, recipientUsdcAta);
-      recipientAtaExists = true;
-    } catch (error) {
-      if (error instanceof TokenAccountNotFoundError || error instanceof TokenInvalidAccountOwnerError) {
-        recipientAtaExists = false;
-      } else {
-        console.error('Unexpected error checking recipient ATA:', error);
-        throw error;
+    if (!isSOLRefund) {
+      // Get associated token accounts for SPL tokens
+      merchantTokenAta = await findAssociatedTokenAddress(merchantPubkey, tokenMint!);
+      recipientTokenAta = await findAssociatedTokenAddress(recipientPubkey, tokenMint!);
+
+      // Check if recipient's token ATA exists
+      recipientAtaExists = false;
+      try {
+        await getAccount(connection, recipientTokenAta);
+        recipientAtaExists = true;
+      } catch (error) {
+        if (error instanceof TokenAccountNotFoundError || error instanceof TokenInvalidAccountOwnerError) {
+          recipientAtaExists = false;
+        } else {
+          console.error('Unexpected error checking recipient ATA:', error);
+          throw error;
+        }
       }
-    }
 
-    console.log('ATA existence check:', {
-      recipientAta: recipientUsdcAta.toString(),
-      recipientAtaExists,
-      merchantAta: merchantUsdcAta.toString()
-    });
+      console.log('ATA existence check:', {
+        recipientAta: recipientTokenAta.toString(),
+        recipientAtaExists,
+        merchantAta: merchantTokenAta.toString()
+      });
 
-    // If recipient's ATA doesn't exist, create it (fee payer covers this)
-    if (!recipientAtaExists) {
-      const createRecipientAtaInstruction = createAssociatedTokenAccountInstruction(
-        feePayer, // Fee payer pays for ATA creation
-        recipientUsdcAta,
-        recipientPubkey, // Recipient owns the ATA
-        usdcMint
-      );
-      transaction.add(createRecipientAtaInstruction);
-      console.log('Added recipient USDC ATA creation instruction');
+      // If recipient's ATA doesn't exist, create it (fee payer covers this)
+      if (!recipientAtaExists) {
+        const createRecipientAtaInstruction = createAssociatedTokenAccountInstruction(
+          feePayer, // Fee payer pays for ATA creation
+          recipientTokenAta,
+          recipientPubkey, // Recipient owns the ATA
+          tokenMint!
+        );
+        transaction.add(createRecipientAtaInstruction);
+        console.log(`Added recipient ${tokenUpper} ATA creation instruction`);
+      }
     }
 
     // Create refund instruction using the program
@@ -363,24 +391,51 @@ export async function POST(request: NextRequest) {
         program.programId
       );
       
-      const refundInstruction = await program.methods
-        .refund(txSigParam, new anchor.BN(amountLamports))
-        .accounts({
-          owner: ownerPubkey,
-          merchant: merchantPubkey,
-          stablecoinMint: usdcMint,
-          merchantStablecoinAta: merchantUsdcAta,
-          recipientStablecoinAta: recipientUsdcAta,
-          refundRecord: refundRecordPda,
-          recipient: recipientPubkey,
-          tokenProgram: TOKEN_PROGRAM_ID,
-          associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
-          systemProgram: SystemProgram.programId,
-        })
-        .instruction();
-      
-      transaction.add(refundInstruction);
-      console.log('Added refund instruction');
+      if (isSOLRefund) {
+        // For SOL refunds, we need the vault PDA
+        const [vaultPda] = PublicKey.findProgramAddressSync(
+          [
+            Buffer.from('vault'),
+            merchantPubkey.toBuffer()
+          ],
+          program.programId
+        );
+
+        const refundInstruction = await program.methods
+          .refundSol(txSigParam, new anchor.BN(amountLamports))
+          .accounts({
+            owner: ownerPubkey,
+            merchant: merchantPubkey,
+            vault: vaultPda,
+            refundRecord: refundRecordPda,
+            recipient: recipientPubkey,
+            systemProgram: SystemProgram.programId,
+          })
+          .instruction();
+        
+        transaction.add(refundInstruction);
+        console.log('Added refund_sol instruction');
+      } else {
+        // For SPL token refunds
+        const refundInstruction = await program.methods
+          .refundSpl(txSigParam, new anchor.BN(amountLamports))
+          .accounts({
+            owner: ownerPubkey,
+            merchant: merchantPubkey,
+            stablecoinMint: tokenMint!,
+            merchantStablecoinAta: merchantTokenAta!,
+            recipientStablecoinAta: recipientTokenAta!,
+            refundRecord: refundRecordPda,
+            recipient: recipientPubkey,
+            tokenProgram: TOKEN_PROGRAM_ID,
+            associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+            systemProgram: SystemProgram.programId,
+          })
+          .instruction();
+        
+        transaction.add(refundInstruction);
+        console.log('Added refund_spl instruction');
+      }
       
     } catch (error) {
       console.error('Failed to create refund instruction:', error);
@@ -411,17 +466,19 @@ export async function POST(request: NextRequest) {
     });
 
     // Create informative message
-    let message = `Refund $${amount} USDC to customer`;
+    let message = isSOLRefund 
+      ? `Refund ${amount} SOL to customer`
+      : `Refund $${amount} ${tokenUpper} to customer`;
     
     if (usingServerFeePayer) {
       const services = [];
-      if (!recipientAtaExists) services.push('recipient USDC account creation');
+      if (!isSOLRefund && !recipientAtaExists) services.push(`recipient ${tokenUpper} account creation`);
       services.push('transaction fees');
       
       message += ` (GotSOL will cover ${services.join(' and ')})`;
     } else {
       message += ` (you will pay transaction fees`;
-      if (!recipientAtaExists) message += ' and USDC account creation';
+      if (!isSOLRefund && !recipientAtaExists) message += ` and ${tokenUpper} account creation`;
       message += ')';
     }
 
@@ -436,13 +493,14 @@ export async function POST(request: NextRequest) {
     };
 
     console.log('Refund transaction created successfully:', {
-      amount: `$${amount} USDC`,
-      merchant: merchantPubkey.toString().slice(0, 8) + '...',
+      amount: isSOLRefund ? `${amount} SOL` : `$${amount} ${tokenUpper}`,
       recipient: recipientPubkey.toString().slice(0, 8) + '...',
+      merchant: merchantPubkey.toString().slice(0, 8) + '...',
       processingTime: `${Date.now() - startTime}ms`,
       transactionSize: `${serializedTransaction.length} bytes`,
       feePaidBy: usingServerFeePayer ? 'Server' : 'Owner',
-      merchantFeeEligible: isFeeEligible
+      merchantFeeEligible: isFeeEligible,
+      tokenType: isSOLRefund ? 'SOL' : tokenUpper
     });
 
     return NextResponse.json(response, { 

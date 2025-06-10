@@ -28,6 +28,7 @@ interface Payment {
     memo: string | null;
     timestamp: number;
     sender: PublicKey;
+    token: string; // Add token field to track payment token type
 }
 
 interface ParsedInstructionWithInfo extends ParsedInstruction {
@@ -186,7 +187,8 @@ async function fetchPaymentData(
                     amount: Number(amount) / Math.pow(10, 6),
                     memo,
                     timestamp: tx.blockTime ? tx.blockTime * 1000 : Date.now(),
-                    sender: new PublicKey(authority)
+                    sender: new PublicKey(authority),
+                    token: 'USDC' // All payments in this flow are USDC transfers
                 });
             } catch (err) {
                 console.error('Error processing transaction:', err);
@@ -360,7 +362,8 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
                 amount: Number(amount) / Math.pow(10, 6),
                 memo,
                 timestamp: tx.blockTime ? tx.blockTime * 1000 : Date.now(),
-                sender: new PublicKey(authority)
+                sender: new PublicKey(authority),
+                token: 'USDC' // All payments in this flow are USDC transfers
             };
 
             return payment;
@@ -618,7 +621,8 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
                                             payment={{
                                                 signature: payment.signature,
                                                 amount: payment.amount,
-                                                recipient: payment.sender
+                                                recipient: payment.sender,
+                                                token: payment.token
                                             }}
                                             onSuccess={() => queryClient.invalidateQueries({
                                                 queryKey: ['payments', merchantPubkey.toString(), isDevnet]

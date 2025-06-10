@@ -25,7 +25,7 @@ async function createStylizedQR(data: string, token: string): Promise<string> {
     QRCode.toCanvas(data, {
       errorCorrectionLevel: "H",
       margin: 4,
-      width: 400,
+      width: 512, // Increased resolution for better clarity
       color: {
         dark: '#000000',
         light: '#FFFFFF',
@@ -42,18 +42,23 @@ async function createStylizedQR(data: string, token: string): Promise<string> {
         return;
       }
 
-      const size = canvas.width;
-      const centerSize = size * 0.2; // 20% of QR code size
+      // Enable image smoothing for better quality
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
 
-      // Create a white circle background for the token logo
+      const size = canvas.width;
+      const centerSize = size * 0.18; // Slightly smaller for better QR readability
+
+      // Create a larger white circle background with padding
+      const paddingSize = centerSize * 1.1;
       ctx.fillStyle = '#FFFFFF';
       ctx.beginPath();
-      ctx.arc(size / 2, size / 2, centerSize / 2, 0, 2 * Math.PI);
+      ctx.arc(size / 2, size / 2, paddingSize / 2, 0, 2 * Math.PI);
       ctx.fill();
 
-      // Add a subtle border
-      ctx.strokeStyle = '#E5E7EB';
-      ctx.lineWidth = 2;
+      // Add a clean border
+      ctx.strokeStyle = '#D1D5DB';
+      ctx.lineWidth = 3;
       ctx.stroke();
 
       // Get the correct logo path for the token
@@ -66,7 +71,7 @@ async function createStylizedQR(data: string, token: string): Promise<string> {
           case 'USDT':
             return '/icons/branding/tether logo.svg';
           case 'FDUSD':
-            return '/icons/branding/fdusd-logo-04.svg';
+            return '/icons/branding/fdusd-logo-03.svg'; // Using the higher quality version
           case 'USDG':
             return '/icons/branding/USDG Token/SVG/GDN_USDG_Token.svg';
           default:
@@ -77,29 +82,43 @@ async function createStylizedQR(data: string, token: string): Promise<string> {
       // Load and draw token logo
       const img = new Image();
       img.onload = () => {
-        // Calculate logo size (80% of the circle size)
-        const logoSize = centerSize * 0.8;
+        // Calculate logo size (75% of the center circle for better proportion)
+        const logoSize = centerSize * 0.75;
         const logoX = (size - logoSize) / 2;
         const logoY = (size - logoSize) / 2;
 
-        // Draw the token logo
+        // Save context state
+        ctx.save();
+
+        // Create clipping mask for the logo to ensure it stays within the circle
+        ctx.beginPath();
+        ctx.arc(size / 2, size / 2, logoSize / 2, 0, 2 * Math.PI);
+        ctx.clip();
+
+        // Draw the token logo with high quality settings
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
         ctx.drawImage(img, logoX, logoY, logoSize, logoSize);
 
-        // Convert canvas to data URL
-        resolve(canvas.toDataURL());
+        // Restore context state
+        ctx.restore();
+
+        // Convert canvas to data URL with high quality
+        resolve(canvas.toDataURL('image/png', 1.0));
       };
 
       img.onerror = () => {
-        // Fallback to text if image fails to load
-        ctx.fillStyle = '#000000';
-        ctx.font = `bold ${centerSize * 0.3}px Arial`;
+        // Fallback to clean text if image fails to load
+        ctx.fillStyle = '#1F2937';
+        ctx.font = `bold ${centerSize * 0.25}px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(token, size / 2, size / 2);
-        resolve(canvas.toDataURL());
+        resolve(canvas.toDataURL('image/png', 1.0));
       };
 
-      // Set the image source to trigger loading
+      // Set CORS and load the image
+      img.crossOrigin = 'anonymous';
       img.src = getTokenLogoPath(token);
     });
   });

@@ -1088,29 +1088,29 @@
       ]
     },
     {
-      "name": "WithdrawalSolProcessed",
+      "name": "WithdrawSolProcessed",
       "discriminator": [
-        165,
-        58,
-        75,
-        98,
-        50,
-        119,
-        151,
-        167
+        43,
+        191,
+        41,
+        84,
+        77,
+        31,
+        179,
+        115
       ]
     },
     {
-      "name": "WithdrawalSplProcessed",
+      "name": "WithdrawSplProcessed",
       "discriminator": [
-        92,
-        120,
-        143,
-        16,
-        126,
-        239,
-        85,
-        172
+        236,
+        23,
+        184,
+        86,
+        114,
+        128,
+        223,
+        120
       ]
     }
   ],
@@ -1238,7 +1238,7 @@
       }
     },
     {
-      "name": "WithdrawalSolProcessed",
+      "name": "WithdrawSolProcessed",
       "type": {
         "kind": "struct",
         "fields": [
@@ -1258,7 +1258,7 @@
       }
     },
     {
-      "name": "WithdrawalSplProcessed",
+      "name": "WithdrawSplProcessed",
       "type": {
         "kind": "struct",
         "fields": [
@@ -1273,6 +1273,10 @@
           {
             "name": "house_amount",
             "type": "u64"
+          },
+          {
+            "name": "mint",
+            "type": "pubkey"
           }
         ]
       }

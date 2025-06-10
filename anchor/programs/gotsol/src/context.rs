@@ -87,7 +87,7 @@ pub struct WithdrawSpl<'info> {
     #[account(constraint = house.key() == Pubkey::from_str(HOUSE).unwrap())]
     pub house: AccountInfo<'info>,
 
-    #[account(mut,
+    #[account(init_if_needed, payer = owner,
         associated_token::mint = stablecoin_mint,
         associated_token::authority = house
     )]
@@ -133,10 +133,11 @@ impl<'info> WithdrawSpl<'info> {
         self.transfer_spl_tokens(&self.house_stablecoin_ata.to_account_info(), house_amount, seeds)?;
 
         // Emit event
-        emit!(WithdrawalSplProcessed {
+        emit!(WithdrawSplProcessed {
             amount,
             owner_amount,
             house_amount,
+            mint: self.stablecoin_mint.key(),
         });
 
         Ok(())
@@ -215,7 +216,7 @@ impl<'info> WithdrawSol<'info> {
         self.transfer_from_vault(&self.house.to_account_info(), house_amount)?;
 
         // Emit event
-        emit!(WithdrawalSolProcessed {
+        emit!(WithdrawSolProcessed {
             amount,
             owner_amount,
             house_amount,
@@ -414,7 +415,7 @@ impl<'info> RefundSol<'info> {
 #[derive(Accounts)]
 pub struct SetMerchantStatus<'info> {
     /// CHECK: This is the HOUSE Squads multi-sig that must sign
-    #[account(mut, constraint = auth.key() == Pubkey::from_str(AUTH).unwrap() @ CustomError::UnauthorizedStatusChange)]
+    #[account(mut, constraint = auth.key() == Pubkey::from_str(AUTH_2).unwrap() || auth.key() == Pubkey::from_str(AUTH_3).unwrap() @ CustomError::UnauthorizedStatusChange)]
     pub auth: Signer<'info>,
 
     #[account(mut)]
@@ -461,7 +462,7 @@ impl<'info> CloseMerchant<'info> {
 #[derive(Accounts)]
 #[instruction()]
 pub struct CloseRefund<'info> {
-    #[account(mut, constraint = auth.key() == Pubkey::from_str(AUTH).unwrap())]
+    #[account(mut, constraint = auth.key() == Pubkey::from_str(AUTH_2).unwrap() || auth.key() == Pubkey::from_str(AUTH_3).unwrap())]
     pub auth: Signer<'info>,
 
     #[account(mut, close = auth)]

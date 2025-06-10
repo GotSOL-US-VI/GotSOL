@@ -192,34 +192,56 @@ export async function POST(request: NextRequest) {
     let feePayer: PublicKey = ownerPubkey; // Default to owner paying fees
     let usingServerFeePayer = false;
 
-    if (isFeeEligible && FEE_PAYER_SECRET) {
+    // Enhanced debugging for fee payer logic
+    console.log('🔍 DEBUG - Fee payer determination:', {
+      isFeeEligible,
+      hasFeePayerSecret: !!FEE_PAYER_SECRET,
+      feePayerSecretLength: FEE_PAYER_SECRET?.length || 0
+    });
+
+    // Smart fee payer logic with automatic fallback for eligible merchants
+    if (FEE_PAYER_SECRET && isFeeEligible) {
+      console.log('✅ CLOSE_MERCHANT: Fee payer secret available for eligible merchant');
       try {
         const secretKey = bs58.decode(FEE_PAYER_SECRET);
         feePayerKeypair = Keypair.fromSecretKey(secretKey);
         
+        console.log('🔑 CLOSE_MERCHANT: Fee payer keypair created:', feePayerKeypair.publicKey.toString());
+        
         // Check server fee payer balance for smart fallback
         const feePayerBalance = await connection.getBalance(feePayerKeypair.publicKey);
         const feePayerSOL = feePayerBalance / LAMPORTS_PER_SOL;
+        
+        console.log('💰 CLOSE_MERCHANT: Fee payer balance check:', {
+          balance: feePayerBalance,
+          balanceSOL: feePayerSOL.toFixed(6),
+          minimumRequired: 10000
+        });
         
         // Minimum balance check - fallback to owner if server has insufficient funds
         const minimumBalance = 10000; // ~0.00001 SOL
         if (feePayerBalance >= minimumBalance) {
           feePayer = feePayerKeypair.publicKey;
           usingServerFeePayer = true;
-          console.log('Using server fee payer for eligible merchant:', feePayer.toString());
-          console.log(`Server fee payer balance: ${feePayerSOL.toFixed(4)} SOL`);
+          console.log('🎉 CLOSE_MERCHANT: Using server fee payer for eligible merchant:', feePayer.toString());
+          console.log(`💸 CLOSE_MERCHANT: Server fee payer balance: ${feePayerSOL.toFixed(4)} SOL`);
         } else {
-          console.warn(`Server fee payer balance too low (${feePayerSOL.toFixed(6)} SOL), falling back to owner payment`);
+          console.warn(`⚠️ CLOSE_MERCHANT: Server fee payer balance too low (${feePayerSOL.toFixed(6)} SOL), falling back to owner payment`);
           feePayerKeypair = null; // Don't use server keypair
+          feePayer = ownerPubkey;
+          usingServerFeePayer = false;
         }
         
       } catch (error) {
-        console.warn('Server fee payer issue, falling back to owner paying fees:', error);
+        console.warn('❌ CLOSE_MERCHANT: Invalid fee payer secret key, falling back to owner paying fees:', error);
+        feePayerKeypair = null;
+        feePayer = ownerPubkey;
+        usingServerFeePayer = false;
       }
     } else if (!isFeeEligible) {
-      console.log('Merchant not eligible for fee-paying service, owner will pay fees');
+      console.log('❌ CLOSE_MERCHANT: Merchant not eligible for fee-paying service, owner will pay fees');
     } else {
-      console.log('Server fee payer not configured, owner will pay fees');
+      console.log('❌ CLOSE_MERCHANT: Server fee payer not configured, owner will pay fees');
     }
 
     console.log('Close merchant transaction details:', {

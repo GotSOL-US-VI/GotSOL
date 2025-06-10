@@ -26,7 +26,8 @@ import {
 import bs58 from 'bs58';
 import * as anchor from '@coral-xyz/anchor';
 import { getGotsolProgram } from '@/utils/gotsol-exports';
-import { USDC_MINT, USDC_DEVNET_MINT, HOUSE, findAssociatedTokenAddress } from '@/utils/token-utils';
+import { HOUSE, findAssociatedTokenAddress } from '@/utils/token-utils';
+import { getStablecoinMint, getStablecoinDecimals } from '@/utils/stablecoin-config';
 
 // RPC URL configuration
 function getRpcUrl(network: string): string {
@@ -61,10 +62,12 @@ export async function GET(request: NextRequest) {
   const merchantParam = url.searchParams.get('merchant');
   const amountParam = url.searchParams.get('amount');
   const network = url.searchParams.get('network') || 'devnet';
+  const token = url.searchParams.get('token') || 'USDC';
 
   console.log('GET request for withdraw action:', {
     merchant: merchantParam?.slice(0, 8) + '...',
     amount: amountParam,
+    token: token.toUpperCase(),
     network
   });
 
@@ -77,6 +80,8 @@ export async function GET(request: NextRequest) {
 
   try {
     const amount = parseFloat(amountParam);
+    const tokenUpper = token.toUpperCase();
+    
     if (isNaN(amount) || amount <= 0) {
       return NextResponse.json(
         { error: 'Invalid amount: must be a positive number' },
@@ -84,17 +89,22 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const tokenDisplay = tokenUpper === 'SOL' ? `${amount} SOL` : `$${amount} ${tokenUpper}`;
+    const description = tokenUpper === 'SOL' 
+      ? `Withdraw ${amount} SOL from merchant account (99% to owner, 1% platform fee)`
+      : `Withdraw $${amount} ${tokenUpper} from merchant account (99% to owner, 1% platform fee)`;
+
     const response: ActionGetResponse = {
       type: "action",
-      title: `Withdraw $${amount} USDC`,
+      title: `Withdraw ${tokenDisplay}`,
       icon: `${process.env.NEXT_PUBLIC_PRODUCTION_URL || 'http://localhost:3000'}/gotsol-logo.png`,
-      description: `Withdraw $${amount} USDC from merchant account (99% to owner, 1% platform fee)`,
+      description,
       label: "Withdraw",
       links: {
         actions: [
           {
             label: "Confirm Withdrawal",
-            href: `/api/withdraw/transaction?merchant=${merchantParam}&amount=${amountParam}&network=${network}`,
+            href: `/api/withdraw/transaction?merchant=${merchantParam}&amount=${amountParam}&network=${network}&token=${tokenUpper}`,
             type: "post",
           }
         ]
@@ -121,10 +131,12 @@ export async function POST(request: NextRequest) {
     const merchantParam = url.searchParams.get('merchant');
     const amountParam = url.searchParams.get('amount');
     const network = url.searchParams.get('network') || 'devnet';
+    const token = url.searchParams.get('token') || 'USDC';
 
     console.log('POST request for withdraw transaction creation:', {
       merchant: merchantParam?.slice(0, 8) + '...',
       amount: amountParam,
+      token: token.toUpperCase(),
       network,
       rpcUrl: getRpcUrl(network)
     });
@@ -148,6 +160,7 @@ export async function POST(request: NextRequest) {
     const merchantPubkey = new PublicKey(merchantParam);
     const ownerPubkey = new PublicKey(body.account);
     const amount = parseFloat(amountParam);
+    const tokenUpper = token.toUpperCase();
     
     if (isNaN(amount) || amount <= 0) {
       return NextResponse.json(
@@ -156,15 +169,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Convert amount to USDC lamports (6 decimals)
-    const amountLamports = Math.floor(amount * 1_000_000);
+    // Determine if this is a SOL or SPL token withdrawal
+    const isSOLWithdrawal = tokenUpper === 'SOL';
+    let amountLamports: number;
+    let tokenMint: PublicKey | null = null;
+    let tokenDecimals: number;
+
+    if (isSOLWithdrawal) {
+      // Convert SOL amount to lamports (9 decimals)
+      amountLamports = Math.floor(amount * LAMPORTS_PER_SOL);
+      tokenDecimals = 9; // SOL has 9 decimals
+    } else {
+      // Get the correct token mint and decimals based on the requested token
+      tokenMint = getStablecoinMint(tokenUpper, network === 'devnet');
+      tokenDecimals = getStablecoinDecimals(tokenUpper);
+      // Convert SPL token amount to token lamports using correct decimals
+      amountLamports = Math.floor(amount * Math.pow(10, tokenDecimals));
+    }
 
     // Setup connection
     const connection = getConnection(network);
     
-    // Get USDC mint for the network
-    const usdcMint = network === 'devnet' ? USDC_DEVNET_MINT : USDC_MINT;
-
     // Get recent blockhash
     let blockhash: string;
     let lastValidBlockHeight: number;
@@ -228,45 +253,68 @@ export async function POST(request: NextRequest) {
     let feePayer: PublicKey = ownerPubkey; // Default to owner paying fees
     let usingServerFeePayer = false;
 
-    if (isFeeEligible && FEE_PAYER_SECRET) {
+    // Enhanced debugging for fee payer logic
+    console.log('🔍 DEBUG - Fee payer determination:', {
+      isFeeEligible,
+      hasFeePayerSecret: !!FEE_PAYER_SECRET,
+      feePayerSecretLength: FEE_PAYER_SECRET?.length || 0
+    });
+
+    // Smart fee payer logic with automatic fallback for eligible merchants
+    if (FEE_PAYER_SECRET && isFeeEligible) {
+      console.log('✅ WITHDRAW: Fee payer secret available for eligible merchant');
       try {
         const secretKey = bs58.decode(FEE_PAYER_SECRET);
         feePayerKeypair = Keypair.fromSecretKey(secretKey);
         
+        console.log('🔑 WITHDRAW: Fee payer keypair created:', feePayerKeypair.publicKey.toString());
+        
         // Check server fee payer balance for smart fallback
         const feePayerBalance = await connection.getBalance(feePayerKeypair.publicKey);
         const feePayerSOL = feePayerBalance / LAMPORTS_PER_SOL;
+        
+        console.log('💰 WITHDRAW: Fee payer balance check:', {
+          balance: feePayerBalance,
+          balanceSOL: feePayerSOL.toFixed(6),
+          minimumRequired: 10000
+        });
         
         // Minimum balance check - fallback to owner if server has insufficient funds
         const minimumBalance = 10000; // ~0.00001 SOL
         if (feePayerBalance >= minimumBalance) {
           feePayer = feePayerKeypair.publicKey;
           usingServerFeePayer = true;
-          console.log('Using server fee payer for eligible merchant:', feePayer.toString());
-          console.log(`Server fee payer balance: ${feePayerSOL.toFixed(4)} SOL`);
+          console.log('🎉 WITHDRAW: Using server fee payer for eligible merchant:', feePayer.toString());
+          console.log(`💸 WITHDRAW: Server fee payer balance: ${feePayerSOL.toFixed(4)} SOL`);
         } else {
-          console.warn(`Server fee payer balance too low (${feePayerSOL.toFixed(6)} SOL), falling back to owner payment`);
+          console.warn(`⚠️ WITHDRAW: Server fee payer balance too low (${feePayerSOL.toFixed(6)} SOL), falling back to owner payment`);
           feePayerKeypair = null; // Don't use server keypair
+          feePayer = ownerPubkey;
+          usingServerFeePayer = false;
         }
         
       } catch (error) {
-        console.warn('Server fee payer issue, falling back to owner paying fees:', error);
+        console.warn('❌ WITHDRAW: Invalid fee payer secret key, falling back to owner paying fees:', error);
+        feePayerKeypair = null;
+        feePayer = ownerPubkey;
+        usingServerFeePayer = false;
       }
     } else if (!isFeeEligible) {
-      console.log('Merchant not eligible for fee-paying service, owner will pay fees');
+      console.log('❌ WITHDRAW: Merchant not eligible for fee-paying service, owner will pay fees');
     } else {
-      console.log('Server fee payer not configured, owner will pay fees');
+      console.log('❌ WITHDRAW: Server fee payer not configured, owner will pay fees');
     }
 
     console.log('Withdraw transaction details:', {
       owner: ownerPubkey.toString(),
       merchant: merchantPubkey.toString(),
-      amount: `$${amount} USDC (${amountLamports} lamports)`,
+      amount: isSOLWithdrawal ? `${amount} SOL (${amountLamports} lamports)` : `$${amount} ${tokenUpper} (${amountLamports} lamports)`,
       feePayer: feePayer.toString(),
       usingServerFeePayer,
       merchantFeeEligible: isFeeEligible,
       network,
-      usdcMint: usdcMint.toString()
+      isSOLWithdrawal,
+      tokenMint: tokenMint?.toString()
     });
 
     // Create transaction
@@ -276,42 +324,54 @@ export async function POST(request: NextRequest) {
       lastValidBlockHeight,
     });
 
-    // Get associated token accounts
-    const merchantUsdcAta = await findAssociatedTokenAddress(merchantPubkey, usdcMint);
-    const ownerUsdcAta = await findAssociatedTokenAddress(ownerPubkey, usdcMint);
-    const houseUsdcAta = await findAssociatedTokenAddress(HOUSE, usdcMint);
+    // Declare ATA variables outside conditional blocks
+    let merchantTokenAta: PublicKey | undefined;
+    let ownerTokenAta: PublicKey | undefined;
+    let houseTokenAta: PublicKey | undefined;
+    let ownerAtaExists = true; // Default to true for SOL (no ATA needed)
 
-    // Check if owner's USDC ATA exists
-    let ownerAtaExists = false;
-    try {
-      await getAccount(connection, ownerUsdcAta);
-      ownerAtaExists = true;
-    } catch (error) {
-      if (error instanceof TokenAccountNotFoundError || error instanceof TokenInvalidAccountOwnerError) {
-        ownerAtaExists = false;
-      } else {
-        console.error('Unexpected error checking owner ATA:', error);
-        throw error;
+    // Only handle ATA creation for SPL tokens
+    if (!isSOLWithdrawal) {
+      // Get associated token accounts
+      merchantTokenAta = await findAssociatedTokenAddress(merchantPubkey, tokenMint!);
+      ownerTokenAta = await findAssociatedTokenAddress(ownerPubkey, tokenMint!);
+      houseTokenAta = await findAssociatedTokenAddress(HOUSE, tokenMint!);
+
+      // Check if owner's token ATA exists
+      ownerAtaExists = false;
+      try {
+        await getAccount(connection, ownerTokenAta);
+        ownerAtaExists = true;
+      } catch (error) {
+        if (error instanceof TokenAccountNotFoundError || error instanceof TokenInvalidAccountOwnerError) {
+          ownerAtaExists = false;
+        } else {
+          console.error('Unexpected error checking owner ATA:', error);
+          throw error;
+        }
       }
-    }
 
-    console.log('ATA existence check:', {
-      ownerAta: ownerUsdcAta.toString(),
-      ownerAtaExists,
-      merchantAta: merchantUsdcAta.toString(),
-      houseAta: houseUsdcAta.toString()
-    });
+      console.log('ATA existence check:', {
+        ownerAta: ownerTokenAta.toString(),
+        ownerAtaExists,
+        houseAta: houseTokenAta.toString(),
+        merchantAta: merchantTokenAta.toString(),
+        note: 'House ATA will be created automatically by program if needed'
+      });
 
-    // If owner's ATA doesn't exist, create it (fee payer covers this)
-    if (!ownerAtaExists) {
-      const createOwnerAtaInstruction = createAssociatedTokenAccountInstruction(
-        feePayer, // Fee payer pays for ATA creation
-        ownerUsdcAta,
-        ownerPubkey, // Owner owns the ATA
-        usdcMint
-      );
-      transaction.add(createOwnerAtaInstruction);
-      console.log('Added owner USDC ATA creation instruction');
+      // If owner's ATA doesn't exist, create it (fee payer covers this)
+      if (!ownerAtaExists) {
+        const createOwnerAtaInstruction = createAssociatedTokenAccountInstruction(
+          feePayer, // Fee payer pays for ATA creation
+          ownerTokenAta,
+          ownerPubkey, // Owner owns the ATA
+          tokenMint!
+        );
+        transaction.add(createOwnerAtaInstruction);
+        console.log(`Added owner ${tokenUpper} ATA creation instruction`);
+      }
+
+      // Note: House ATA creation is now handled automatically by the program with init_if_needed
     }
 
     // Create withdraw instruction using the program
@@ -328,24 +388,50 @@ export async function POST(request: NextRequest) {
       
       const program = getGotsolProgram(tempProvider);
       
-      const withdrawInstruction = await program.methods
-        .withdraw(new anchor.BN(amountLamports))
-        .accounts({
-          owner: ownerPubkey,
-          merchant: merchantPubkey,
-          stablecoinMint: usdcMint,
-          merchantStablecoinAta: merchantUsdcAta,
-          ownerStablecoinAta: ownerUsdcAta,
-          house: HOUSE,
-          houseStablecoinAta: houseUsdcAta,
-          tokenProgram: TOKEN_PROGRAM_ID,
-          associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
-          systemProgram: SystemProgram.programId,
-        })
-        .instruction();
-      
-      transaction.add(withdrawInstruction);
-      console.log('Added withdraw instruction');
+      if (isSOLWithdrawal) {
+        // For SOL withdrawals, we need the vault PDA
+        const [vaultPda] = PublicKey.findProgramAddressSync(
+          [
+            Buffer.from('vault'),
+            merchantPubkey.toBuffer()
+          ],
+          program.programId
+        );
+
+        const withdrawInstruction = await program.methods
+          .withdrawSol(new anchor.BN(amountLamports))
+          .accounts({
+            owner: ownerPubkey,
+            merchant: merchantPubkey,
+            vault: vaultPda,
+            house: HOUSE,
+            systemProgram: SystemProgram.programId,
+          })
+          .instruction();
+        
+        transaction.add(withdrawInstruction);
+        console.log('Added withdraw_sol instruction');
+      } else {
+        // For SPL token withdrawals
+        const withdrawInstruction = await program.methods
+          .withdrawSpl(new anchor.BN(amountLamports))
+          .accounts({
+            owner: ownerPubkey,
+            merchant: merchantPubkey,
+            stablecoinMint: tokenMint!,
+            merchantStablecoinAta: merchantTokenAta!,
+            ownerStablecoinAta: ownerTokenAta!,
+            house: HOUSE,
+            houseStablecoinAta: houseTokenAta!,
+            tokenProgram: TOKEN_PROGRAM_ID,
+            associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+            systemProgram: SystemProgram.programId,
+          })
+          .instruction();
+        
+        transaction.add(withdrawInstruction);
+        console.log('Added withdraw_spl instruction');
+      }
       
     } catch (error) {
       console.error('Failed to create withdraw instruction:', error);
@@ -376,17 +462,23 @@ export async function POST(request: NextRequest) {
     });
 
     // Create informative message
-    let message = `Withdraw $${amount} USDC from merchant account`;
+    let message = isSOLWithdrawal 
+      ? `Withdraw ${amount} SOL from merchant account`
+      : `Withdraw $${amount} ${tokenUpper} from merchant account`;
     
     if (usingServerFeePayer) {
       const services = [];
-      if (!ownerAtaExists) services.push('USDC account creation');
+      if (!isSOLWithdrawal && !ownerAtaExists) {
+        services.push(`your ${tokenUpper} account creation`);
+      }
       services.push('transaction fees');
       
       message += ` (GotSOL will cover ${services.join(' and ')})`;
     } else {
       message += ` (you will pay transaction fees`;
-      if (!ownerAtaExists) message += ' and USDC account creation';
+      if (!isSOLWithdrawal && !ownerAtaExists) {
+        message += ` and your ${tokenUpper} account creation`;
+      }
       message += ')';
     }
 
@@ -401,12 +493,13 @@ export async function POST(request: NextRequest) {
     };
 
     console.log('Withdraw transaction created successfully:', {
-      amount: `$${amount} USDC`,
+      amount: isSOLWithdrawal ? `${amount} SOL` : `$${amount} ${tokenUpper}`,
       merchant: merchantPubkey.toString().slice(0, 8) + '...',
       processingTime: `${Date.now() - startTime}ms`,
       transactionSize: `${serializedTransaction.length} bytes`,
       feePaidBy: usingServerFeePayer ? 'Server' : 'Owner',
-      merchantFeeEligible: isFeeEligible
+      merchantFeeEligible: isFeeEligible,
+      tokenType: isSOLWithdrawal ? 'SOL' : tokenUpper
     });
 
     return NextResponse.json(response, { 

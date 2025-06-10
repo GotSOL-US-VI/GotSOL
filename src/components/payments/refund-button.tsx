@@ -10,7 +10,8 @@ import { formatSolscanDevnetLink } from '@/utils/format-transaction-link';
 import { useWallet } from "@getpara/react-sdk";
 import type { Gotsol } from '@/utils/gotsol-exports';
 import { useQueryClient } from '@tanstack/react-query';
-import { findAssociatedTokenAddress, USDC_MINT, USDC_DEVNET_MINT } from '@/utils/token-utils';
+import { findAssociatedTokenAddress } from '@/utils/token-utils';
+import { getStablecoinMint, getStablecoinDecimals } from '@/utils/stablecoin-config';
 import { parseAnchorError, ErrorToastContent } from '@/utils/error-parser';
 import { useClient } from "@getpara/react-sdk";
 import { createClient } from '@/utils/supabaseClient';
@@ -23,6 +24,7 @@ interface RefundButtonProps {
         signature: string;
         amount: number;
         recipient: PublicKey;
+        token?: string; // Add token field to determine if it's SOL or SPL
     };
     onSuccess?: () => void;
     isDevnet?: boolean;
@@ -46,7 +48,10 @@ export function RefundButton({ program, merchantPubkey, payment, onSuccess, isDe
         try {
             setIsLoading(true);
 
-            const usdcMint = isDevnet ? USDC_DEVNET_MINT : USDC_MINT;
+            // Get the correct mint based on payment token (default to USDC for backward compatibility)
+            const paymentToken = payment.token || 'USDC';
+            const tokenMint = getStablecoinMint(paymentToken, isDevnet);
+            const tokenDecimals = getStablecoinDecimals(paymentToken);
 
             // Check if the merchant is eligible for reduced fees
             const merchantAccount = await fetchMerchantAccount(program, merchantPubkey);
@@ -76,14 +81,14 @@ export function RefundButton({ program, merchantPubkey, payment, onSuccess, isDe
                 throw new Error('Derived merchant PDA does not match provided merchant pubkey');
             }
 
-            // Get merchant's USDC ATA using merchant PDA as authority
-            const merchantUsdcAta = await findAssociatedTokenAddress(merchantPda, usdcMint);
+            // Get merchant's token ATA using merchant PDA as authority
+            const merchantTokenAta = await findAssociatedTokenAddress(merchantPda, tokenMint);
 
-            // Get recipient's USDC ATA
-            const recipientUsdcAta = await findAssociatedTokenAddress(payment.recipient, usdcMint);
+            // Get recipient's token ATA
+            const recipientTokenAta = await findAssociatedTokenAddress(payment.recipient, tokenMint);
 
-            // Convert amount to USDC decimals (6 decimals) and to BN value
-            const refundAmountU64 = Math.floor(payment.amount * 1_000_000);
+            // Convert amount to token decimals and to BN value
+            const refundAmountU64 = Math.floor(payment.amount * Math.pow(10, tokenDecimals));
             const refundAmount = new anchor.BN(refundAmountU64.toString());
 
             // Take first 8 characters of the base58 signature string
@@ -98,22 +103,51 @@ export function RefundButton({ program, merchantPubkey, payment, onSuccess, isDe
                 program.programId
             );
 
-            // Execute the refund
-            const tx = await program.methods
-                .refund(signaturePrefix, refundAmount)
-                .accountsPartial({
-                    owner: merchantAccount.owner,
-                    merchant: merchantPda,
-                    stablecoinMint: usdcMint,
-                    merchantStablecoinAta: merchantUsdcAta,
-                    recipientStablecoinAta: recipientUsdcAta,
-                    refundRecord,
-                    recipient: payment.recipient,
-                    associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
-                    tokenProgram: TOKEN_PROGRAM_ID,
-                    systemProgram: anchor.web3.SystemProgram.programId
-                })
-                .rpc();
+            let tx: string;
+
+            // Determine if this is a SOL or SPL token refund
+            const isSOLRefund = payment.token === 'SOL' || !payment.token; // Default to SOL if token not specified
+
+            if (isSOLRefund) {
+                // For SOL refunds, we need the vault PDA
+                const [vaultPda] = PublicKey.findProgramAddressSync(
+                    [
+                        Buffer.from('vault'),
+                        merchantPda.toBuffer()
+                    ],
+                    program.programId
+                );
+
+                // Execute SOL refund
+                tx = await program.methods
+                    .refundSol(signaturePrefix, refundAmount)
+                    .accountsPartial({
+                        owner: merchantAccount.owner,
+                        merchant: merchantPda,
+                        vault: vaultPda,
+                        refundRecord,
+                        recipient: payment.recipient,
+                        systemProgram: anchor.web3.SystemProgram.programId
+                    })
+                    .rpc();
+            } else {
+                // Execute SPL token refund (existing logic)
+                tx = await program.methods
+                    .refundSpl(signaturePrefix, refundAmount)
+                    .accountsPartial({
+                        owner: merchantAccount.owner,
+                        merchant: merchantPda,
+                        stablecoinMint: tokenMint,
+                        merchantStablecoinAta: merchantTokenAta,
+                        recipientStablecoinAta: recipientTokenAta,
+                        refundRecord,
+                        recipient: payment.recipient,
+                        associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+                        tokenProgram: TOKEN_PROGRAM_ID,
+                        systemProgram: anchor.web3.SystemProgram.programId
+                    })
+                    .rpc();
+            }
 
             // console.log('Refund successful:', tx);
             
@@ -192,7 +226,7 @@ export function RefundButton({ program, merchantPubkey, payment, onSuccess, isDe
             if (!para) throw new Error("Para client not initialized");
             const wallets = para.getWallets();
             const paraWalletId = Object.values(wallets)[0].id;
-            const decimalAmount = refundAmountU64 / 1_000_000;
+            const decimalAmount = refundAmountU64 / Math.pow(10, tokenDecimals);
             await supabase.from('refund_events').insert([
                 {
                     parawalletid: paraWalletId,

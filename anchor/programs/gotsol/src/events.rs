@@ -14,14 +14,15 @@ pub struct MerchantClosed {
 }
 
 #[event]
-pub struct WithdrawalSplProcessed {
+pub struct WithdrawSplProcessed {
     pub amount: u64,
     pub owner_amount: u64,
     pub house_amount: u64,
+    pub mint: Pubkey,
 }
 
 #[event]
-pub struct WithdrawalSolProcessed {
+pub struct WithdrawSolProcessed {
     pub amount: u64,
     pub owner_amount: u64,
     pub house_amount: u64,

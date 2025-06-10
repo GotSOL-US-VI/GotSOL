@@ -139,6 +139,28 @@
           }
         },
         {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "merchant"
+              }
+            ]
+          }
+        },
+        {
           "name": "associated_token_program",
           "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
         },
@@ -158,16 +180,128 @@
       ]
     },
     {
-      "name": "refund",
+      "name": "refund_sol",
       "discriminator": [
-        2,
-        96,
-        183,
-        251,
-        63,
-        208,
-        46,
-        46
+        158,
+        68,
+        131,
+        114,
+        106,
+        77,
+        56,
+        13
+      ],
+      "accounts": [
+        {
+          "name": "owner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "merchant",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  101,
+                  114,
+                  99,
+                  104,
+                  97,
+                  110,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "merchant.entity_name",
+                "account": "Merchant"
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "merchant"
+              }
+            ]
+          }
+        },
+        {
+          "name": "refund_record",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  102,
+                  117,
+                  110,
+                  100
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "original_tx_sig"
+              }
+            ]
+          }
+        },
+        {
+          "name": "recipient",
+          "writable": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "original_tx_sig",
+          "type": "string"
+        },
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "refund_spl",
+      "discriminator": [
+        121,
+        79,
+        57,
+        29,
+        6,
+        199,
+        238,
+        125
       ],
       "accounts": [
         {
@@ -471,16 +605,101 @@
       ]
     },
     {
-      "name": "withdraw",
+      "name": "withdraw_sol",
       "discriminator": [
-        183,
-        18,
-        70,
-        156,
-        148,
-        109,
-        161,
-        34
+        145,
+        131,
+        74,
+        136,
+        65,
+        137,
+        42,
+        38
+      ],
+      "accounts": [
+        {
+          "name": "owner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "merchant",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  101,
+                  114,
+                  99,
+                  104,
+                  97,
+                  110,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "merchant.entity_name",
+                "account": "Merchant"
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "merchant"
+              }
+            ]
+          }
+        },
+        {
+          "name": "house",
+          "writable": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "withdraw_spl",
+      "discriminator": [
+        181,
+        154,
+        94,
+        86,
+        62,
+        115,
+        6,
+        186
       ],
       "accounts": [
         {
@@ -869,16 +1088,29 @@
       ]
     },
     {
-      "name": "WithdrawalProcessed",
+      "name": "WithdrawSolProcessed",
       "discriminator": [
-        127,
-        92,
-        169,
-        199,
-        212,
-        241,
-        193,
-        65
+        43,
+        191,
+        41,
+        84,
+        77,
+        31,
+        179,
+        115
+      ]
+    },
+    {
+      "name": "WithdrawSplProcessed",
+      "discriminator": [
+        236,
+        23,
+        184,
+        86,
+        114,
+        128,
+        223,
+        120
       ]
     }
   ],
@@ -911,7 +1143,17 @@
     {
       "code": 6005,
       "name": "BelowMinimumWithdrawal",
-      "msg": "Withdrawal amount is below minimum allowed amount!"
+      "msg": "Withdrawal amount is below minimum amount!"
+    },
+    {
+      "code": 6006,
+      "name": "InvalidWithdrawalAmount",
+      "msg": "Invalid withdrawal amount: calculated amount is zero!"
+    },
+    {
+      "code": 6007,
+      "name": "InsufficientRentBalance",
+      "msg": "Insufficient balance: withdrawal would leave vault below rent-exempt threshold!"
     }
   ],
   "types": [
@@ -934,6 +1176,10 @@
           },
           {
             "name": "merchant_bump",
+            "type": "u8"
+          },
+          {
+            "name": "vault_bump",
             "type": "u8"
           }
         ]
@@ -992,13 +1238,45 @@
       }
     },
     {
-      "name": "WithdrawalProcessed",
+      "name": "WithdrawSolProcessed",
       "type": {
         "kind": "struct",
         "fields": [
           {
             "name": "amount",
             "type": "u64"
+          },
+          {
+            "name": "owner_amount",
+            "type": "u64"
+          },
+          {
+            "name": "house_amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "WithdrawSplProcessed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "owner_amount",
+            "type": "u64"
+          },
+          {
+            "name": "house_amount",
+            "type": "u64"
+          },
+          {
+            "name": "mint",
+            "type": "pubkey"
           }
         ]
       }
