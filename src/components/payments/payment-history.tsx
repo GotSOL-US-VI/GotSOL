@@ -2,7 +2,7 @@
 
 import { useWallet } from '@getpara/react-sdk';
 import { PublicKey, ParsedTransactionWithMeta, ParsedInstruction, PartiallyDecodedInstruction, Connection } from '@solana/web3.js';
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useState } from 'react';
 import { useConnection } from '@/lib/connection-context';
 import { formatSolscanDevnetLink } from '@/utils/format-transaction-link';
 import { toastUtils } from '@/utils/toast-utils';
@@ -28,6 +28,7 @@ interface Payment {
     memo: string | null;
     timestamp: number;
     sender: PublicKey;
+    token: string; // Add token field to track payment token type
 }
 
 interface ParsedInstructionWithInfo extends ParsedInstruction {
@@ -88,16 +89,16 @@ async function fetchPaymentData(
     try {
         // Get the merchant's USDC ATA
         const usdcMint = isDevnet ? USDC_DEVNET_MINT : USDC_MINT;
-        const merchantUsdcAta = await findAssociatedTokenAddress(merchantPubkey, usdcMint);
+        const merchantStablecoinAta = await findAssociatedTokenAddress(merchantPubkey, usdcMint);
         
         // First check if the ATA exists
-        const ataInfo = await connection.getAccountInfo(merchantUsdcAta);
+        const ataInfo = await connection.getAccountInfo(merchantStablecoinAta);
         if (!ataInfo) {
             return [];
         }
 
         // Get all signatures for the merchant's USDC ATA
-        const signatures = await connection.getSignaturesForAddress(merchantUsdcAta, {
+        const signatures = await connection.getSignaturesForAddress(merchantStablecoinAta, {
             limit: 250
         });
 
@@ -140,7 +141,7 @@ async function fetchPaymentData(
                             destination = parsedData.info.destination;
                         }
 
-                        return destination === merchantUsdcAta.toString();
+                        return destination === merchantStablecoinAta.toString();
                     }
                 );
 
@@ -186,7 +187,8 @@ async function fetchPaymentData(
                     amount: Number(amount) / Math.pow(10, 6),
                     memo,
                     timestamp: tx.blockTime ? tx.blockTime * 1000 : Date.now(),
-                    sender: new PublicKey(authority)
+                    sender: new PublicKey(authority),
+                    token: 'USDC' // All payments in this flow are USDC transfers
                 });
             } catch (err) {
                 console.error('Error processing transaction:', err);
@@ -205,6 +207,9 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
     const { data: wallet } = useWallet();
     const { connection } = useConnection();
     const queryClient = useQueryClient();
+    
+    // State to track which payment cards are locked open (by signature)
+    const [lockedPayments, setLockedPayments] = useState<Set<string>>(new Set());
     
     // Use our custom payment cache hook for localStorage persistence
     const { savePaymentsToCache } = usePaymentCache(merchantPubkey, isDevnet);
@@ -235,8 +240,8 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
         
         try {
             const usdcMint = isDevnet ? USDC_DEVNET_MINT : USDC_MINT;
-            const merchantUsdcAta = await findAssociatedTokenAddress(merchantPubkey, usdcMint);
-            const balance = await connection.getTokenAccountBalance(merchantUsdcAta).catch(() => null);
+            const merchantStablecoinAta = await findAssociatedTokenAddress(merchantPubkey, usdcMint);
+            const balance = await connection.getTokenAccountBalance(merchantStablecoinAta).catch(() => null);
             return balance ? Number(balance.value.uiAmount || 0) : 0;
         } catch (error) {
             console.error('Error fetching balance:', error);
@@ -287,7 +292,7 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
             if (!tx || !tx.meta) return null;
 
             const usdcMint = isDevnet ? USDC_DEVNET_MINT : USDC_MINT;
-            const merchantUsdcAta = await findAssociatedTokenAddress(merchantPubkey, usdcMint);
+            const merchantStablecoinAta = await findAssociatedTokenAddress(merchantPubkey, usdcMint);
 
             // Find the token transfer instruction
             const transferInstruction = tx.transaction.message.instructions.find(
@@ -313,7 +318,7 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
                             amount = parsedData.info.tokenAmount?.amount || parsedData.info.amount;
                         }
 
-                        return destination === merchantUsdcAta.toString();
+                        return destination === merchantStablecoinAta.toString();
                     }
                     return false;
                 }
@@ -357,7 +362,8 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
                 amount: Number(amount) / Math.pow(10, 6),
                 memo,
                 timestamp: tx.blockTime ? tx.blockTime * 1000 : Date.now(),
-                sender: new PublicKey(authority)
+                sender: new PublicKey(authority),
+                token: 'USDC' // All payments in this flow are USDC transfers
             };
 
             return payment;
@@ -377,7 +383,7 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
         const setupSubscription = async () => {
             try {
                 const usdcMint = isDevnet ? USDC_DEVNET_MINT : USDC_MINT;
-                const merchantUsdcAta = await findAssociatedTokenAddress(merchantPubkey, usdcMint);
+                const merchantStablecoinAta = await findAssociatedTokenAddress(merchantPubkey, usdcMint);
 
                 // Prefill the processed signatures set with existing payment signatures
                 const existingPayments = queryClient.getQueryData<Payment[]>(
@@ -385,16 +391,18 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
                 ) || [];
                 existingPayments.forEach(p => processedSignatures.add(p.signature));
 
+                console.log(`Setting up subscription for merchant ATA: ${merchantStablecoinAta.toString()}`);
+
                 // Subscribe to account changes
                 const subscriptionId = connection.onAccountChange(
-                    merchantUsdcAta,
+                    merchantStablecoinAta,
                     // Add explicit types to callback parameters
                     async (_accountInfo, _context) => {
                         // Add a small delay to avoid rate limiting
                         await new Promise<void>(resolve => setTimeout(resolve, 100));
                         
                         // Get the latest transaction signature
-                        const signatures = await connection.getSignaturesForAddress(merchantUsdcAta, {
+                        const signatures = await connection.getSignaturesForAddress(merchantStablecoinAta, {
                             limit: 1
                         }) as TransactionSignatureResult[];
 
@@ -486,6 +494,19 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
         };
     }, [connection, merchantPubkey, isDevnet, processNewTransaction, queryClient, savePaymentsToCache, onPaymentReceived]);
 
+    // Function to toggle lock state for a specific payment
+    const togglePaymentLock = (signature: string) => {
+        setLockedPayments(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(signature)) {
+                newSet.delete(signature);
+            } else {
+                newSet.add(signature);
+            }
+            return newSet;
+        });
+    };
+
     if (isLoading) {
         return (
             <div className="space-y-4">
@@ -531,7 +552,12 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
                         gap: "12px"
                     }}
                 >
-                    {payments.map((payment: Payment) => (
+                    {payments.map((payment: Payment) => {
+                        const isLocked = lockedPayments.has(payment.signature);
+                        // Payment history amounts are independent - only show if individually locked
+                        const shouldShowAmount = isLocked;
+                        
+                        return (
                         <div 
                             key={payment.signature} 
                             className="card bg-[#1C1C1C] shadow flex-shrink-0"
@@ -541,7 +567,31 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
                                 <div className="flex justify-between items-start">
                                     <div className="space-y-1">
                                         <p className="text-gray font-medium">
-                                            +{formatUSDCAmount(payment.amount)} USDC
+                                            {shouldShowAmount ? (
+                                                <span 
+                                                    className="cursor-pointer select-none"
+                                                    onClick={() => togglePaymentLock(payment.signature)}
+                                                    title="Click to unlock and hide amount"
+                                                >
+                                                    +{formatUSDCAmount(payment.amount)} USDC {isLocked}
+                                                </span>
+                                            ) : (
+                                                <span 
+                                                    className="cursor-pointer hover:opacity-75 transition-opacity select-none"
+                                                    title={`+${formatUSDCAmount(payment.amount)} USDC - Click to lock visible`}
+                                                    onClick={() => togglePaymentLock(payment.signature)}
+                                                    onMouseEnter={(e) => {
+                                                        // Show on hover when not locked
+                                                        e.currentTarget.textContent = `+${formatUSDCAmount(payment.amount)} USDC`;
+                                                    }}
+                                                    onMouseLeave={(e) => {
+                                                        // Hide on mouse leave when not locked
+                                                        e.currentTarget.textContent = '+••••••• USDC';
+                                                    }}
+                                                >
+                                                    +••••••• USDC
+                                                </span>
+                                            )}
                                         </p>
                                         <p className="text-gray-400 text-sm">
                                             {new Date(payment.timestamp).toLocaleString()}
@@ -571,7 +621,8 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
                                             payment={{
                                                 signature: payment.signature,
                                                 amount: payment.amount,
-                                                recipient: payment.sender
+                                                recipient: payment.sender,
+                                                token: payment.token
                                             }}
                                             onSuccess={() => queryClient.invalidateQueries({
                                                 queryKey: ['payments', merchantPubkey.toString(), isDevnet]
@@ -582,7 +633,8 @@ export function PaymentHistory({ program, merchantPubkey, isDevnet = true, onBal
                                 </div>
                             </div>
                         </div>
-                    ))}
+                        );
+                    })}
                 </div>
             )}
         </div>

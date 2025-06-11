@@ -1,6 +1,7 @@
 #![allow(unexpected_cfgs)]
 
 use anchor_lang::prelude::*;
+use solana_security_txt::security_txt;
 
 mod constants;
 mod context;
@@ -9,10 +10,20 @@ mod events;
 mod state;
 
 use crate::context::*;
-// use crate::state::{EmployeeRole, RoleLimits};
-// use crate::events::{EmployeeCreated, EmployeeUpdated, EmployeeWithdrawal, RevenuePayment};
 
-declare_id!("RKAxBK5mBxYta3FUfMLHafMj8xakd8PLsH3PXFa773r");
+declare_id!("E6MRtJg483SVLY7EvryXJXPSLybRZyCCTsDY4BhNQYb");
+
+// Security contact information embedded in the smart contract
+#[cfg(not(feature = "no-entrypoint"))]
+security_txt! {
+    name: "GotSOL",
+    project_url: "https://gotsol-dev.vercel.app",
+    contacts: "email:gotsol-dev@protonmail.com",
+    policy: "https://gotsol-dev.vercel.app/security-policy",
+    preferred_languages: "en",
+    source_code: "https://github.com/GotSOL-US-VI/GotSOL",
+    acknowledgements: "https://gotsol-dev.vercel.app/security-acknowledgments"
+}
 
 #[program]
 pub mod gotsol {
@@ -23,89 +34,38 @@ pub mod gotsol {
         Ok(())
     }
 
-    pub fn withdraw_usdc(ctx: Context<WithdrawUSDC>, amount: u64) -> Result<()> {
-        ctx.accounts.withdraw(amount)?;
+    pub fn withdraw_spl(ctx: Context<WithdrawSpl>, amount: u64) -> Result<()> {
+        ctx.accounts.withdraw_spl(amount)?;
         Ok(())
     }
 
-    pub fn refund(ctx: Context<RefundPayment>, original_tx_sig: String, amount: u64) -> Result<()> {
-        ctx.accounts.refund(original_tx_sig, amount, &ctx.bumps)?;
+    pub fn withdraw_sol(ctx: Context<WithdrawSol>, amount: u64) -> Result<()> {
+        ctx.accounts.withdraw_sol(amount)?;
         Ok(())
     }
 
-    pub fn set_merchant_status(ctx: Context<SetMerchantStatus>, is_active: bool) -> Result<()> {
-        ctx.accounts.set_status(is_active)?;
+    pub fn refund_spl(ctx: Context<RefundSpl>, original_tx_sig: String, amount: u64) -> Result<()> {
+        ctx.accounts.refund_spl(original_tx_sig, amount, &ctx.bumps)?;
         Ok(())
     }
 
-    pub fn update_refund_limit(ctx: Context<UpdateRefundLimit>, new_limit: u64) -> Result<()> {
-        ctx.accounts.update_limit(new_limit)?;
+    pub fn refund_sol(ctx: Context<RefundSol>, original_tx_sig: String, amount: u64) -> Result<()> {
+        ctx.accounts.refund_sol(original_tx_sig, amount, &ctx.bumps)?;
+        Ok(())
+    }
+
+    pub fn set_merchant_status(ctx: Context<SetMerchantStatus>, fee_eligible: bool) -> Result<()> {
+        ctx.accounts.set_status(fee_eligible)?;
+        Ok(())
+    }
+
+    pub fn close_merchant(ctx: Context<CloseMerchant>) -> Result<()> {
+        ctx.accounts.close_merchant()?;
+        Ok(())
+    }
+
+    pub fn close_refund(ctx: Context<CloseRefund>) -> Result<()> {
+        ctx.accounts.close_refund()?;
         Ok(())
     }
 }
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////// LEAVING THIS CODE HERE FOR A LATER UPGRADE, SAVING SPACE ON-CHAIN FOR NOW ///////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-// pub fn make_revenue_payment(ctx: Context<MakeRevenuePayment>) -> Result<()> {
-//     // Get the amount before making the payment
-//     let amount = ctx.accounts.compliance_escrow.amount;
-
-//     // Make the payment
-//     ctx.accounts.make_revenue_payment(&ctx.bumps)?;
-
-//     // Emit the event after the payment is made
-//     emit!(RevenuePayment {
-//         merchant: ctx.accounts.merchant.key(),
-//         amount,
-//         timestamp: Clock::get()?.unix_timestamp,
-//         lifetime_paid: ctx.accounts.compliance.lifetime_paid,
-//     });
-
-//     Ok(())
-// }
-
-// pub fn create_employee(
-//     ctx: Context<CreateEmployee>,
-//     name: String,
-//     role: EmployeeRole,
-//     custom_limits: Option<RoleLimits>
-// ) -> Result<()> {
-//     ctx.accounts.init(role, name.clone(), custom_limits)?;
-
-//     emit!(EmployeeCreated {
-//         merchant: ctx.accounts.merchant.key(),
-//         employee: ctx.accounts.employee_pubkey.key(),
-//         role: format!("{:?}", role),
-//         name,
-//     });
-
-//     Ok(())
-// }
-
-// pub fn update_employee(ctx: Context<UpdateEmployee>, role: Option<EmployeeRole>, is_active: Option<bool>) -> Result<()> {
-//     ctx.accounts.update(role, is_active)?;
-
-//     emit!(EmployeeUpdated {
-//         merchant: ctx.accounts.merchant.key(),
-//         employee: ctx.accounts.employee.employee_pubkey,
-//         new_role: role.map(|r| format!("{:?}", r)),
-//         is_active,
-//     });
-
-//     Ok(())
-// }
-
-// pub fn employee_withdraw(ctx: Context<EmployeeWithdrawUSDC>, amount: u64) -> Result<()> {
-//     ctx.accounts.withdraw(amount)?;
-
-//     emit!(EmployeeWithdrawal {
-//         merchant: ctx.accounts.merchant.key(),
-//         employee: ctx.accounts.employee_signer.key(),
-//         amount,
-//         timestamp: Clock::get()?.unix_timestamp,
-//     });
-
-//     Ok(())
-// }

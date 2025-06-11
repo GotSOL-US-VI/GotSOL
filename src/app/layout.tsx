@@ -24,29 +24,29 @@ export const metadata = {
 export const viewport = {
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  maximumScale: 5,
+  userScalable: true,
 };
 
 // Define navigation links at the server level
 const defaultLinks: NavigationLink[] = [
   { label: 'Create Merchant', path: '/merchant/setup' },
-  { label: 'Inventory', path: '/inventory_management' },
-  { label: 'Revenue', path: '/tax_compliance' },
-  { label: 'Portfolio', path: '/yield' },
+  // { label: 'Inventory', path: '/inventory_management' },
+  // { label: 'Revenue', path: '/tax_compliance' },
+  // { label: 'Portfolio', path: '/yield' },
   // { label: 'Swap', path: '/owner_yield' },
   { label: 'Roadmap', path: '/roadmap' },
-  { label: 'Colosseum Hackathon Notes', path: '/hackathon_notes' },
+  // { label: 'Colosseum Hackathon Notes', path: '/hackathon_notes' },
   // { label: 'Test Supabase', path: '/test-supabase' },
 ]
 
 const merchantLinks: NavigationLink[] = [
   { label: 'Point of Sale', path: '/merchant/dashboard/:merchantId' },
-  { label: 'Inventory', path: '/merchant/dashboard/:merchantId/inventory_management' },
-  { label: 'Revenue', path: '/merchant/dashboard/:merchantId/tax_compliance' },
-  { label: 'Treasury', path: '/merchant/dashboard/:merchantId/yield' },
+  { label: 'Manage Funds', path: '/merchant/dashboard/:merchantId/manage_funds' },
+  // { label: 'Inventory', path: '/merchant/dashboard/:merchantId/inventory_management' },
+  // { label: 'Treasury', path: '/merchant/dashboard/:merchantId/yield' },
   // { label: 'Withdraw USD', path: '/merchant/dashboard/:merchantId/off-ramps' },
-  { label: 'Roadmap', path: '/merchant/dashboard/:merchantId/roadmap' },
+  // { label: 'Roadmap', path: '/merchant/dashboard/:merchantId/roadmap' },
   { label: <ExplorerLink />, path: '#' }
 ]
 

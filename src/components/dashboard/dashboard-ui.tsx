@@ -5,6 +5,8 @@ import { AppHero } from '../ui/ui-layout'
 import { MerchantCard } from './merchant-card'
 import { EmptyMerchantState } from './empty-merchant-state'
 import { type Merchant } from '@/hooks/find-merchants'
+import { useState } from 'react'
+import { DeleteMerchantModal } from './delete-merchant-modal'
 
 export function DashboardHero({ subtitle }: { subtitle: string }) {
   return (
@@ -36,11 +38,22 @@ export function DashboardHero({ subtitle }: { subtitle: string }) {
   )
 }
 
-export function MerchantGrid({ merchants }: { merchants: Merchant[] }) {
+interface MerchantGridProps {
+  merchants: Merchant[]
+  deletionMode: boolean
+  onMerchantDelete: (merchant: Merchant) => void
+}
+
+export function MerchantGrid({ merchants, deletionMode, onMerchantDelete }: MerchantGridProps) {
   return (
     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
       {merchants.map((merchant) => (
-        <MerchantCard key={merchant.publicKey.toString()} merchant={merchant} />
+        <MerchantCard 
+          key={merchant.publicKey.toString()} 
+          merchant={merchant} 
+          deletionMode={deletionMode}
+          onDelete={() => onMerchantDelete(merchant)}
+        />
       ))}
     </div>
   )
@@ -78,11 +91,71 @@ export function DashboardContent({
   error?: string | null
   subtitle?: string
 }) {
+  const [deletionMode, setDeletionMode] = useState(false)
+  const [merchantToDelete, setMerchantToDelete] = useState<Merchant | null>(null)
+
+  const handleToggleDeletionMode = () => {
+    setDeletionMode(!deletionMode)
+    if (deletionMode) {
+      // Reset any pending deletion when exiting deletion mode
+      setMerchantToDelete(null)
+    }
+  }
+
+  const handleMerchantSelect = (merchant: Merchant) => {
+    if (deletionMode) {
+      setMerchantToDelete(merchant)
+    }
+  }
+
+  const handleConfirmDelete = () => {
+    // Reset states
+    setMerchantToDelete(null)
+    setDeletionMode(false)
+  }
+
+  const handleCancelDelete = () => {
+    setMerchantToDelete(null)
+  }
+
   return (
     <div>
       <DashboardHero subtitle={subtitle} />
 
       <div className="max-w-6xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+        {/* Trash Can Icon - Only show when merchants exist */}
+        {!isLoading && !error && merchants.length > 0 && (
+          <div className="flex justify-end mb-4">
+            <button
+              onClick={handleToggleDeletionMode}
+              className={`btn btn-sm ${deletionMode ? 'btn-error' : 'btn-ghost hover:btn-error'} tooltip tooltip-left`}
+              data-tip={deletionMode ? "Exit deletion mode" : "Delete merchant accounts"}
+            >
+              {!deletionMode && (
+                <svg 
+                  xmlns="http://www.w3.org/2000/svg" 
+                  className="h-5 w-5 text-red-500"
+                  fill="none" 
+                  viewBox="0 0 24 24" 
+                  stroke="currentColor"
+                >
+                  <path 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    strokeWidth={2} 
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" 
+                  />
+                </svg>
+              )}
+              {deletionMode && <span>Cancel</span>}
+            </button>
+          </div>
+        )}
+
+        {/* Deletion Mode Notice */}
+        {deletionMode
+        }
+
         {isLoading ? (
           <DashboardLoading />
         ) : error ? (
@@ -90,13 +163,26 @@ export function DashboardContent({
         ) : (
           <div className="space-y-8">
             {merchants.length > 0 ? (
-              <MerchantGrid merchants={merchants} />
+              <MerchantGrid 
+                merchants={merchants} 
+                deletionMode={deletionMode}
+                onMerchantDelete={handleMerchantSelect}
+              />
             ) : (
               <EmptyMerchantState />
             )}
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {merchantToDelete && (
+        <DeleteMerchantModal
+          merchant={merchantToDelete}
+          onConfirm={handleConfirmDelete}
+          onCancel={handleCancelDelete}
+        />
+      )}
     </div>
   )
 } 

@@ -15,60 +15,61 @@ interface Phase {
 const phases: Phase[] = [
   {
     number: 1,
-    title: 'Solana Breakout Hackathon v0)',
+    title: 'Solana Breakout Hackathon v0; 2 members',
     items: [
-      { text: 'Write Anchor backend; achieve a working Merchant Point of Sale program', completed: true },
-      { text: 'Deploy Anchor program to Solana devnet', completed: true },
-      { text: 'Deploy a working front-end Vercel web app', completed: true },
-      { text: 'Integrate Para MPC wallet provider for key-less user wallets via social sign-on', completed: true },
-      { text: 'Integrate gas fee-payer accounts for Merchants and their customers on devnet (1/2 completed)', completed: true },
-      { text: 'Conduct User Experience Surveys and solicit user feedback', completed: true }
+      { text: 'MVP Point of Sale on devnet', completed: true },
+      { text: 'Multi-platform, offline-capable bespoke front end', completed: true },
+      // Personnel
+      { text: 'Chief Executive', completed: true },
+      { text: 'Chief Product', completed: true },
     ],
     active: true,
   },
   {
     number: 2,
-    title: 'Prepare Program for Mainnet Launch with MVP version v1)',
+    title: 'Road to Mainnet v1, 8-12 members',
     items: [
-      { text: 'Trim the Anchor program to acceptable MVP levels (Merchant Point of Sale, 8 stablecoin options)', completed: false },
-      { text: 'Full-stack security audit', completed: false },
-      { text: 'Create video and text resources for Merchants and users on how to use the application', completed: false },
-      // { text: 'Integrate Jupiter Swap API for USDC to Perena USD* swap on main net (our first in-app DeFi yield opportunity, front-end integration only)', completed: true },
-      { text: 'Register GotSOL trade name in USVI', completed: true },
-      { text: 'Onboard interested Merchants in-person in the US Virgin Islands (20+ Verbal commitments)', completed: true },
+      // Product
+      { text: 'Multi-asset Point of Sale', completed: false },
+      { text: 'Send to Contacts', completed: false },
+      { text: 'Connect to bank account', completed: true },
+      { text: 'Rain', completed: false },
+      { text: 'Audit', completed: false },
+      // Personnel
+      { text: 'Chief Tech/Info-sec', completed: false },
+      { text: 'Engineering, 1-2', completed: false },
+      { text: '100% commission Sales reps, 2-5 (30% of net for 3 years)', completed: false },
+      { text: 'Chief Finance', completed: false },
+      { text: 'Chief Legal', completed: false },
     ],
     active: true,
   },
   {
     number: 3,
-    title: 'Onboard Merchants, Extend offerings v1.5)',
+    title: 'Mainnet v2, 15-20 members',
     items: [
-      { text: 'Build mobile iOS and Android apps for Merchants, compatible with existing point of sale hardware if possible', completed: false },
-      { text: 'Build Merchant Inventory Management System (Off-chain solution)', completed: false },
-      { text: 'Integrate Bookkeeping services for Merchants (Quickbooks, Xero)', completed: false },
-      { text: 'Build in-app Payroll Services for Merchants', completed: false },
-      { text: 'Continuous auditing backend and front-end integrations', completed: false },
+      // Product
+      { text: 'Existing Point of Sale integrations', completed: false },
+      { text: 'Inventory Management', completed: false },
+      { text: 'Perena', completed: false },
+      { text: 'Jupiter API', completed: false },
+      { text: 'Audit', completed: false },
+      // Personnel
+      { text: 'Dev Team 2, 2-3', completed: false },
+      { text: 'More Sales', completed: false },
     ],
     active: true,
   },
   {
-    number: 4,
-    title: 'Focus on Customer On-boarding (end Customers, not Merchants v1.5.5)',
+    number: 3,
+    title: 'Mainnet v3',
     items: [
-      { text: 'Build mobile app for customers focusing on quality DeFi opportunities', completed: false },
-      { text: 'On-board customers to our app using social sign-on, DeFi, and gas-less transactions', completed: false },
-      { text: 'Expand customer DeFi suite with stablecoin, SOL, and BTC yield opportunities (the simpler the better)', completed: false },
-    ],
-    active: true,
-  },
-  {
-    number: 5,
-    title: 'Integrate Merchant and Customer Feedback, start building stretch goals v2',
-    items: [
-      { text: 'Build Treasury and Yield opportunities for the Merchant (requires Anchor CPI integrations so Merchant PDAs can sign)', completed: false },
-      { text: 'Build Automated Tax and Revenue payments/compliance', completed: false },
-      { text: 'Onboard tax and revenue bureaus for interested government parties', completed: false },
-      { text: 'Build the capacity for AI-driven marketing campaigns for Merchants to drive local business, all within our app B-to-C', completed: false },
+      // Product
+      { text: 'Bookkeeping', completed: false },
+      { text: 'Payroll', completed: false },
+      { text: 'CRM', completed: false },
+      { text: 'Audits', completed: false },
+      // Personnel
     ],
     active: true,
   },
@@ -79,9 +80,9 @@ export function RoadmapPhases() {
     <div className="p-8">
       <h1 className="text-4xl font-bold mb-12 hero-gradient-text">Project Roadmap and Phases</h1>
       <div className="flex flex-col lg:flex-row gap-8 justify-between">
-        {phases.map((phase) => (
+        {phases.map((phase, index) => (
           <div
-            key={phase.number}
+            key={`${phase.number}-${index}`}
             className={`card flex-1 p-6 ${phase.active ? 'border-mint/50' : 'opacity-50'
               }`}
           >
@@ -91,14 +92,37 @@ export function RoadmapPhases() {
               <h3 className="text-lg text-mint mb-4">{phase.title}</h3>
             </div>
             <ul className="space-y-3">
-              {phase.items.map((item, index) => (
-                <li key={index} className="flex items-center gap-2">
-                  <span className={`text-2xl ${item.completed ? 'text-mint' : 'text-gray-400'}`}>
-                    {item.completed ? '✓' : '○'}
-                  </span>
-                  <span>{item.text}</span>
-                </li>
-              ))}
+              {phase.items.map((item, itemIndex) => {
+                                // Detect if this is the start of a personnel section by looking for personnel-related terms
+                const personnelTerms = ['Chief', 'Executive', 'Engineer', 'Engineering', 'Sales', 'CFO', 'CLO', 'CPO', 'CEO', 'Founder', 'Co-Founder', 'Dev Team', 'Support Staff', 'Team'];
+                const isPersonnelItem = personnelTerms.some(term => 
+                  item.text.includes(term)
+                );
+
+                // Check if this is the first personnel item (no previous personnel items before this one)
+                const previousItems = phase.items.slice(0, itemIndex);
+                const hasPreviousPersonnelItems = previousItems.some(prevItem =>
+                  personnelTerms.some(term => prevItem.text.includes(term))
+                );
+
+                const isPersonnelStart = isPersonnelItem && !hasPreviousPersonnelItems && item.text.trim() !== '';
+
+                return (
+                  <React.Fragment key={itemIndex}>
+                    {isPersonnelStart && (
+                      <li className="py-2">
+                        <div className="h-px w-full bg-mint opacity-50"></div>
+                      </li>
+                    )}
+                    <li className="flex items-center gap-2">
+                      <span className={`text-2xl ${item.completed ? 'text-mint' : 'text-gray-400'}`}>
+                        {item.completed ? '✓' : '○'}
+                      </span>
+                      <span>{item.text}</span>
+                    </li>
+                  </React.Fragment>
+                );
+              })}
             </ul>
           </div>
         ))}

@@ -5,6 +5,7 @@ import { ReactQueryProvider } from '@/app/react-query-provider';
 import { ClusterProvider } from '@/components/cluster/cluster-data-access';
 import { ConnectionProvider } from '@/lib/devnet-connection-provider';
 import { ParaProvider } from '@/components/para/para-provider';
+import { ParaErrorBoundary } from '@/components/para/para-error-boundary';
 import { DisclaimerProvider } from '@/components/ui/disclaimer-provider';
 import { SoundProvider } from '@/components/sound/sound-context';
 import Link from 'next/link';
@@ -16,6 +17,7 @@ import { AccountChecker } from '@/components/accounts/account-ui';
 import { ClusterChecker } from '@/components/cluster/cluster-ui';
 import { Footer } from '@/components/ui/footer';
 import { SoundToggle } from '@/components/sound/sound-toggle';
+import { useQueryClient } from '@tanstack/react-query';
 
 // Define proper types for links
 export interface NavigationLink {
@@ -35,13 +37,15 @@ export function ClientProviders({ children, defaultLinks, merchantLinks }: Clien
       <ClusterProvider>
         <ConnectionProvider>
           <ParaProvider>
-            <DisclaimerProvider>
-              <SoundProvider>
-                <ClientSideStateHandler defaultLinks={defaultLinks} merchantLinks={merchantLinks}>
-                  {children}
-                </ClientSideStateHandler>
-              </SoundProvider>
-            </DisclaimerProvider>
+            <ParaErrorBoundary>
+              <DisclaimerProvider>
+                <SoundProvider>
+                  <ClientSideStateHandler defaultLinks={defaultLinks} merchantLinks={merchantLinks}>
+                    {children}
+                  </ClientSideStateHandler>
+                </SoundProvider>
+              </DisclaimerProvider>
+            </ParaErrorBoundary>
           </ParaProvider>
         </ConnectionProvider>
       </ClusterProvider>
@@ -69,6 +73,7 @@ function ClientSideStateHandler({
   const { data: account } = useAccount();
   const { openModal } = useModal();
   const [mounted, setMounted] = useState(false);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     setMounted(true);
@@ -115,6 +120,12 @@ function ClientSideStateHandler({
   const handleLogoClick = () => {
     setActiveMerchant(null);
     localStorage.removeItem('activeMerchant');
+    
+    // Invalidate merchants cache to ensure fresh data when navigating home
+    queryClient.invalidateQueries({ 
+      queryKey: ['merchants'] 
+    });
+    
     router.push('/');
   };
 

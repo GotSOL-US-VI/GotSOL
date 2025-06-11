@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 
-export function TwitterLink({ url = "https://x.com/gotsolana" }: { url?: string }) {
+export function TwitterLink({ url = "https://x.com/real_GotSOL" }: { url?: string }) {
   return (
     <Link 
       href={url}

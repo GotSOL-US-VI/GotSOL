@@ -6,6 +6,7 @@ import { useWallet } from '@getpara/react-sdk';
 import Image from 'next/image';
 import { usePaymentQR } from './use-payment-qr';
 import { useSoundContext } from '@/components/sound/sound-context';
+import { TokenSelector, SupportedToken } from './token-selector';
 
 interface PaymentQRProps {
   merchantPubkey: PublicKey;
@@ -24,10 +25,12 @@ export function PaymentQR({ merchantPubkey, isDevnet = true, resetSignal }: Paym
   const [error, setError] = useState<string>('');
   const [useNumpad, setUseNumpad] = useState<boolean>(false);
   const [showSuccessIcon, setShowSuccessIcon] = useState<boolean>(false);
+  const [selectedToken, setSelectedToken] = useState<SupportedToken>('USDC');
+  const [solAmountInfo, setSolAmountInfo] = useState<{ solAmount: number; solPrice: number; expiresAt: number } | null>(null);
   const isFirstRender = useRef(true);
   const prevResetSignal = useRef(resetSignal);
 
-  // Validate USDC amount constraints
+  // Validate amount constraints (generalized for all tokens)
   const isValidAmount = (value: string): boolean => {
     // Don't allow empty strings
     if (!value) return true;
@@ -39,10 +42,10 @@ export function PaymentQR({ merchantPubkey, isDevnet = true, resetSignal }: Paym
     const wholeNum = parts[0];
     const decimals = parts[1] || '';
 
-    // Whole number can't be more than 16 digits (reasonable USDC amount limit)
+    // Whole number can't be more than 16 digits (reasonable amount limit)
     if (wholeNum.length > 16) return false;
 
-    // Decimals can't be more than 6 places (USDC decimal limit)
+    // Decimals can't be more than 6 places (most stablecoins use 6 decimals)
     if (decimals.length > 6) return false;
 
     return true;
@@ -97,7 +100,7 @@ export function PaymentQR({ merchantPubkey, isDevnet = true, resetSignal }: Paym
       }
 
       const trimmedMemo = memo.trim();
-      const result = await generatePaymentQR(numAmount, merchantPubkey, isDevnet, trimmedMemo);
+      const result = await generatePaymentQR(numAmount, merchantPubkey, isDevnet, trimmedMemo, selectedToken);
 
       if (result.error) {
         setError(result.error.message);
@@ -105,12 +108,13 @@ export function PaymentQR({ merchantPubkey, isDevnet = true, resetSignal }: Paym
       }
 
       setQrCode(result.qrCode);
+      setSolAmountInfo(result.solAmountInfo || null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     }
-  }, [amount, memo, merchantPubkey, isDevnet, generatePaymentQR]);
+  }, [amount, memo, merchantPubkey, isDevnet, generatePaymentQR, selectedToken]);
 
-  // Auto-generate QR code when amount or memo changes
+  // Auto-generate QR code when amount, memo, or selected token changes
   useEffect(() => {
     // Only generate if we have a valid amount
     if (!amount || parseFloat(amount) <= 0) {
@@ -123,7 +127,7 @@ export function PaymentQR({ merchantPubkey, isDevnet = true, resetSignal }: Paym
     }, 500); // 500ms debounce
 
     return () => clearTimeout(debounceTimer);
-  }, [amount, memo, generateQR]);
+  }, [amount, memo, selectedToken, generateQR]);
 
   // Reset state when resetSignal changes
   useEffect(() => {
@@ -154,6 +158,7 @@ export function PaymentQR({ merchantPubkey, isDevnet = true, resetSignal }: Paym
       setMemo('');
       setQrCode('');
       setError('');
+      setSolAmountInfo(null);
 
       // Hide the success icon after 3.5 seconds
       const timer = setTimeout(() => {
@@ -166,31 +171,35 @@ export function PaymentQR({ merchantPubkey, isDevnet = true, resetSignal }: Paym
   }, [resetSignal, playSound]);
 
   const renderNumberPad = (): React.ReactElement => (
-    <div className="grid grid-cols-3 gap-2 w-full mt-2">
+    <div className="grid grid-cols-3 gap-3 w-full mt-3" role="group" aria-label="Number pad for amount input">
       {[7, 8, 9, 4, 5, 6, 1, 2, 3].map((num) => (
         <button
           key={num}
-          className="btn btn-outline"
+          className="btn btn-outline text-lg h-12"
           onClick={() => handleNumberPadInput(num.toString())}
+          aria-label={`Enter number ${num}`}
         >
           {num}
         </button>
       ))}
       <button
-        className="btn btn-outline"
+        className="btn btn-outline text-lg h-12"
         onClick={() => handleNumberPadInput('.')}
+        aria-label="Enter decimal point"
       >
         .
       </button>
       <button
-        className="btn btn-outline"
+        className="btn btn-outline text-lg h-12"
         onClick={() => handleNumberPadInput('0')}
+        aria-label="Enter number 0"
       >
         0
       </button>
       <button
-        className="btn btn-outline btn-error"
+        className="btn btn-outline btn-error text-lg h-12"
         onClick={() => handleNumberPadInput('backspace')}
+        aria-label="Delete last digit"
       >
         ←
       </button>
@@ -198,15 +207,20 @@ export function PaymentQR({ merchantPubkey, isDevnet = true, resetSignal }: Paym
   );
 
   return (
-    <div className="flex flex-col items-center space-y-2 p-4">
-      <div className="form-control w-full max-w-xs">
-        <div className="flex justify-between items-center mb-2">
+    <div className="flex flex-col items-center space-y-3 p-5">
+      <div className="form-control w-full max-w-sm">
+        <TokenSelector 
+          selectedToken={selectedToken}
+          onTokenSelect={setSelectedToken}
+        />
+        <div className="flex justify-between items-center mb-3">
           <label className="label py-1">
-            <span className="label-text">Enter $ Amount in USDC</span>
+            <span className="label-text text-base">Enter $ Amount</span>
           </label>
           <button
             className="btn btn-sm btn-ghost text-[#00b5ff]"
             onClick={() => setUseNumpad(!useNumpad)}
+            aria-label={useNumpad ? 'Switch to keyboard input' : 'Switch to number pad input'}
           >
             {useNumpad ? 'Use Keyboard' : 'Use Numpad'}
           </button>
@@ -215,27 +229,37 @@ export function PaymentQR({ merchantPubkey, isDevnet = true, resetSignal }: Paym
           <input
             type="text"
             inputMode="decimal"
-            placeholder=""
-            className="input input-bordered w-full text-xl text-center"
+            placeholder="0.00"
+            className="input input-bordered w-full text-2xl text-center"
             value={amount}
             onChange={handleKeyboardInput}
             readOnly={useNumpad}
+            aria-label="Payment amount in dollars"
+            aria-describedby="amount-help"
           />
+        </div>
+        <div id="amount-help" className="sr-only">
+          Enter the payment amount in dollars
         </div>
 
         {useNumpad && renderNumberPad()}
 
         <label className="label mt-4">
-          <span className="label-text">Add a Memo (optional)</span>
+          <span className="label-text text-base">Add a Memo (optional)</span>
         </label>
         <div className="input-group">
           <input
             type="text"
             placeholder="e.g., Coffee and pastries"
-            className="input input-bordered w-full"
+            className="input input-bordered w-full text-base"
             value={memo}
             onChange={handleMemoChange}
+            aria-label="Payment memo or description"
+            aria-describedby="memo-help"
           />
+        </div>
+        <div id="memo-help" className="sr-only">
+          Optional description for this payment
         </div>
 
         {error && (
@@ -243,12 +267,12 @@ export function PaymentQR({ merchantPubkey, isDevnet = true, resetSignal }: Paym
         )}
 
         {showSuccessIcon ? (
-          <div className="mt-4 flex flex-col items-center">
-            <div className="success-icon bg-gradient-to-r from-green-400 to-green-600 shadow-lg rounded-full w-[250px] h-[250px] flex items-center justify-center">
+          <div className="mt-5 flex flex-col items-center">
+            <div className="success-icon bg-gradient-to-r from-green-400 to-green-600 shadow-lg rounded-full w-[275px] h-[275px] flex items-center justify-center">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                width="150"
-                height="150"
+                width="165"
+                height="165"
                 viewBox="0 0 24 24"
                 className="text-white"
                 fill="currentColor"
@@ -256,22 +280,36 @@ export function PaymentQR({ merchantPubkey, isDevnet = true, resetSignal }: Paym
                 <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" />
               </svg>
             </div>
-            <p className="text-sm text-green-500 font-bold mt-2">
+            <p className="text-base text-green-500 font-bold mt-3">
               Payment Received!
             </p>
           </div>
         ) : qrCode && (
-          <div className="mt-4 flex flex-col items-center">
+          <div className="mt-5 flex flex-col items-center">
             <Image
               src={qrCode}
               alt="Payment QR Code"
-              width={250}
-              height={250}
+              width={275}
+              height={275}
               className="rounded-lg"
             />
-            <p className="text-sm text-gray-500 mt-2">
-              Scan to pay {amount} USDC
-            </p>
+            {selectedToken === 'SOL' && solAmountInfo ? (
+              <div className="text-center mt-3">
+                <p className="text-base text-gray-500">
+                  Scan to pay {solAmountInfo.solAmount.toFixed(6)} SOL
+                </p>
+                <p className="text-sm text-gray-400">
+                  ~${amount} USD @ ${solAmountInfo.solPrice.toFixed(2)}/SOL
+                </p>
+                <p className="text-xs text-gray-400">
+                  Price expires: {new Date(solAmountInfo.expiresAt).toLocaleTimeString()}
+                </p>
+              </div>
+            ) : (
+              <p className="text-base text-gray-500 mt-3">
+                Scan to pay ${amount} {selectedToken}
+              </p>
+            )}
           </div>
         )}
       </div>

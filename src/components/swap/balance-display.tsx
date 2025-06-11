@@ -11,10 +11,11 @@ import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 import { useConnection } from '@/lib/connection-context';
 import { MainnetConnectionProvider } from '@/lib/mainnet-connection-provider';
 import { toastUtils } from '@/utils/toast-utils';
+import { useBalanceVisibility } from '@/hooks/use-balance-visibility';
 
 // Token addresses - using mainnet addresses directly since this is a mainnet-only component
 const USDC_MINT = new PublicKey('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v');
-const USD_STAR_MINT = new PublicKey('BenJy1n3WTx9mTjEvy63e8Q1j4RqUc6E4VBMz3ir4Wo6');
+const USD_STAR_MINT = new PublicKey('USDSwr9ApdHk5bvJKMjzff41FfuX8bSxdKcR81vTwcA');
 
 // Helper function to get associated token address
 async function findAssociatedTokenAddress(
@@ -105,12 +106,12 @@ BalanceDisplayContent.displayName = 'BalanceDisplayContent';
 function BalanceDisplayInner() {
   const { data: wallet } = useWallet();
   const { connection } = useConnection();
+  const { isBalancesVisible, toggleBalanceVisibility } = useBalanceVisibility();
   const [usdcBalance, setUsdcBalance] = useState<number | null>(null);
   const [usdStarBalance, setUsdStarBalance] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isBalancesVisible, setIsBalancesVisible] = useState(true);
   
   // Add refs to track fetch state
   const isFetching = useRef(false);
@@ -212,8 +213,8 @@ function BalanceDisplayInner() {
 
   // Toggle visibility without triggering a re-fetch
   const toggleVisibility = useCallback(() => {
-    setIsBalancesVisible(prev => !prev);
-  }, []);
+    toggleBalanceVisibility();
+  }, [toggleBalanceVisibility]);
 
   // Add a manual refresh function
   const handleRefresh = useCallback(() => {

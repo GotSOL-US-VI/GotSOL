@@ -1,41 +1,43 @@
 'use client';
 
-import * as anchor from "@coral-xyz/anchor";
 import { useState } from 'react';
-import { Program, Idl } from '@coral-xyz/anchor';
-import { PublicKey } from '@solana/web3.js';
-import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { useWallet, useClient } from "@getpara/react-sdk";
+import { PublicKey } from '@solana/web3.js';
+import * as anchor from "@coral-xyz/anchor";
+import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { ParaSolanaWeb3Signer } from "@getpara/solana-web3.js-v1-integration";
 import { toastUtils } from '@/utils/toast-utils';
-import { parseAnchorError, ErrorToastContent } from '@/utils/error-parser';
+import { formatSolscanDevnetLink } from '@/utils/format-transaction-link';
+import type { Program } from '@coral-xyz/anchor';
+import type { Gotsol } from '@/utils/gotsol-exports';
+import { useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/utils/supabaseClient';
+import { toParaSignerCompatible } from '@/types/para';
 
 interface CreateMerchantProps {
-    program: Program<Idl>;
-    onSuccess?: (merchantPubkey: PublicKey) => void;
+    program: Program<Gotsol>;
+    onSuccess?: () => void;
 }
 
 export function CreateMerchant({ program, onSuccess }: CreateMerchantProps) {
     const [name, setName] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<string>('');
+    const [error, setError] = useState('');
+    const router = useRouter();
+    const queryClient = useQueryClient();
+    
     const { data: wallet } = useWallet();
     const para = useClient();
-    const supabase = createClient();
-    
-    // Debug log to see wallet data
-    // console.log('Para wallet data:', wallet);
-    
-    // Get the public key from Para wallet's address field
     const publicKey = wallet?.address ? new PublicKey(wallet.address) : null;
-    
-    // console.log('Derived public key:', publicKey?.toString());
 
     if (!publicKey) {
         return (
-            <div className="max-w-md mx-auto p-6">
-                <p className="text-center text-lg">Please connect your wallet to create a merchant account</p>
+            <div className="card bg-base-200 shadow-xl">
+                <div className="card-body">
+                    <h2 className="card-title text-mint">Create New Merchant</h2>
+                    <p className="text-white/60">Please connect your wallet to create a merchant account.</p>
+                </div>
             </div>
         );
     }
@@ -56,6 +58,10 @@ export function CreateMerchant({ program, onSuccess }: CreateMerchantProps) {
             setIsLoading(true);
             setError('');
 
+            if (!para) {
+                throw new Error('Para client not available');
+            }
+
             // Find the merchant PDA
             const [merchantPda] = PublicKey.findProgramAddressSync(
                 [
@@ -66,16 +72,12 @@ export function CreateMerchant({ program, onSuccess }: CreateMerchantProps) {
                 program.programId
             );
 
-            // Get the USDC mint (using devnet for now)
-            const usdcMint = new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU');
-
             // Create the merchant using Para transaction signing
             const methodBuilder = program.methods
                 .createMerchant(name)
                 .accountsPartial({
                     owner: publicKey,
                     merchant: merchantPda,
-                    usdcMint,
                     tokenProgram: TOKEN_PROGRAM_ID,
                     associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
                     systemProgram: anchor.web3.SystemProgram.programId,
@@ -89,119 +91,82 @@ export function CreateMerchant({ program, onSuccess }: CreateMerchantProps) {
             transaction.recentBlockhash = blockhash;
             transaction.feePayer = publicKey;
 
-            // Create Para Solana signer
-            if (!para) {
-                throw new Error("Para client not initialized");
-            }
-            const solanaSigner = new ParaSolanaWeb3Signer(para, program.provider.connection);
+            // Create Para Solana signer - use type-safe conversion
+            const solanaSigner = new ParaSolanaWeb3Signer(toParaSignerCompatible(para), program.provider.connection);
 
-            // Sign the transaction with Para
-            const signedTx = await solanaSigner.signTransaction(transaction);
-
-            // Send the signed transaction
-            const tx = await program.provider.connection.sendRawTransaction(
-                signedTx.serialize(),
-                { skipPreflight: false }
+            // Sign and send the transaction
+            const signedTransaction = await solanaSigner.signTransaction(transaction);
+            const txSignature = await program.provider.connection.sendRawTransaction(
+                signedTransaction.serialize()
             );
 
             // Wait for confirmation
-            const confirmation = await program.provider.connection.confirmTransaction(tx, 'confirmed');
-            if (confirmation.value.err) {
-                throw new Error(`Transaction failed: ${confirmation.value.err}`);
-            }
+            await program.provider.connection.confirmTransaction(txSignature, 'confirmed');
 
-            // console.log('Created merchant:', merchantPda);
-            toastUtils.success('Merchant account created successfully!');
-            onSuccess?.(merchantPda);
+            console.log('Merchant created successfully:', txSignature);
+            toastUtils.success(`Merchant "${name}" created successfully!`);
 
-            // Store event in Supabase
-            if (!para) throw new Error("Para client not initialized");
-            const wallets = para.getWallets();
-            const paraWalletId = Object.values(wallets)[0].id;
-            await supabase.from('createmerchant_events').insert([
-                {
-                    parawalletid: paraWalletId,
-                    owner_wallet: publicKey.toString(),
-                    merchant_pda: merchantPda.toString(),
-                    name,
-                    is_active: true,
-                    refund_limit: 1000_000000,
-                    txid: tx,
-                }
-            ]);
-        } catch (err) {
-            console.error('Failed to create merchant:', err);
+            // Invalidate merchants cache to ensure fresh data on home page
+            await queryClient.invalidateQueries({ 
+                queryKey: ['merchants'] 
+            });
+
+            // Reset form
+            setName('');
             
-            // Parse the error to get a more user-friendly message
-            const parsedError = parseAnchorError(err);
-            setError(parsedError.message);
+            // Call onSuccess callback if provided
+            onSuccess?.();
 
-            // Display appropriate error toast based on the error code
-            switch (parsedError.code) {
-                case 'INVALID_MERCHANT_NAME':
-                    toastUtils.error(
-                        <ErrorToastContent 
-                            title="Invalid merchant name" 
-                            message="Merchant name cannot be empty" 
-                        />
-                    );
-                    break;
-                case 'ACCOUNT_ALREADY_EXISTS':
-                    toastUtils.error(
-                        <ErrorToastContent 
-                            title="Merchant already exists" 
-                            message="A merchant with this name already exists for your wallet" 
-                        />
-                    );
-                    break;
-                default:
-                    // Generic error message with details if available
-                    toastUtils.error(
-                        <ErrorToastContent 
-                            title="Failed to create merchant" 
-                            message={parsedError.message} 
-                        />
-                    );
-            }
+            // Navigate to the merchant dashboard
+            router.push(`/merchant/dashboard/${merchantPda.toString()}`);
+
+        } catch (error: any) {
+            console.error('Error creating merchant:', error);
+            setError(error?.message || 'Failed to create merchant');
+            toastUtils.error('Failed to create merchant', error?.message);
         } finally {
             setIsLoading(false);
         }
     };
 
     return (
-        <div className="max-w-md mx-auto p-6">
-            <h2 className="text-2xl font-bold mb-6">Create a Merchant Account</h2>
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                    <label className="label">
-                        <span className="label-text">Merchant Name</span>
-                    </label>
-                    <input
-                        type="text"
-                        className="input input-bordered w-full"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        placeholder="Enter your Merchant name"
-                        required
-                        disabled={isLoading}
-                    />
-                </div>
-
-                {error && (
-                    <div className="alert alert-error">
-                        <span>{error}</span>
+        <div className="card bg-base-200 shadow-xl">
+            <div className="card-body">
+                <h2 className="card-title text-mint">Create New Merchant</h2>
+                
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <div className="form-control">
+                        <label className="label">
+                            <span className="label-text">Merchant Name</span>
+                        </label>
+                        <input
+                            type="text"
+                            placeholder="Enter merchant name"
+                            className="input input-bordered"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            disabled={isLoading}
+                            required
+                        />
                     </div>
-                )}
 
-                <button
-                    type="submit"
-                    className={`btn btn-primary w-full ${isLoading ? 'loading' : ''}`}
-                    disabled={!publicKey || !name || isLoading}
-                >
-                    {isLoading ? 'Creating...' : 'Create Merchant'}
-                </button>
-            </form>
+                    {error && (
+                        <div className="alert alert-error">
+                            <span>{error}</span>
+                        </div>
+                    )}
+
+                    <div className="card-actions justify-end">
+                        <button
+                            type="submit"
+                            className={`btn btn-primary ${isLoading ? 'loading' : ''}`}
+                            disabled={isLoading || !name.trim()}
+                        >
+                            {isLoading ? 'Creating...' : 'Create Merchant'}
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
     );
 } 

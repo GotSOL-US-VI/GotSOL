@@ -2,6 +2,7 @@
 
 import { AppHero } from '@/components/ui/ui-layout'
 import { useState, useMemo } from 'react'
+import { useBalanceVisibility } from '@/hooks/use-balance-visibility'
 
 interface YieldPosition {
   name: string
@@ -10,6 +11,8 @@ interface YieldPosition {
 }
 
 export default function YieldPage() {
+  const { isBalancesVisible: showBalances, toggleBalanceVisibility } = useBalanceVisibility();
+
   // Mock data - in real implementation, these would come from on-chain
   const [positions] = useState<YieldPosition[]>([
     {
@@ -44,12 +47,6 @@ export default function YieldPage() {
     }
   ])
 
-  const [showBalances, setShowBalances] = useState(true);
-
-  const toggleBalances = () => {
-    setShowBalances(!showBalances);
-  };
-
   // Calculate total balance across all positions
   const totalBalance = useMemo(() => {
     const stablecoinTotal = positions.reduce((sum, pos) => sum + pos.balance, 0);
@@ -70,7 +67,7 @@ export default function YieldPage() {
           <div className="flex items-center justify-between gap-3">
             <div className="text-sm font-medium opacity-70">Total Treasury Balance</div>
             <button
-              onClick={toggleBalances}
+              onClick={toggleBalanceVisibility}
               className="btn btn-ghost btn-xs"
             >
               {showBalances ? (

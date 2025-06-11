@@ -6,7 +6,7 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-gotsol = "RKAxBK5mBxYta3FUfMLHafMj8xakd8PLsH3PXFa773r"
+gotsol = "E6MRtJg483SVLY7EvryXJXPSLybRZyCCTsDY4BhNQYb"
 
 [registry]
 # url = "http://localhost:8899"

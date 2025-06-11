@@ -4,13 +4,14 @@
 import * as anchor from '@coral-xyz/anchor';
 import { useRouter } from 'next/navigation';
 import { useMemo } from 'react';
-import idl from '../../../utils/gotsol.json';
 import { CreateMerchant } from '@/components/merchant/create-merchant';
 import { PublicKey } from '@solana/web3.js';
 import { AppHero } from '@/components/ui/ui-layout';
 import { useConnection } from '@/lib/connection-context';
 import { useWallet, useClient } from '@getpara/react-sdk';
 import { ParaSolanaWeb3Signer } from "@getpara/solana-web3.js-v1-integration";
+import { getGotsolProgram } from '@/utils/gotsol-exports';
+import { toParaSignerCompatible } from '@/types/para';
 
 export default function MerchantSetupPage() {
   // const provider = useAnchorProvider();
@@ -31,8 +32,8 @@ export default function MerchantSetupPage() {
     }
 
     try {
-      // Create Para Solana signer
-      const solanaSigner = new ParaSolanaWeb3Signer(para, connection);
+      // Create Para Solana signer - use type-safe conversion
+      const solanaSigner = new ParaSolanaWeb3Signer(toParaSignerCompatible(para), connection);
 
       // Create the provider directly with Para signer
       const provider = new anchor.AnchorProvider(
@@ -49,23 +50,17 @@ export default function MerchantSetupPage() {
         { commitment: 'confirmed' }
       );
 
-      // Set the provider globally
-      anchor.setProvider(provider);
-
-      // Create the program with correct parameter order
-      return new anchor.Program(
-        idl as anchor.Idl,
-        provider
-      );
+      // Use the helper function to get the properly typed program
+      return getGotsolProgram(provider);
     } catch (error) {
       console.error('Error creating program:', error);
       return null;
     }
   }, [connection, wallet, para]);
 
-  const handleSuccess = (merchantPubkey: PublicKey) => {
-    // Redirect to the merchant dashboard
-    router.push(`/merchant/dashboard/${merchantPubkey.toString()}`);
+  const handleSuccess = () => {
+    // Redirect to the dashboard
+    router.push('/dashboard');
   };
 
   // Early return with debug info if no wallet

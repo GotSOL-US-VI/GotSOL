@@ -16,24 +16,7 @@ body {
   padding: 0;
 }
 
-.wallet-adapter-button-trigger {
-  background: var(--color-mint) !important;
-  color: var(--button-text) !important;
-  border-radius: 8px !important;
-  padding-left: 16px !important;
-  padding-right: 16px !important;
-  transition: all 0.2s ease-in-out !important;
-}
 
-.wallet-adapter-button-trigger:hover {
-  background: var(--color-lavender) !important;
-  transform: translateY(-2px);
-}
-
-.wallet-adapter-dropdown-list,
-.wallet-adapter-button {
-  font-family: inherit !important;
-}
 
 .btn-primary {
   background: var(--color-mint) !important;
@@ -77,6 +60,15 @@ body {
   border: 1px solid var(--color-mint) !important;
   box-shadow: 4px 4px 8px rgba(137, 248, 203, 0.15) !important;
   outline: none !important;
+}
+
+/* Deletion mode styles */
+[data-theme="light"] .hover\:border-red-500:hover {
+  border-color: #ef4444 !important;
+}
+
+[data-theme="dark"] .hover\:border-red-500:hover {
+  border-color: #ef4444 !important;
 }
 
 /* Dashboard container cards - thinner borders */
