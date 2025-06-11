@@ -68,4 +68,44 @@ pub mod gotsol {
         ctx.accounts.close_refund()?;
         Ok(())
     }
+
+    pub fn create_contacts(ctx: Context<CreateContacts>) -> Result<()> {
+        ctx.accounts.create_contacts(&ctx.bumps)?;
+        Ok(())
+    }
+
+    pub fn close_contacts(ctx: Context<CloseContacts>) -> Result<()> {
+        ctx.accounts.close_contacts(&ctx.bumps)?;
+        Ok(())
+    }
+
+    pub fn append_contacts(ctx: Context<EditContacts>, contact: Pubkey) -> Result<()> {
+        ctx.accounts.append_contact(contact)?;
+        Ok(())
+    }
+
+    pub fn delete_from_contacts(ctx: Context<EditContacts>, contact: Pubkey) -> Result<()> {
+        ctx.accounts.remove_contact(contact)?;
+        Ok(())
+    }
+
+    pub fn send_spl_to_contacts(ctx: Context<SendSplToContacts>, recipients: Vec<(Pubkey, u64)>) -> Result<()> {
+        ctx.accounts.send_spl_to_contacts(recipients)?;
+        Ok(())
+    }
+
+    pub fn send_sol_to_contacts(ctx: Context<SendSolToContacts>, recipients: Vec<(Pubkey, u64)>) -> Result<()> {
+        ctx.accounts.send_sol_to_contacts(recipients)?;
+        Ok(())
+    }
+
+    pub fn send_spl(ctx: Context<SendSpl>, amount: u64) -> Result<()> {
+        ctx.accounts.send_spl(amount)?;
+        Ok(())
+    }
+
+    pub fn send_sol(ctx: Context<SendSol>, amount: u64) -> Result<()> {
+        ctx.accounts.send_sol(amount)?;
+        Ok(())
+    }
 }

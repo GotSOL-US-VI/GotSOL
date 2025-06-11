@@ -46,7 +46,7 @@ impl<'info> CreateMerchant<'info> {
         self.merchant.set_inner(Merchant {
             owner: self.owner.key(),
             entity_name: trimmed_name,
-            fee_eligible: true,
+            fee_eligible: false,
             merchant_bump: bumps.merchant,
             vault_bump: bumps.vault,
         });
@@ -326,9 +326,10 @@ impl<'info> RefundSpl<'info> {
         )?;
 
         // Emit event
-        emit!(RefundProcessed {
+        emit!(SplRefundProcessed {
             original_tx_sig,
             amount,
+            mint: self.stablecoin_mint.key(),
             recipient: self.recipient.key()
         });
 
@@ -402,7 +403,7 @@ impl<'info> RefundSol<'info> {
         transfer(cpi_ctx, amount)?;
 
         // Emit event
-        emit!(RefundProcessed {
+        emit!(SolRefundProcessed {
             original_tx_sig,
             amount,
             recipient: self.recipient.key()
@@ -473,6 +474,400 @@ pub struct CloseRefund<'info> {
 
 impl<'info> CloseRefund<'info> {
     pub fn close_refund(&mut self) -> Result<()> {
+        Ok(())
+    }
+}
+
+#[derive(Accounts)]
+pub struct CreateContacts<'info> {
+    #[account(mut)]
+    pub owner: Signer<'info>,
+
+    #[account(
+        init,
+        payer = owner,
+        seeds = [b"contacts", owner.key().as_ref()],
+        space = Contacts::LEN,
+        bump
+    )]
+    pub contacts: Box<Account<'info, Contacts>>,
+
+    pub system_program: Program<'info, System>,
+}
+
+impl<'info> CreateContacts<'info> {
+    pub fn create_contacts(&mut self, bumps: &CreateContactsBumps) -> Result<()> {
+        self.contacts.set_inner(Contacts {
+            contacts: Vec::new(),
+            bump: bumps.contacts,
+        });
+        Ok(())
+    }
+}
+
+#[derive(Accounts)]
+#[instruction(contact: Pubkey)]
+pub struct EditContacts<'info> {
+    #[account(mut)]
+    pub owner: Signer<'info>,
+
+    #[account(
+        mut,
+        seeds = [b"contacts", owner.key().as_ref()],
+        bump = contacts.bump
+    )]
+    pub contacts: Box<Account<'info, Contacts>>,
+
+    pub clock: Sysvar<'info, Clock>,
+    pub system_program: Program<'info, System>,
+}
+
+impl<'info> EditContacts<'info> {
+    pub fn append_contact(&mut self, contact: Pubkey) -> Result<()> {
+        self.contacts.add_contact(contact, &self.clock)?;
+        Ok(())
+    }
+
+    pub fn remove_contact(&mut self, contact: Pubkey) -> Result<()> {
+        self.contacts.remove_contact(contact)?;
+        Ok(())
+    }
+}
+
+#[derive(Accounts)]
+pub struct CloseContacts<'info> {
+    #[account(mut)]
+    pub owner: Signer<'info>,
+
+    #[account(
+        mut,
+        seeds = [b"contacts", owner.key().as_ref()],
+        bump = contacts.bump,
+        close = owner
+    )]
+    pub contacts: Box<Account<'info, Contacts>>,
+
+    #[account(
+        init_if_needed, payer = owner,
+        seeds = [b"close", owner.key().as_ref()],
+        space = CloseContactsRecord::LEN, bump
+    )]
+    pub contacts_closed_record: Box<Account<'info, CloseContactsRecord>>,
+
+    pub clock: Sysvar<'info, Clock>,
+    pub system_program: Program<'info, System>,
+}
+
+impl<'info> CloseContacts<'info> {
+    pub fn close_contacts(&mut self, bumps: &CloseContactsBumps) -> Result<()> {
+        
+        let current_slot = self.clock.slot;
+
+        self.contacts_closed_record.set_inner(CloseContactsRecord {
+            slot: current_slot,
+            bump: bumps.contacts_closed_record,
+        });
+        Ok(())
+    }
+}
+
+#[derive(Accounts)]
+pub struct SendSplToContacts<'info> {
+    #[account(mut)]
+    pub owner: Signer<'info>,
+
+    #[account(
+        seeds = [b"contacts", owner.key().as_ref()],
+        bump = contacts.bump
+    )]
+    pub contacts: Box<Account<'info, Contacts>>,
+
+    pub stablecoin_mint: Box<InterfaceAccount<'info, Mint>>,
+
+    #[account(mut,
+        associated_token::mint = stablecoin_mint,
+        associated_token::authority = owner
+    )]
+    pub owner_stablecoin_ata: Box<InterfaceAccount<'info, TokenAccount>>,
+
+    pub clock: Sysvar<'info, Clock>,
+    pub token_program: Interface<'info, TokenInterface>,
+    pub associated_token_program: Program<'info, AssociatedToken>,
+    pub system_program: Program<'info, System>,
+}
+
+impl<'info> SendSplToContacts<'info> {
+    pub fn send_spl_to_contacts(&mut self, recipients: Vec<(Pubkey, u64)>) -> Result<()> {
+        
+        // Ensure at least one recipient
+        require!(!recipients.is_empty(), crate::errors::CustomError::InvalidWithdrawalAmount);
+        require!(recipients.len() <= 5, crate::errors::CustomError::ContactsLimitReached);
+
+        let current_slot = self.clock.slot;
+        
+        // Calculate total amount requested
+        let total_amount: u64 = recipients.iter()
+            .map(|(_, amount)| *amount)
+            .try_fold(0u64, |acc, amount| -> Result<u64> {
+                require!(amount > 0, crate::errors::CustomError::InvalidWithdrawalAmount);
+                acc.checked_add(amount).ok_or(crate::errors::CustomError::ArithmeticOverflow.into())
+            })?;
+
+        // Validate owner has sufficient balance
+        require!(
+            self.owner_stablecoin_ata.amount >= total_amount,
+            crate::errors::CustomError::InsufficientFunds
+        );
+
+        // Get remaining accounts (should be recipient ATAs in same order as recipients vec)
+        let remaining_accounts = &self.to_account_infos()[self.to_account_infos().len() - recipients.len()..];
+        require!(
+            remaining_accounts.len() == recipients.len(),
+            crate::errors::CustomError::InvalidWithdrawalAmount
+        );
+
+        // Validate recipients and perform transfers
+        for (i, (recipient_pubkey, amount)) in recipients.iter().enumerate() {
+            // Validate recipient is in contacts (if contacts account exists)
+            self.validate_recipient_in_contacts(*recipient_pubkey, current_slot)?;
+
+            // Get recipient ATA from remaining accounts
+            let recipient_ata = &remaining_accounts[i];
+            
+            // Verify this ATA belongs to the intended recipient
+            let expected_ata = anchor_spl::associated_token::get_associated_token_address(
+                recipient_pubkey,
+                &self.stablecoin_mint.key()
+            );
+            require!(
+                recipient_ata.key() == expected_ata,
+                crate::errors::CustomError::InvalidWithdrawalAmount
+            );
+
+            // Transfer SPL tokens
+            anchor_spl::token_interface::transfer_checked(
+                CpiContext::new(
+                    self.token_program.to_account_info(),
+                    anchor_spl::token_interface::TransferChecked {
+                        from: self.owner_stablecoin_ata.to_account_info(),
+                        mint: self.stablecoin_mint.to_account_info(),
+                        to: recipient_ata.clone(),
+                        authority: self.owner.to_account_info(),
+                    },
+                ),
+                *amount,
+                self.stablecoin_mint.decimals,
+            )?;
+        }
+
+        Ok(())
+    }
+
+    fn validate_recipient_in_contacts(&self, recipient_pubkey: Pubkey, current_slot: u64) -> Result<()> {
+        // Contacts list acts as security whitelist - empty list = locked (no sends allowed)
+        require!(
+            !self.contacts.contacts.is_empty(),
+            crate::errors::CustomError::ContactNotValidated
+        );
+
+        // Validate recipient is in the contacts list and timing requirement is met
+        require!(
+            self.contacts.is_valid_contact(recipient_pubkey, current_slot),
+            crate::errors::CustomError::ContactNotValidated
+        );
+
+        Ok(())
+    }
+}
+
+#[derive(Accounts)]
+pub struct SendSolToContacts<'info> {
+    #[account(mut)]
+    pub owner: Signer<'info>,
+
+    #[account(
+        seeds = [b"contacts", owner.key().as_ref()],
+        bump = contacts.bump
+    )]
+    pub contacts: Box<Account<'info, Contacts>>,
+
+    pub clock: Sysvar<'info, Clock>,
+    pub system_program: Program<'info, System>,
+}
+
+impl<'info> SendSolToContacts<'info> {
+    pub fn send_sol_to_contacts(&mut self, recipients: Vec<(Pubkey, u64)>) -> Result<()> {
+        
+        // Ensure at least one recipient
+        require!(!recipients.is_empty(), crate::errors::CustomError::InvalidWithdrawalAmount);
+        require!(recipients.len() <= 5, crate::errors::CustomError::ContactsLimitReached);
+
+        let current_slot = self.clock.slot;
+        
+        // Calculate total amount requested
+        let total_amount: u64 = recipients.iter()
+            .map(|(_, amount)| *amount)
+            .try_fold(0u64, |acc, amount| -> Result<u64> {
+                require!(amount > 0, crate::errors::CustomError::InvalidWithdrawalAmount);
+                acc.checked_add(amount).ok_or(crate::errors::CustomError::ArithmeticOverflow.into())
+            })?;
+
+        // Validate owner has sufficient balance (including rent)
+        let owner_balance = self.owner.lamports();
+        let rent_reserve = Rent::get()?.minimum_balance(0);
+        require!(
+            owner_balance.saturating_sub(rent_reserve) >= total_amount,
+            crate::errors::CustomError::InsufficientFunds
+        );
+
+        // Get remaining accounts (should be recipient accounts in same order as recipients vec)
+        let remaining_accounts = &self.to_account_infos()[self.to_account_infos().len() - recipients.len()..];
+        require!(
+            remaining_accounts.len() == recipients.len(),
+            crate::errors::CustomError::InvalidWithdrawalAmount
+        );
+
+        // Validate recipients and perform transfers
+        for (i, (recipient_pubkey, amount)) in recipients.iter().enumerate() {
+            // Validate recipient is in contacts (if contacts account exists)
+            self.validate_recipient_in_contacts(*recipient_pubkey, current_slot)?;
+
+            // Get recipient account from remaining accounts
+            let recipient_account = &remaining_accounts[i];
+            
+            // Verify this account is the intended recipient
+            require!(
+                recipient_account.key() == *recipient_pubkey,
+                crate::errors::CustomError::InvalidWithdrawalAmount
+            );
+
+            // Transfer SOL
+            let cpi_accounts = Transfer {
+                from: self.owner.to_account_info(),
+                to: recipient_account.clone(),
+            };
+
+            let cpi_ctx = CpiContext::new(
+                self.system_program.to_account_info(),
+                cpi_accounts
+            );
+
+            transfer(cpi_ctx, *amount)?;
+        }
+
+        Ok(())
+    }
+
+    fn validate_recipient_in_contacts(&self, recipient_pubkey: Pubkey, current_slot: u64) -> Result<()> {
+        // Contacts list acts as security whitelist - empty list = locked (no sends allowed)
+        require!(
+            !self.contacts.contacts.is_empty(),
+            crate::errors::CustomError::ContactNotValidated
+        );
+
+        // Validate recipient is in the contacts list and timing requirement is met
+        require!(
+            self.contacts.is_valid_contact(recipient_pubkey, current_slot),
+            crate::errors::CustomError::ContactNotValidated
+        );
+
+        Ok(())
+    }
+}
+
+#[derive(Accounts)]
+pub struct SendSol<'info> {
+    #[account(mut)]
+    pub owner: Signer<'info>,
+
+    /// CHECK: recipient account
+    #[account(mut)]
+    pub recipient: AccountInfo<'info>,
+
+    pub system_program: Program<'info, System>,
+}
+
+impl<'info> SendSol<'info> {
+    pub fn send_sol(&mut self, amount: u64) -> Result<()> {
+        require!(amount > 0, crate::errors::CustomError::InvalidWithdrawalAmount);
+        
+        let owner_balance = self.owner.lamports();
+        let rent_reserve = Rent::get()?.minimum_balance(0);
+        require!(
+            owner_balance.saturating_sub(rent_reserve) >= amount,
+            crate::errors::CustomError::InsufficientFunds
+        );
+
+        // Transfer SOL
+        let cpi_accounts = Transfer {
+            from: self.owner.to_account_info(),
+            to: self.recipient.to_account_info(),
+        };
+
+        let cpi_ctx = CpiContext::new(
+            self.system_program.to_account_info(),
+            cpi_accounts
+        );
+
+        transfer(cpi_ctx, amount)?;
+
+        Ok(())
+    }
+}
+
+#[derive(Accounts)]
+pub struct SendSpl<'info> {
+    #[account(mut)]
+    pub owner: Signer<'info>,
+
+    pub stablecoin_mint: Box<InterfaceAccount<'info, Mint>>,
+
+    #[account(mut,
+        associated_token::mint = stablecoin_mint,
+        associated_token::authority = owner
+    )]
+    pub owner_stablecoin_ata: Box<InterfaceAccount<'info, TokenAccount>>,
+
+    /// CHECK: recipient account
+    pub recipient: AccountInfo<'info>,
+
+    #[account(init_if_needed,
+        payer = owner,
+        associated_token::mint = stablecoin_mint,
+        associated_token::authority = recipient
+    )]
+    pub recipient_ata: Box<InterfaceAccount<'info, TokenAccount>>,
+
+    pub token_program: Interface<'info, TokenInterface>,
+    pub associated_token_program: Program<'info, AssociatedToken>,
+    pub system_program: Program<'info, System>,
+}
+
+impl<'info> SendSpl<'info> {
+    pub fn send_spl(&mut self, amount: u64) -> Result<()> {
+        require!(amount > 0, crate::errors::CustomError::InvalidWithdrawalAmount);
+
+        // Validate owner has sufficient balance
+        require!(
+            self.owner_stablecoin_ata.amount >= amount,
+            crate::errors::CustomError::InsufficientFunds
+        );
+
+        // Transfer SPL tokens
+        anchor_spl::token_interface::transfer_checked(
+            CpiContext::new(
+                self.token_program.to_account_info(),
+                anchor_spl::token_interface::TransferChecked {
+                    from: self.owner_stablecoin_ata.to_account_info(),
+                    mint: self.stablecoin_mint.to_account_info(),
+                    to: self.recipient_ata.to_account_info(),
+                    authority: self.owner.to_account_info(),
+                },
+            ),
+            amount,
+            self.stablecoin_mint.decimals,
+        )?;
+
         Ok(())
     }
 }

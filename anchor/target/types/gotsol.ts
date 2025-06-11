@@ -14,6 +14,141 @@ export type Gotsol = {
   },
   "instructions": [
     {
+      "name": "appendContacts",
+      "discriminator": [
+        18,
+        120,
+        61,
+        243,
+        247,
+        48,
+        140,
+        137
+      ],
+      "accounts": [
+        {
+          "name": "owner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "contacts",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  116,
+                  97,
+                  99,
+                  116,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "clock",
+          "address": "SysvarC1ock11111111111111111111111111111111"
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "contact",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "closeContacts",
+      "discriminator": [
+        146,
+        46,
+        60,
+        232,
+        169,
+        212,
+        185,
+        171
+      ],
+      "accounts": [
+        {
+          "name": "owner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "contacts",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  116,
+                  97,
+                  99,
+                  116,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "contactsClosedRecord",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  108,
+                  111,
+                  115,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "clock",
+          "address": "SysvarC1ock11111111111111111111111111111111"
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "closeMerchant",
       "discriminator": [
         138,
@@ -89,6 +224,56 @@ export type Gotsol = {
         {
           "name": "refundRecord",
           "writable": true
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "createContacts",
+      "discriminator": [
+        192,
+        169,
+        65,
+        56,
+        115,
+        238,
+        124,
+        168
+      ],
+      "accounts": [
+        {
+          "name": "owner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "contacts",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  116,
+                  97,
+                  99,
+                  116,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
         },
         {
           "name": "systemProgram",
@@ -182,6 +367,65 @@ export type Gotsol = {
         {
           "name": "name",
           "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "deleteFromContacts",
+      "discriminator": [
+        88,
+        245,
+        235,
+        170,
+        1,
+        43,
+        253,
+        21
+      ],
+      "accounts": [
+        {
+          "name": "owner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "contacts",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  116,
+                  97,
+                  99,
+                  116,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "clock",
+          "address": "SysvarC1ock11111111111111111111111111111111"
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "contact",
+          "type": "pubkey"
         }
       ]
     },
@@ -570,6 +814,263 @@ export type Gotsol = {
           "name": "originalTxSig",
           "type": "string"
         },
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "sendSol",
+      "discriminator": [
+        214,
+        24,
+        219,
+        18,
+        3,
+        205,
+        201,
+        179
+      ],
+      "accounts": [
+        {
+          "name": "owner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "recipient",
+          "writable": true
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "sendSpl",
+      "discriminator": [
+        154,
+        91,
+        198,
+        176,
+        243,
+        141,
+        102,
+        163
+      ],
+      "accounts": [
+        {
+          "name": "owner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "stablecoinMint"
+        },
+        {
+          "name": "ownerStablecoinAta",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  215,
+                  101,
+                  161,
+                  147,
+                  217,
+                  203,
+                  225,
+                  70,
+                  206,
+                  235,
+                  121,
+                  172,
+                  28,
+                  180,
+                  133,
+                  237,
+                  95,
+                  91,
+                  55,
+                  145,
+                  58,
+                  140,
+                  245,
+                  133,
+                  126,
+                  255,
+                  0,
+                  169
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "stablecoinMint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "recipient"
+        },
+        {
+          "name": "recipientAta",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "recipient"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  215,
+                  101,
+                  161,
+                  147,
+                  217,
+                  203,
+                  225,
+                  70,
+                  206,
+                  235,
+                  121,
+                  172,
+                  28,
+                  180,
+                  133,
+                  237,
+                  95,
+                  91,
+                  55,
+                  145,
+                  58,
+                  140,
+                  245,
+                  133,
+                  126,
+                  255,
+                  0,
+                  169
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "stablecoinMint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "tokenProgram"
+        },
+        {
+          "name": "associatedTokenProgram",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
         {
           "name": "amount",
           "type": "u64"
@@ -1040,6 +1541,32 @@ export type Gotsol = {
   ],
   "accounts": [
     {
+      "name": "closeContactsRecord",
+      "discriminator": [
+        55,
+        201,
+        239,
+        217,
+        238,
+        89,
+        38,
+        78
+      ]
+    },
+    {
+      "name": "contacts",
+      "discriminator": [
+        48,
+        11,
+        52,
+        30,
+        129,
+        58,
+        6,
+        155
+      ]
+    },
+    {
       "name": "merchant",
       "discriminator": [
         71,
@@ -1081,16 +1608,29 @@ export type Gotsol = {
       ]
     },
     {
-      "name": "refundProcessed",
+      "name": "solRefundProcessed",
       "discriminator": [
-        203,
-        88,
-        236,
-        233,
+        206,
+        9,
+        59,
+        125,
+        64,
+        180,
+        6,
+        103
+      ]
+    },
+    {
+      "name": "splRefundProcessed",
+      "discriminator": [
         192,
-        178,
-        57,
-        161
+        63,
+        173,
+        110,
+        135,
+        36,
+        13,
+        236
       ]
     },
     {
@@ -1160,9 +1700,88 @@ export type Gotsol = {
       "code": 6007,
       "name": "insufficientRentBalance",
       "msg": "Insufficient balance: withdrawal would leave vault below rent-exempt threshold!"
+    },
+    {
+      "code": 6008,
+      "name": "contactsLimitReached",
+      "msg": "Maximum number of contacts reached!"
+    },
+    {
+      "code": 6009,
+      "name": "contactAlreadyExists",
+      "msg": "Contact already exists! Remove the existing contact first before re-adding."
+    },
+    {
+      "code": 6010,
+      "name": "notInContacts",
+      "msg": "Recipient is not in contacts list!"
+    },
+    {
+      "code": 6011,
+      "name": "contactNotValidated",
+      "msg": "Recipient has not cleared its 48 hour hold from time of addition to Contacts list!"
+    },
+    {
+      "code": 6012,
+      "name": "contactsListExists",
+      "msg": "The Contacts account for this Owner exists. You must use different program instructions to send funds, or add your intended recipient to the Contacts list pending a 48-hour activation time, or delete the Contacts list."
     }
   ],
   "types": [
+    {
+      "name": "closeContactsRecord",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "slot",
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "contactEntry",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pubkey",
+            "type": "pubkey"
+          },
+          {
+            "name": "slot",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "contacts",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "contacts",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "contactEntry"
+                }
+              }
+            }
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
     {
       "name": "merchant",
       "type": {
@@ -1208,7 +1827,23 @@ export type Gotsol = {
       }
     },
     {
-      "name": "refundProcessed",
+      "name": "refundRecord",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "originalTxSig",
+            "type": "string"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "solRefundProcessed",
       "type": {
         "kind": "struct",
         "fields": [
@@ -1228,7 +1863,7 @@ export type Gotsol = {
       }
     },
     {
-      "name": "refundRecord",
+      "name": "splRefundProcessed",
       "type": {
         "kind": "struct",
         "fields": [
@@ -1237,8 +1872,16 @@ export type Gotsol = {
             "type": "string"
           },
           {
-            "name": "bump",
-            "type": "u8"
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "recipient",
+            "type": "pubkey"
           }
         ]
       }
