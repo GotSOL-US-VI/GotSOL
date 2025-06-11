@@ -46,7 +46,7 @@ impl<'info> CreateMerchant<'info> {
         self.merchant.set_inner(Merchant {
             owner: self.owner.key(),
             entity_name: trimmed_name,
-            fee_eligible: true,
+            fee_eligible: false,
             merchant_bump: bumps.merchant,
             vault_bump: bumps.vault,
         });
