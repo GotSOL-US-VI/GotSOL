@@ -1,133 +1,268 @@
 import * as anchor from "@coral-xyz/anchor";
-import { Program, web3 } from "@coral-xyz/anchor";
+import { Program, web3, BN } from "@coral-xyz/anchor";
 import { Gotsol } from "../target/types/gotsol";
-import { PublicKey } from "@solana/web3.js";
+import { PublicKey, SystemProgram, Keypair } from "@solana/web3.js";
 import { assert } from "chai";
-import { TOKEN_PROGRAM_ID, createMint } from "@solana/spl-token";
-
-// associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
+import { TOKEN_PROGRAM_ID, createMint, getOrCreateAssociatedTokenAccount, mintTo, getAccount } from "@solana/spl-token";
+import { Buffer } from "buffer";
 
 describe("gotsol", () => {
-  // Configure the client to use the local cluster
   const provider = anchor.AnchorProvider.env();
   anchor.setProvider(provider);
-
   const program = anchor.workspace.Gotsol as Program<Gotsol>;
+  const AUTH_PUBKEY = new PublicKey("Hth4EBxLWJSoRWj7raCKoniuzcvXt8MUFgGKty3B66ih");
+  const HOUSE = AUTH_PUBKEY;
+  const connection = provider.connection;
 
-  // The expected house public key from the program
-  const HOUSE = new PublicKey("Hth4EBxLWJSoRWj7raCKoniuzcvXt8MUFgGKty3B66ih");
+  let owner: Keypair;
+  let merchant: PublicKey;
+  let merchantBump: number;
+  let vault: PublicKey;
+  let vaultBump: number;
+  let refundRecord: PublicKey;
+  let refundBump: number;
+  let stablecoinMint: PublicKey;
+  let stablecoinMintAuthority: Keypair;
+  let merchantStablecoinAta: PublicKey;
+  let ownerStablecoinAta: PublicKey;
+  let houseStablecoinAta: PublicKey;
+  let recipient: Keypair;
+  let recipientStablecoinAta: PublicKey;
+  let merchantName = "TestMerchant";
+  let rentExempt: number;
+  let withdrawalAmount: number;
 
-  // main net USDC address
-  const USDC_MINT = new PublicKey(
-    "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
-  );
-
-  // devnet USDC address
-  const USDC_DEVNET_MINT = new PublicKey(
-    "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"
-  );
-
-  // Create a mock USDC mint authority
-  const mockUsdcMintAuthority = web3.Keypair.generate();
-  let mockUsdcMint: PublicKey;
-
-  const [global] = web3.PublicKey.findProgramAddressSync(
-    [Buffer.from("global")],
-    program.programId
-  );
-  console.log("Global account: ", global.toBase58());
 
   before(async () => {
-    // Airdrop SOL to mint authority for creating the mint
-    const signature = await provider.connection.requestAirdrop(
-      mockUsdcMintAuthority.publicKey,
-      2 * web3.LAMPORTS_PER_SOL
-    );
-    await provider.connection.confirmTransaction(signature);
-
-    // Create the mock USDC mint
-    mockUsdcMint = await createMint(
+    owner = Keypair.generate();
+    stablecoinMintAuthority = Keypair.generate();
+    recipient = Keypair.generate();
+    let sig1 = await provider.connection.requestAirdrop(owner.publicKey, 3 * web3.LAMPORTS_PER_SOL);
+    await provider.connection.confirmTransaction(sig1, "confirmed");
+    let sig2 = await provider.connection.requestAirdrop(stablecoinMintAuthority.publicKey, 2 * web3.LAMPORTS_PER_SOL);
+    await provider.connection.confirmTransaction(sig2, "confirmed");
+    let sig3 = await provider.connection.requestAirdrop(recipient.publicKey, 2 * web3.LAMPORTS_PER_SOL);
+    await provider.connection.confirmTransaction(sig3, "confirmed");
+    let sig4 = await provider.connection.requestAirdrop(HOUSE, 1 * web3.LAMPORTS_PER_SOL);
+    await provider.connection.confirmTransaction(sig4, "confirmed");
+    stablecoinMint = await createMint(
       provider.connection,
-      mockUsdcMintAuthority,
-      mockUsdcMintAuthority.publicKey,
-      mockUsdcMintAuthority.publicKey,
-      6 // USDC has 6 decimals
+      stablecoinMintAuthority,
+      stablecoinMintAuthority.publicKey,
+      null,
+      6
     );
-    console.log("Mock USDC mint created:", mockUsdcMint.toString());
+    [merchant, merchantBump] = PublicKey.findProgramAddressSync([
+      Buffer.from("merchant"),
+      Buffer.from(merchantName),
+      owner.publicKey.toBuffer(),
+    ], program.programId);
+    [vault, vaultBump] = PublicKey.findProgramAddressSync([
+      Buffer.from("vault"),
+      merchant.toBuffer(),
+    ], program.programId);
+    merchantStablecoinAta = (await getOrCreateAssociatedTokenAccount(
+      provider.connection,
+      owner,
+      stablecoinMint,
+      merchant,
+      true
+    )).address;
+    ownerStablecoinAta = (await getOrCreateAssociatedTokenAccount(
+      provider.connection,
+      owner,
+      stablecoinMint,
+      owner.publicKey
+    )).address;
+    houseStablecoinAta = (await getOrCreateAssociatedTokenAccount(
+      provider.connection,
+      owner,
+      stablecoinMint,
+      HOUSE,
+      true
+    )).address;
+    recipientStablecoinAta = (await getOrCreateAssociatedTokenAccount(
+      provider.connection,
+      owner,
+      stablecoinMint,
+      recipient.publicKey
+    )).address;
+    await mintTo(
+      provider.connection,
+      stablecoinMintAuthority,
+      stablecoinMint,
+      merchantStablecoinAta,
+      stablecoinMintAuthority,
+      1_000_000_000
+    );
+    rentExempt = await provider.connection.getMinimumBalanceForRentExemption(0);
+    withdrawalAmount = 1_000_000;
+    const fundVaultTx = new web3.Transaction().add(
+      web3.SystemProgram.transfer({
+        fromPubkey: owner.publicKey,
+        toPubkey: vault,
+        lamports: withdrawalAmount + rentExempt + 1_000_000, // add a little extra for safety
+      })
+    );
+    await provider.sendAndConfirm(fundVaultTx, [owner]);
   });
 
-  it("should initialize global state", async () => {
-    // Get the merchant's USDC ATA address (TO MOCK USDC ON LOCALNET)
-    const [houseMockUsdcAta] = web3.PublicKey.findProgramAddressSync(
-      [HOUSE.toBuffer(), TOKEN_PROGRAM_ID.toBuffer(), mockUsdcMint.toBuffer()],
-      anchor.utils.token.ASSOCIATED_PROGRAM_ID
-    );
-
+  it("creates a merchant", async () => {
+    const tx = await program.methods
+      .createMerchant(merchantName)
+      .accountsPartial({
+        owner: owner.publicKey,
+        merchant,
+        vault,
+        associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([owner])
+      .rpc();
+    console.log("createMerchant tx:", tx);
+    const merchantAccount = await program.account.merchant.fetch(merchant);
+    console.log("Merchant pubkey:", merchant.toString());
+    console.log("Merchant owner:", merchantAccount.owner.toString());
+    console.log("Merchant name:", merchantAccount.entityName);
+    assert.equal(merchantAccount.entityName, merchantName);
+    assert.ok(merchantAccount.owner.equals(owner.publicKey));
   });
 
-  it("Initializes a Merchant called The Remedy", async () => {
-    const owner = web3.Keypair.generate();
-    console.log("New owner pubkey: ", owner.publicKey.toString());
-    const merchantName = "The Remedy";
+  it("withdraws SPL tokens", async () => {
+    const amount = new BN(1_000_000);
+    const tx = await program.methods
+      .withdrawSpl(amount)
+      .accountsPartial({
+        owner: owner.publicKey,
+        merchant,
+        stablecoinMint,
+        merchantStablecoinAta,
+        ownerStablecoinAta,
+        house: HOUSE,
+        houseStablecoinAta,
+        associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([owner])
+      .rpc();
+    console.log("withdrawSpl tx:", tx);
+    const ownerAta = await getAccount(provider.connection, ownerStablecoinAta);
+    const houseAta = await getAccount(provider.connection, houseStablecoinAta);
+    console.log("Owner SPL balance:", ownerAta.amount.toString());
+    console.log("House SPL balance:", houseAta.amount.toString());
+    assert.ok(ownerAta.amount > 0);
+    assert.ok(houseAta.amount > 0);
+  });
 
-    const [merchant] = web3.PublicKey.findProgramAddressSync(
-      [
-        Buffer.from("merchant"),
-        Buffer.from(merchantName),
-        owner.publicKey.toBuffer(),
-      ],
-      program.programId
-    );
+  it("withdraws SOL", async () => {
+    const vaultBalanceBefore = await provider.connection.getBalance(vault);
+    const rentExempt = await provider.connection.getMinimumBalanceForRentExemption(0);
+    const buffer = 1000; // Leave a small buffer to ensure rent-exempt status
+    const maxWithdraw = vaultBalanceBefore - rentExempt - buffer;
+    const amount = new BN(maxWithdraw > 0 ? maxWithdraw : 0);
+    const tx = await program.methods
+      .withdrawSol(new BN(amount))
+      .accountsPartial({
+        owner: owner.publicKey,
+        merchant,
+        vault,
+        house: HOUSE,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([owner])
+      .rpc();
+    console.log("withdrawSol tx:", tx);
+    const vaultBalance = await provider.connection.getBalance(vault);
+    console.log("Vault SOL balance:", vaultBalance.toString());
+    assert.ok(vaultBalance >= rentExempt);
+  });
 
-    // Airdrop 2 SOL to the owner
-    const signature = await provider.connection.requestAirdrop(
-      owner.publicKey,
-      2 * web3.LAMPORTS_PER_SOL
-    );
-    await provider.connection.confirmTransaction(signature);
+  it("refunds SPL tokens", async () => {
+    const originalTxSig = "mockTxSigSpl";
+    const amount = new BN(100_000);
+    [refundRecord, refundBump] = PublicKey.findProgramAddressSync([
+      Buffer.from("refund"),
+      Buffer.from(originalTxSig),
+    ], program.programId);
+    const tx = await program.methods
+      .refundSpl(originalTxSig, amount)
+      .accountsPartial({
+        owner: owner.publicKey,
+        merchant,
+        stablecoinMint,
+        merchantStablecoinAta,
+        recipientStablecoinAta,
+        refundRecord,
+        recipient: recipient.publicKey,
+        associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([owner])
+      .rpc();
+    console.log("refundSpl tx:", tx);
+    const recipientAta = await getAccount(provider.connection, recipientStablecoinAta);
+    console.log("Recipient SPL balance:", recipientAta.amount.toString());
+    assert.ok(recipientAta.amount > 0);
+  });
 
+  it("refunds SOL", async () => {
+    const originalTxSig = "mockTxSigSol";
+    const vaultBalanceBefore = await provider.connection.getBalance(vault);
+    const rentExempt = await provider.connection.getMinimumBalanceForRentExemption(0);
+    const buffer = 1000; // Leave a small buffer to ensure rent-exempt status
+    const maxRefund = vaultBalanceBefore - rentExempt - buffer;
+    const amount = new BN(maxRefund > 0 ? maxRefund : 0);
+    [refundRecord, refundBump] = PublicKey.findProgramAddressSync([
+      Buffer.from("refund"),
+      Buffer.from(originalTxSig),
+    ], program.programId);
+    const tx = await program.methods
+      .refundSol(originalTxSig, new BN(1000))
+      .accountsPartial({
+        owner: owner.publicKey,
+        merchant,
+        vault,
+        refundRecord,
+        recipient: recipient.publicKey,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([owner])
+      .rpc();
+    console.log("refundSol tx:", tx);
+    const recipientBalance = await provider.connection.getBalance(recipient.publicKey);
+    console.log("Recipient SOL balance:", recipientBalance.toString());
+    assert.ok(recipientBalance > 0);
+  });
+
+  // it("sets merchant status (skipped, cannot sign as AUTH)", async function () {
+  //   this.skip();
+  // });
+
+  it("closes merchant", async () => {
+    const tx = await program.methods
+      .closeMerchant()
+      .accountsPartial({
+        owner: owner.publicKey,
+        merchant,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([owner])
+      .rpc();
+    console.log("closeMerchant tx:", tx);
     try {
-      const tx = await program.methods
-        .createMerchant(merchantName)
-        .accountsPartial({
-          owner: owner.publicKey,
-          merchant,
-          tokenProgram: TOKEN_PROGRAM_ID,
-          associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
-          systemProgram: anchor.web3.SystemProgram.programId,
-        })
-        .signers([owner])
-        .rpc();
-
-      console.log("Transaction signature:", tx);
-
-      // Fetch and verify the merchant account
-      const merchantAccount = await program.account.merchant.fetch(merchant);
-      console.log("Merchant pubkey: ", merchant.toString());
-      console.log(
-        "Owner address from merchant state account: ",
-        merchantAccount.owner.toString()
-      );
-      console.log(
-        "Merchant's entity_name from merchant state account: ",
-        merchantAccount.entityName.toString()
-      );
-      console.log(
-        "Merchant bump from merchant state account: ",
-        merchantAccount.merchantBump
-      );
-      assert.equal(
-        merchantAccount.entityName,
-        merchantName,
-        "Merchant name should match"
-      );
-      assert.ok(
-        merchantAccount.owner.equals(owner.publicKey),
-        "Owner should match"
-      );
-    } catch (error) {
-      console.error("Error:", error);
-      throw error;
+      await program.account.merchant.fetch(merchant);
+      assert.fail("Merchant account should be closed");
+    } catch (e: any) {
+      console.log("Merchant account closed as expected");
+      assert.ok(e.message.includes("Account does not exist"));
     }
   });
+
+  // it("closes refund record (skipped, cannot sign as AUTH)", async function () {
+  //   this.skip();
+  // });
 });
+
