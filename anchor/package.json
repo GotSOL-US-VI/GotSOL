@@ -15,8 +15,10 @@
   "description": "",
   "devDependencies": {
     "@types/chai": "^4.3.20",
+    "@types/chai-as-promised": "^8.0.2",
     "@types/mocha": "^10.0.10",
     "chai": "^4.3.10",
+    "chai-as-promised": "^8.0.1",
     "mocha": "^10.2.0",
     "node-gyp": "^10.0.1",
     "ts-mocha": "^10.0.0",
@@ -24,6 +26,8 @@
     "typescript": "^5.0.4"
   },
   "dependencies": {
+    "@coral-xyz/anchor": "^0.31.1",
+    "@solana/spl-token": "^0.4.13",
     "@types/qrcode": "^1.5.5",
     "qrcode": "^1.5.4"
   }

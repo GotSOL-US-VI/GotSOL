@@ -1,5 +1,5 @@
 [toolchain]
-anchor_version = "0.30.1"
+anchor_version = "0.31.1"
 
 [features]
 resolution = true
@@ -9,14 +9,14 @@ skip-lint = false
 gotsol = "E6MRtJg483SVLY7EvryXJXPSLybRZyCCTsDY4BhNQYb"
 
 [registry]
-# url = "http://localhost:8899"
+url = "http://localhost:8899"
 # url = "https://api.mainnet-beta.solana.com"
-url = "https://api.devnet.solana.com" 
+# url = "https://api.devnet.solana.com" 
 
 [provider]
 # cluster = "mainnet"
-cluster = "devnet"
-# cluster = "localnet"
+# cluster = "devnet"
+cluster = "localnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]
