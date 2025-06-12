@@ -211,6 +211,38 @@ describe("gotsol", () => {
     assert.ok(recipientAta.amount > 0);
   });
 
+  it("attempts duplicate refund of SPL", async () => {
+    const originalTxSig = "mockTxSigSpl";
+    const amount = new BN(100_000);
+    [refundRecord, refundBump] = PublicKey.findProgramAddressSync([
+      Buffer.from("refund"),
+      Buffer.from(originalTxSig),
+    ], program.programId);
+    try {
+      const tx = await program.methods
+        .refundSpl(originalTxSig, amount)
+        .accountsPartial({
+          owner: owner.publicKey,
+          merchant,
+          stablecoinMint,
+          merchantStablecoinAta,
+          recipientStablecoinAta,
+          refundRecord,
+          recipient: recipient.publicKey,
+          associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          systemProgram: SystemProgram.programId,
+        })
+        .signers([owner])
+        .rpc();
+        assert.fail("Expected error due to duplicate refund");
+      } catch (e: any) {
+        console.log("Duplicate refund rejected as expected");
+        // console.log("Error:", e.message);
+        assert.ok(e.message.includes("already in use"));
+      }
+  });
+
   it("refunds SOL", async () => {
     const originalTxSig = "mockTxSigSol";
     const vaultBalanceBefore = await provider.connection.getBalance(vault);
@@ -240,7 +272,39 @@ describe("gotsol", () => {
     assert.ok(recipientBalance > 0);
   });
 
-  it("sets merchant status", async function () {
+  it("attempts duplicate refund of SOL", async () => {
+    const originalTxSig = "mockTxSigSol";
+    const vaultBalanceBefore = await provider.connection.getBalance(vault);
+    const rentExempt = await provider.connection.getMinimumBalanceForRentExemption(0);
+    const buffer = 1000; // Leave a small buffer to ensure rent-exempt status
+    const maxRefund = vaultBalanceBefore - rentExempt - buffer;
+    const amount = new BN(maxRefund > 0 ? maxRefund : 0);
+    [refundRecord, refundBump] = PublicKey.findProgramAddressSync([
+      Buffer.from("refund"),
+      Buffer.from(originalTxSig),
+    ], program.programId);
+    try {
+      const tx = await program.methods
+        .refundSol(originalTxSig, new BN(1000))
+        .accountsPartial({
+          owner: owner.publicKey,
+          merchant,
+          vault,
+          refundRecord,
+          recipient: recipient.publicKey,
+          systemProgram: SystemProgram.programId,
+        })
+        .signers([owner])
+        .rpc();
+      assert.fail("Expected error due to duplicate refund");
+    } catch (e: any) {
+      console.log("Duplicate refund rejected as expected");
+      // console.log("Error:", e.message);
+      assert.ok(e.message.includes("already in use"));
+    }
+  });
+
+  it("sets merchant status to true", async function () {
     const tx = await program.methods
       .setMerchantStatus(true)
       .accountsPartial({
