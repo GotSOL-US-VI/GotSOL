@@ -74,20 +74,65 @@ export function DeleteMerchantModal({ merchant, onConfirm, onCancel }: DeleteMer
         { commitment: 'confirmed' }
       );
 
-      // Get the program
+      // Get the program and check fee eligibility
       const program = getGotsolProgram(provider);
+      
+      // Check if merchant is fee-eligible
+      const merchantAccount = await (program.account as any).merchant.fetch(merchantPubkey);
+      const isFeeEligible = merchantAccount.feeEligible;
 
-      console.log('Program created, calling closeMerchant...');
+      console.log('Program created, calling closeMerchant...', { isFeeEligible });
 
-      // Call the close_merchant instruction
-      const tx = await program.methods
-        .closeMerchant()
-        .accounts({
-          owner: ownerPubkey,
-          merchant: merchantPubkey,
-          systemProgram: SystemProgram.programId,
-        })
-        .rpc();
+      let tx: string;
+
+      // Smart routing: Use API for eligible merchants, direct call for others
+      if (isFeeEligible) {
+        console.log('Using API route for fee-eligible merchant closure');
+        
+        // Use the close merchant API route for fee-eligible merchants
+        const network = 'devnet'; // TODO: Make this dynamic based on environment
+        const apiUrl = `/api/close-merchant/transaction?merchant=${merchantPubkey.toString()}&network=${network}`;
+        
+        // Get the transaction from API
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ account: ownerPubkey.toString() }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to create close merchant transaction');
+        }
+
+        const { transaction: base64Transaction } = await response.json();
+        
+        // Deserialize and sign the transaction
+        const transactionBuffer = Buffer.from(base64Transaction, 'base64');
+        const transaction = anchor.web3.Transaction.from(transactionBuffer);
+        
+        // Sign the transaction
+        const signedTransaction = await solanaSigner.signTransaction(transaction);
+        
+        // Send the signed transaction
+        tx = await connection.sendRawTransaction(signedTransaction.serialize(), {
+          skipPreflight: false,
+          preflightCommitment: 'confirmed',
+        });
+        
+      } else {
+        console.log('Using direct call for non-eligible merchant closure');
+
+        // Call the close_merchant instruction directly
+        tx = await program.methods
+          .closeMerchant()
+          .accounts({
+            owner: ownerPubkey,
+            merchant: merchantPubkey,
+            systemProgram: SystemProgram.programId,
+          })
+          .rpc();
+      }
 
       console.log('Merchant closed successfully:', tx);
 

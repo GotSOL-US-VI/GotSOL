@@ -25,7 +25,7 @@ import {
 } from '@solana/actions';
 import bs58 from 'bs58';
 import * as anchor from '@coral-xyz/anchor';
-import { getGotsolProgram } from '@/utils/gotsol-exports';
+import { getGotsolProgram, findVaultPda } from '@/utils/gotsol-exports';
 import { HOUSE, findAssociatedTokenAddress } from '@/utils/token-utils';
 import { getStablecoinMint, getStablecoinDecimals } from '@/utils/stablecoin-config';
 
@@ -390,13 +390,7 @@ export async function POST(request: NextRequest) {
       
       if (isSOLWithdrawal) {
         // For SOL withdrawals, we need the vault PDA
-        const [vaultPda] = PublicKey.findProgramAddressSync(
-          [
-            Buffer.from('vault'),
-            merchantPubkey.toBuffer()
-          ],
-          program.programId
-        );
+        const [vaultPda] = findVaultPda(merchantPubkey);
 
         const withdrawInstruction = await program.methods
           .withdrawSol(new anchor.BN(amountLamports))

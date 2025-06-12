@@ -111,6 +111,9 @@ export function ParaProvider({ children }: { children: React.ReactNode }) {
 
 export { useWallet };
 
+// Export usePara for consistency with v2 alpha SDK
+export const usePara = useClient;
+
 // Create context for the Anchor provider
 const AnchorProviderContext = createContext<anchor.AnchorProvider | null>(null);
 

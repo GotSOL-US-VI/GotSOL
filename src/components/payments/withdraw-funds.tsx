@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useConnection } from '@/lib/connection-context';
 import { PublicKey } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID } from "@solana/spl-token";
@@ -12,7 +12,7 @@ import { useWallet, useClient } from "@getpara/react-sdk";
 import * as anchor from "@coral-xyz/anchor";
 import { formatSolscanDevnetLink } from '@/utils/format-transaction-link';
 import { ParaSolanaWeb3Signer } from "@getpara/solana-web3.js-v1-integration";
-import { getGotsolProgram } from '@/utils/gotsol-exports';
+import { getGotsolProgram, findVaultPda } from '@/utils/gotsol-exports';
 import { HOUSE, findAssociatedTokenAddress } from '@/utils/token-utils';
 import { parseAnchorError, ErrorToastContent } from '@/utils/error-parser';
 import { createClient } from '@/utils/supabaseClient';
@@ -21,6 +21,8 @@ import { TokenSelector, SupportedToken } from './token-selector';
 import { useMultiTokenBalance, getTokenInfo } from '@/hooks/use-multi-token-balance';
 import { getStablecoinMint } from '@/utils/stablecoin-config';
 import { useTokenAccountListener } from '@/hooks/use-token-account-listener';
+
+
 
 interface WithdrawFundsProps {
   merchantPubkey: PublicKey;
@@ -329,13 +331,16 @@ export function WithdrawFunds({
 
         // Direct program call using our consistent token config
         if (selectedToken === 'SOL') {
+          // For SOL withdrawals, we need the vault PDA
+          const [vaultPda] = findVaultPda(merchantPubkey);
+          
           // Use withdraw_sol for SOL withdrawals
           const methodBuilder = program.methods
             .withdrawSol(new anchor.BN(withdrawAmountU64.toString()))
             .accountsPartial({
               owner: ownerPubkey,
               merchant: merchantPubkey,
-              vault: tokenAddresses.merchantAta, // For SOL, vault is the merchant's native account
+              vault: vaultPda, // Use the correct vault PDA
               house: HOUSE,
               systemProgram: anchor.web3.SystemProgram.programId,
             });

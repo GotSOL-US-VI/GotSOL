@@ -1,21 +1,22 @@
-import { useState } from 'react';
-import { useConnection } from '@/lib/connection-context';
-import * as anchor from "@coral-xyz/anchor";
-import { Program, Idl, BN } from '@coral-xyz/anchor';
+import React, { useState } from 'react';
 import { PublicKey } from '@solana/web3.js';
+import { Program } from '@coral-xyz/anchor';
 import { TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID } from '@solana/spl-token';
-import { toastUtils } from '@/utils/toast-utils';
-import { env } from '@/utils/env';
-import { formatSolscanDevnetLink } from '@/utils/format-transaction-link';
-import { useWallet } from "@getpara/react-sdk";
-import type { Gotsol } from '@/utils/gotsol-exports';
+import { Gotsol } from '@/types/anchor';
+import { useConnection } from '@/lib/connection-context';
 import { useQueryClient } from '@tanstack/react-query';
+import { parseAnchorError, ErrorToastContent } from '@/utils/error-parser';
+import { toastUtils } from '@/utils/toast-utils';
+import { formatSolscanDevnetLink } from '@/utils/format-transaction-link';
+import { createClient } from '@/utils/supabaseClient';
+import { useWallet } from "@getpara/react-sdk";
+import { usePara } from '@/components/para/para-provider';
+import * as anchor from '@coral-xyz/anchor';
 import { findAssociatedTokenAddress } from '@/utils/token-utils';
 import { getStablecoinMint, getStablecoinDecimals } from '@/utils/stablecoin-config';
-import { parseAnchorError, ErrorToastContent } from '@/utils/error-parser';
-import { useClient } from "@getpara/react-sdk";
-import { createClient } from '@/utils/supabaseClient';
-import { fetchMerchantAccount, type MerchantAccount } from '@/types/anchor';
+import { findVaultPda, findRefundRecordPda } from '@/utils/gotsol-exports';
+import { fetchMerchantAccount } from '@/types/anchor';
+import { ParaSolanaWeb3Signer } from "@getpara/solana-web3.js-v1-integration";
 
 interface RefundButtonProps {
     program: Program<Gotsol>;
@@ -36,7 +37,7 @@ export function RefundButton({ program, merchantPubkey, payment, onSuccess, isDe
     const [isLoading, setIsLoading] = useState(false);
     const queryClient = useQueryClient();
     const publicKey = wallet?.address ? new PublicKey(wallet.address) : null;
-    const para = useClient();
+    const para = usePara();
     const supabase = createClient();
 
     const handleRefund = async () => {
@@ -95,58 +96,91 @@ export function RefundButton({ program, merchantPubkey, payment, onSuccess, isDe
             const signaturePrefix = payment.signature.slice(0, 8);
 
             // Get refund record PDA using the string's UTF-8 bytes (same as .as_bytes() in Rust)
-            const [refundRecord, refundBump] = PublicKey.findProgramAddressSync(
-                [
-                    Buffer.from('refund'),
-                    Buffer.from(signaturePrefix)  // Convert string to UTF-8 bytes
-                ],
-                program.programId
-            );
+            const [refundRecord, refundBump] = findRefundRecordPda(signaturePrefix);
 
             let tx: string;
 
             // Determine if this is a SOL or SPL token refund
             const isSOLRefund = payment.token === 'SOL' || !payment.token; // Default to SOL if token not specified
 
-            if (isSOLRefund) {
-                // For SOL refunds, we need the vault PDA
-                const [vaultPda] = PublicKey.findProgramAddressSync(
-                    [
-                        Buffer.from('vault'),
-                        merchantPda.toBuffer()
-                    ],
-                    program.programId
-                );
+            // Smart routing: Use API for eligible merchants, direct call for others
+            if (isFeeEligible) {
+                console.log('Using API route for fee-eligible merchant refund');
+                
+                // Use the refund API route for fee-eligible merchants
+                const network = isDevnet ? 'devnet' : 'mainnet';
+                const apiUrl = `/api/refund/transaction?merchant=${merchantPubkey.toString()}&amount=${payment.amount}&recipient=${payment.recipient.toString()}&txSig=${signaturePrefix}&network=${network}&token=${paymentToken}`;
+                
+                // Get the transaction from API
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ account: publicKey.toString() }),
+                });
 
-                // Execute SOL refund
-                tx = await program.methods
-                    .refundSol(signaturePrefix, refundAmount)
-                    .accountsPartial({
-                        owner: merchantAccount.owner,
-                        merchant: merchantPda,
-                        vault: vaultPda,
-                        refundRecord,
-                        recipient: payment.recipient,
-                        systemProgram: anchor.web3.SystemProgram.programId
-                    })
-                    .rpc();
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Failed to create refund transaction');
+                }
+
+                const { transaction: base64Transaction } = await response.json();
+                
+                // Deserialize and sign the transaction
+                const transactionBuffer = Buffer.from(base64Transaction, 'base64');
+                const transaction = anchor.web3.Transaction.from(transactionBuffer);
+                
+                // Sign with Para wallet
+                if (!para) throw new Error("Para client not initialized");
+                
+                // Create Para Solana signer (same as withdraw component)
+                const solanaSigner = new ParaSolanaWeb3Signer(para as any, connection);
+                
+                // Sign the transaction
+                const signedTransaction = await solanaSigner.signTransaction(transaction);
+                
+                // Send the signed transaction
+                tx = await connection.sendRawTransaction(signedTransaction.serialize(), {
+                    skipPreflight: false,
+                    preflightCommitment: 'confirmed',
+                });
+                
             } else {
-                // Execute SPL token refund (existing logic)
-                tx = await program.methods
-                    .refundSpl(signaturePrefix, refundAmount)
-                    .accountsPartial({
-                        owner: merchantAccount.owner,
-                        merchant: merchantPda,
-                        stablecoinMint: tokenMint,
-                        merchantStablecoinAta: merchantTokenAta,
-                        recipientStablecoinAta: recipientTokenAta,
-                        refundRecord,
-                        recipient: payment.recipient,
-                        associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
-                        tokenProgram: TOKEN_PROGRAM_ID,
-                        systemProgram: anchor.web3.SystemProgram.programId
-                    })
-                    .rpc();
+                console.log('Using direct call for non-eligible merchant refund');
+
+                if (isSOLRefund) {
+                    // For SOL refunds, we need the vault PDA
+                    const [vaultPda] = findVaultPda(merchantPda);
+
+                    // Execute SOL refund
+                    tx = await program.methods
+                        .refundSol(signaturePrefix, refundAmount)
+                        .accountsPartial({
+                            owner: merchantAccount.owner,
+                            merchant: merchantPda,
+                            vault: vaultPda,
+                            refundRecord,
+                            recipient: payment.recipient,
+                            systemProgram: anchor.web3.SystemProgram.programId
+                        })
+                        .rpc();
+                } else {
+                    // Execute SPL token refund (existing logic)
+                    tx = await program.methods
+                        .refundSpl(signaturePrefix, refundAmount)
+                        .accountsPartial({
+                            owner: merchantAccount.owner,
+                            merchant: merchantPda,
+                            stablecoinMint: tokenMint,
+                            merchantStablecoinAta: merchantTokenAta,
+                            recipientStablecoinAta: recipientTokenAta,
+                            refundRecord,
+                            recipient: payment.recipient,
+                            associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+                            tokenProgram: TOKEN_PROGRAM_ID,
+                            systemProgram: anchor.web3.SystemProgram.programId
+                        })
+                        .rpc();
+                }
             }
 
             // console.log('Refund successful:', tx);

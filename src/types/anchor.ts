@@ -2,6 +2,8 @@ import { Program, Idl } from '@coral-xyz/anchor';
 import { PublicKey } from '@solana/web3.js';
 import type { Gotsol } from '@/utils/gotsol-exports';
 
+export type { Gotsol };
+
 // Define proper merchant account structure
 export interface MerchantAccount {
   owner: PublicKey;

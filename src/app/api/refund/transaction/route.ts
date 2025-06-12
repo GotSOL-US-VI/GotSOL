@@ -23,7 +23,7 @@ import {
 } from '@solana/actions';
 import bs58 from 'bs58';
 import * as anchor from '@coral-xyz/anchor';
-import { getGotsolProgram } from '@/utils/gotsol-exports';
+import { getGotsolProgram, findVaultPda, findRefundRecordPda } from '@/utils/gotsol-exports';
 import { USDC_MINT, USDC_DEVNET_MINT, findAssociatedTokenAddress } from '@/utils/token-utils';
 
 // RPC URL configuration
@@ -386,20 +386,11 @@ export async function POST(request: NextRequest) {
       const program = getGotsolProgram(tempProvider);
       
       // Calculate refund record PDA
-      const [refundRecordPda] = PublicKey.findProgramAddressSync(
-        [Buffer.from("refund"), Buffer.from(txSigParam)],
-        program.programId
-      );
+      const [refundRecordPda] = findRefundRecordPda(txSigParam);
       
       if (isSOLRefund) {
         // For SOL refunds, we need the vault PDA
-        const [vaultPda] = PublicKey.findProgramAddressSync(
-          [
-            Buffer.from('vault'),
-            merchantPubkey.toBuffer()
-          ],
-          program.programId
-        );
+        const [vaultPda] = findVaultPda(merchantPubkey);
 
         const refundInstruction = await program.methods
           .refundSol(txSigParam, new anchor.BN(amountLamports))
