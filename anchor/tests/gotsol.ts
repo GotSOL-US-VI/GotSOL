@@ -5,6 +5,8 @@ import { PublicKey, SystemProgram, Keypair } from "@solana/web3.js";
 import { assert } from "chai";
 import { TOKEN_PROGRAM_ID, createMint, getOrCreateAssociatedTokenAccount, mintTo, getAccount } from "@solana/spl-token";
 import { Buffer } from "buffer";
+import wallet from "/home/agent/.config/solana/id.json";
+
 
 describe("gotsol", () => {
   const provider = anchor.AnchorProvider.env();
@@ -13,6 +15,7 @@ describe("gotsol", () => {
   const AUTH_PUBKEY = new PublicKey("Hth4EBxLWJSoRWj7raCKoniuzcvXt8MUFgGKty3B66ih");
   const HOUSE = AUTH_PUBKEY;
   const connection = provider.connection;
+  const auth = Keypair.fromSecretKey(new Uint8Array(wallet));
 
   let owner: Keypair;
   let merchant: PublicKey;
@@ -237,10 +240,40 @@ describe("gotsol", () => {
     assert.ok(recipientBalance > 0);
   });
 
-  // it("sets merchant status (skipped, cannot sign as AUTH)", async function () {
-  //   this.skip();
-  // });
+  it("sets merchant status", async function () {
+    const tx = await program.methods
+      .setMerchantStatus(true)
+      .accountsPartial({
+        auth: auth.publicKey,
+        merchant,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([auth])
+      .rpc();
+    console.log("setMerchantStatus tx:", tx);
+    
+    const merchantAccount = await program.account.merchant.fetch(merchant);
+    assert.ok(merchantAccount.feeEligible === true, "Merchant fee_eligible should be true");
+    console.log("Merchant fee eligibility status:", merchantAccount.feeEligible);
+  });
 
+  it("sets merchant status to false", async function () {
+    const tx = await program.methods
+      .setMerchantStatus(false)
+      .accountsPartial({
+        auth: auth.publicKey,
+        merchant,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([auth])
+      .rpc();
+    console.log("setMerchantStatus tx:", tx);
+    
+    const merchantAccount = await program.account.merchant.fetch(merchant);
+    assert.ok(merchantAccount.feeEligible === false, "Merchant fee_eligible should be false");
+    console.log("Merchant fee eligibility status:", merchantAccount.feeEligible);
+  });
+    
   it("closes merchant", async () => {
     const tx = await program.methods
       .closeMerchant()
@@ -261,8 +294,23 @@ describe("gotsol", () => {
     }
   });
 
-  // it("closes refund record (skipped, cannot sign as AUTH)", async function () {
-  //   this.skip();
-  // });
+  it("closes refund record", async function () {
+    const tx = await program.methods
+      .closeRefund()
+      .accountsPartial({
+        auth: auth.publicKey,
+        refundRecord,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([auth])
+      .rpc();
+      try {
+        await program.account.refundRecord.fetch(refundRecord);
+        assert.fail("Refund Record account should be closed");
+      } catch (e: any) {
+        console.log("Refund Record closed as expected");
+        assert.ok(e.message.includes("Account does not exist"));
+      }
+  });
 });
 
