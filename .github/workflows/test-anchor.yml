@@ -30,7 +30,7 @@ jobs:
 
       - uses: metadaoproject/setup-anchor@v2
         with:
-          anchor-version: '0.30.1'
+          anchor-version: '0.31.1'
           node-version: '20'
           solana-cli-version: '1.18.9'
 
@@ -42,6 +42,9 @@ jobs:
 
       - name: Check solana config
         run: solana config get
+
+      - name: Install anchor dependencies
+        run: cd anchor && npm install
 
       - run: pnpm run anchor build
         shell: bash
