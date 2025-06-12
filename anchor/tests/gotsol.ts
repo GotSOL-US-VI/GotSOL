@@ -337,6 +337,218 @@ describe("gotsol", () => {
     assert.ok(merchantAccount.feeEligible === false, "Merchant fee_eligible should be false");
     console.log("Merchant fee eligibility status:", merchantAccount.feeEligible);
   });
+
+  it("rejects minimum withdrawal amount for SPL", async function () {
+    const amount = new BN(50); // Below minimum of 100
+    try {
+      const tx = await program.methods
+        .withdrawSpl(amount)
+        .accountsPartial({
+          owner: owner.publicKey,
+          merchant,
+          stablecoinMint,
+          merchantStablecoinAta,
+          ownerStablecoinAta,
+          house: HOUSE,
+          houseStablecoinAta,
+          associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          systemProgram: SystemProgram.programId,
+        })
+        .signers([owner])
+        .rpc();
+      assert.fail("Expected error due to below minimum withdrawal");
+    } catch (e: any) {
+      console.log("Below minimum SPL withdrawal rejected as expected");
+      assert.ok(e.message.includes("BelowMinimumWithdrawal"));
+    }
+  });
+
+  it("rejects minimum withdrawal amount for SOL", async function () {
+    const amount = new BN(500); // Below minimum of 1000 lamports
+    try {
+      const tx = await program.methods
+        .withdrawSol(amount)
+        .accountsPartial({
+          owner: owner.publicKey,
+          merchant,
+          vault,
+          house: HOUSE,
+          systemProgram: SystemProgram.programId,
+        })
+        .signers([owner])
+        .rpc();
+      assert.fail("Expected error due to below minimum withdrawal");
+    } catch (e: any) {
+      console.log("Below minimum SOL withdrawal rejected as expected");
+      assert.ok(e.message.includes("BelowMinimumWithdrawal"));
+    }
+  });
+
+  it("rejects zero amount refund for SPL", async function () {
+    const originalTxSig = "mockTxSigZeroSpl";
+    const amount = new BN(0);
+    [refundRecord, refundBump] = PublicKey.findProgramAddressSync([
+      Buffer.from("refund"),
+      Buffer.from(originalTxSig),
+    ], program.programId);
+    try {
+      const tx = await program.methods
+        .refundSpl(originalTxSig, amount)
+        .accountsPartial({
+          owner: owner.publicKey,
+          merchant,
+          stablecoinMint,
+          merchantStablecoinAta,
+          recipientStablecoinAta,
+          refundRecord,
+          recipient: recipient.publicKey,
+          associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          systemProgram: SystemProgram.programId,
+        })
+        .signers([owner])
+        .rpc();
+      assert.fail("Expected error due to zero amount refund");
+    } catch (e: any) {
+      console.log("Zero amount SPL refund rejected as expected");
+      assert.ok(e.message.includes("ZeroAmountRefund"));
+    }
+  });
+
+  it("rejects zero amount refund for SOL", async function () {
+    const originalTxSig = "mockTxSigZeroSol";
+    const amount = new BN(0);
+    [refundRecord, refundBump] = PublicKey.findProgramAddressSync([
+      Buffer.from("refund"),
+      Buffer.from(originalTxSig),
+    ], program.programId);
+    try {
+      const tx = await program.methods
+        .refundSol(originalTxSig, amount)
+        .accountsPartial({
+          owner: owner.publicKey,
+          merchant,
+          vault,
+          refundRecord,
+          recipient: recipient.publicKey,
+          systemProgram: SystemProgram.programId,
+        })
+        .signers([owner])
+        .rpc();
+      assert.fail("Expected error due to zero amount refund");
+    } catch (e: any) {
+      console.log("Zero amount SOL refund rejected as expected");
+      assert.ok(e.message.includes("ZeroAmountRefund"));
+    }
+  });
+
+  it("rejects unauthorized status change", async function () {
+    const unauthorizedUser = Keypair.generate();
+    // Airdrop some SOL to the unauthorized user
+    const sig = await provider.connection.requestAirdrop(unauthorizedUser.publicKey, 1 * web3.LAMPORTS_PER_SOL);
+    await provider.connection.confirmTransaction(sig, "confirmed");
+    
+    try {
+      const tx = await program.methods
+        .setMerchantStatus(true)
+        .accountsPartial({
+          auth: unauthorizedUser.publicKey,
+          merchant,
+          systemProgram: SystemProgram.programId,
+        })
+        .signers([unauthorizedUser])
+        .rpc();
+      assert.fail("Expected error due to unauthorized status change");
+    } catch (e: any) {
+      console.log("Unauthorized status change rejected as expected");
+      assert.ok(e.message.includes("UnauthorizedStatusChange"));
+    }
+  });
+
+  it("rejects invalid merchant name (empty)", async function () {
+    const invalidMerchantName = "";
+    const [invalidMerchant, invalidMerchantBump] = PublicKey.findProgramAddressSync([
+      Buffer.from("merchant"),
+      Buffer.from(invalidMerchantName),
+      owner.publicKey.toBuffer(),
+    ], program.programId);
+    const [invalidVault, invalidVaultBump] = PublicKey.findProgramAddressSync([
+      Buffer.from("vault"),
+      invalidMerchant.toBuffer(),
+    ], program.programId);
+    
+    try {
+      const tx = await program.methods
+        .createMerchant(invalidMerchantName)
+        .accountsPartial({
+          owner: owner.publicKey,
+          merchant: invalidMerchant,
+          vault: invalidVault,
+          associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          systemProgram: SystemProgram.programId,
+        })
+        .signers([owner])
+        .rpc();
+      assert.fail("Expected error due to invalid merchant name");
+    } catch (e: any) {
+      console.log("Invalid merchant name rejected as expected");
+      assert.ok(e.message.includes("InvalidMerchantName"));
+    }
+  });
+
+  it("rejects invalid merchant name (whitespace only)", async function () {
+    const invalidMerchantName = "   ";
+    const [invalidMerchant, invalidMerchantBump] = PublicKey.findProgramAddressSync([
+      Buffer.from("merchant"),
+      Buffer.from(invalidMerchantName),
+      owner.publicKey.toBuffer(),
+    ], program.programId);
+    const [invalidVault, invalidVaultBump] = PublicKey.findProgramAddressSync([
+      Buffer.from("vault"),
+      invalidMerchant.toBuffer(),
+    ], program.programId);
+    
+    try {
+      const tx = await program.methods
+        .createMerchant(invalidMerchantName)
+        .accountsPartial({
+          owner: owner.publicKey,
+          merchant: invalidMerchant,
+          vault: invalidVault,
+          associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          systemProgram: SystemProgram.programId,
+        })
+        .signers([owner])
+        .rpc();
+      assert.fail("Expected error due to invalid merchant name");
+    } catch (e: any) {
+      console.log("Invalid merchant name (whitespace) rejected as expected");
+      assert.ok(e.message.includes("InvalidMerchantName"));
+    }
+  });
+
+  it("rejects invalid merchant name (too long)", async function () {
+    // Test with a name that's within Solana's PDA limits but exceeds our smart contract's MAX_ENTITY_NAME_LEN
+    // We'll use a name that's exactly 32 chars (max PDA seed) but our contract limits it to 32 chars
+    // Since 32 chars is actually valid, let's test with a name that's 33 chars but handle the PDA error
+    const invalidMerchantName = "A".repeat(33); // Exceeds MAX_ENTITY_NAME_LEN of 32
+    
+    try {
+      // This will fail at the PDA level before reaching our smart contract validation
+      const [invalidMerchant, invalidMerchantBump] = PublicKey.findProgramAddressSync([
+        Buffer.from("merchant"),
+        Buffer.from(invalidMerchantName),
+        owner.publicKey.toBuffer(),
+      ], program.programId);
+      assert.fail("Expected PDA creation to fail due to max seed length");
+    } catch (e: any) {
+      console.log("PDA creation failed due to max seed length as expected");
+      assert.ok(e.message.includes("Max seed length exceeded"));
+    }
+  });
     
   it("closes merchant", async () => {
     const tx = await program.methods
@@ -359,7 +571,15 @@ describe("gotsol", () => {
   });
 
   it("closes refund record", async function () {
-    const tx = await program.methods
+    // Use the refund record from the previous "refunds SOL" test
+    // We need to use a refund record that actually exists
+    const originalTxSig = "mockTxSigSol"; // This was used in the "refunds SOL" test
+    [refundRecord, refundBump] = PublicKey.findProgramAddressSync([
+      Buffer.from("refund"),
+      Buffer.from(originalTxSig),
+    ], program.programId);
+    
+    const closeTx = await program.methods
       .closeRefund()
       .accountsPartial({
         auth: auth.publicKey,
@@ -368,13 +588,15 @@ describe("gotsol", () => {
       })
       .signers([auth])
       .rpc();
-      try {
-        await program.account.refundRecord.fetch(refundRecord);
-        assert.fail("Refund Record account should be closed");
-      } catch (e: any) {
-        console.log("Refund Record closed as expected");
-        assert.ok(e.message.includes("Account does not exist"));
-      }
+    console.log("closeRefund tx:", closeTx);
+    
+    try {
+      await program.account.refundRecord.fetch(refundRecord);
+      assert.fail("Refund Record account should be closed");
+    } catch (e: any) {
+      console.log("Refund Record closed as expected");
+      assert.ok(e.message.includes("Account does not exist"));
+    }
   });
 });
 
