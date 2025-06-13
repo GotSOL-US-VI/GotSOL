@@ -7,11 +7,14 @@ use crate::state::RefundRecord;
 use crate::errors::*;
 use crate::events::*;
 
-
-
 #[derive(Accounts)]
 #[instruction(original_tx_sig: String, amount: u64)]
 pub struct RefundSol<'info> {
+
+    // our node's fee payer
+    #[account(mut)]
+    pub fee_payer: Option<Signer<'info>>,
+
     #[account(mut, 
         constraint = amount > 0 @ CustomError::ZeroAmountRefund)]
     pub owner: Signer<'info>,
@@ -24,13 +27,12 @@ pub struct RefundSol<'info> {
     #[account(mut, 
         seeds = [b"vault", merchant.key().as_ref()], 
         bump = merchant.vault_bump,
-        constraint = vault.lamports() >= amount @ CustomError::InsufficientFunds,
-        constraint = vault.lamports().checked_sub(amount).unwrap() >= Rent::get()?.minimum_balance(0) @ CustomError::InsufficientRentBalance)]
+        constraint = vault.lamports() >= amount @ CustomError::InsufficientFunds)]
     pub vault: SystemAccount<'info>,
 
     #[account(
         init,
-        payer = owner,
+        payer = fee_payer.as_ref().unwrap_or(&owner),
         seeds = [b"refund", original_tx_sig.as_bytes()],
         space = RefundRecord::LEN,
         bump

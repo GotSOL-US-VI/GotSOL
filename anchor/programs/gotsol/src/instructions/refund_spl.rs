@@ -12,6 +12,11 @@ use anchor_spl::{
 #[derive(Accounts)]
 #[instruction(original_tx_sig: String, amount: u64)]
 pub struct RefundSpl<'info> {
+
+    // our node's fee payer
+    #[account(mut)]
+    pub fee_payer: Option<Signer<'info>>,
+
     #[account(mut, 
         constraint = amount > 0 @ CustomError::ZeroAmountRefund)]
     pub owner: Signer<'info>,
@@ -37,7 +42,7 @@ pub struct RefundSpl<'info> {
 
     #[account(
         init,
-        payer = owner,
+        payer = fee_payer.as_ref().unwrap_or(&owner),
         seeds = [b"refund", original_tx_sig.as_bytes()],
         space = RefundRecord::LEN,
         bump
