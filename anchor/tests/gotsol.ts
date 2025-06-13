@@ -1161,47 +1161,48 @@ describe("gotsol", () => {
     }
   });
 
-  it("rejects SOL refund that would leave vault below rent-exempt threshold", async function () {
-    // Get current vault balance and rent-exempt amount
-    const vaultBalance = await provider.connection.getBalance(vault);
-    const rentExempt = await provider.connection.getMinimumBalanceForRentExemption(0);
+  // I DON'T THINK THIS TEST MAKES ANY SENSE ANYMORE!!! RENT EXEMPTION DOESN'T MEAN ANYTHING FOR OUR SYSTEMACCOUNT VAULT PDA!
+  // it("rejects SOL refund that would leave vault below rent-exempt threshold", async function () {
+  //   // Get current vault balance and rent-exempt amount
+  //   const vaultBalance = await provider.connection.getBalance(vault);
+  //   const rentExempt = await provider.connection.getMinimumBalanceForRentExemption(0);
     
-    // Try to refund an amount that would leave exactly rent-exempt amount
-    const refundAmount = vaultBalance - rentExempt;
+  //   // Try to refund an amount that would leave exactly rent-exempt amount
+  //   const refundAmount = vaultBalance - rentExempt;
     
-    if (refundAmount > 0) {
-      const originalTxSig = "mockTxSigExactSol";
-      [refundRecord, refundBump] = PublicKey.findProgramAddressSync([
-        Buffer.from("refund"),
-        Buffer.from(originalTxSig),
-      ], program.programId);
+  //   if (refundAmount > 0) {
+  //     const originalTxSig = "mockTxSigExactSol";
+  //     [refundRecord, refundBump] = PublicKey.findProgramAddressSync([
+  //       Buffer.from("refund"),
+  //       Buffer.from(originalTxSig),
+  //     ], program.programId);
       
-      try {
-        const tx = await program.methods
-          .refundSol(originalTxSig, new BN(refundAmount))
-          .accountsPartial({
-            owner: owner.publicKey,
-            merchant,
-            vault,
-            refundRecord,
-            recipient: recipient.publicKey,
-            systemProgram: SystemProgram.programId,
-          })
-          .signers([owner])
-          .rpc();
-        console.log("Rent-exempt threshold SOL refund succeeded as expected");
-        assert.ok(true, "Contract allows refunding up to rent-exempt threshold");
-      } catch (e: any) {
-        console.log("Rent-exempt threshold SOL refund failed:", e.message);
-        // This might fail due to other constraints
-        assert.ok(e.message.includes("ZeroAmountRefund") || e.message.includes("InsufficientFunds"), 
-          "Expected appropriate error for rent-exempt threshold refund");
-      }
-    } else {
-      console.log("Vault balance too low to test rent-exempt threshold refund");
-      assert.ok(true, "Skipped test due to insufficient vault balance");
-    }
-  });
+  //     try {
+  //       const tx = await program.methods
+  //         .refundSol(originalTxSig, new BN(refundAmount))
+  //         .accountsPartial({
+  //           owner: owner.publicKey,
+  //           merchant,
+  //           vault,
+  //           refundRecord,
+  //           recipient: recipient.publicKey,
+  //           systemProgram: SystemProgram.programId,
+  //         })
+  //         .signers([owner])
+  //         .rpc();
+  //       console.log("Rent-exempt threshold SOL refund succeeded as expected");
+  //       assert.ok(true, "Contract allows refunding up to rent-exempt threshold");
+  //     } catch (e: any) {
+  //       console.log("Rent-exempt threshold SOL refund failed:", e.message);
+  //       // This might fail due to other constraints
+  //       assert.ok(e.message.includes("ZeroAmountRefund") || e.message.includes("InsufficientFunds"), 
+  //         "Expected appropriate error for rent-exempt threshold refund");
+  //     }
+  //   } else {
+  //     console.log("Vault balance too low to test rent-exempt threshold refund");
+  //     assert.ok(true, "Skipped test due to insufficient vault balance");
+  //   }
+  // });
     
   it("closes merchant", async () => {
     const tx = await program.methods
