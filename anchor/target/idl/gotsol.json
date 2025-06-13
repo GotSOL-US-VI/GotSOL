@@ -193,6 +193,12 @@
       ],
       "accounts": [
         {
+          "name": "fee_payer",
+          "writable": true,
+          "signer": true,
+          "optional": true
+        },
+        {
           "name": "owner",
           "writable": true,
           "signer": true
@@ -304,6 +310,12 @@
         125
       ],
       "accounts": [
+        {
+          "name": "fee_payer",
+          "writable": true,
+          "signer": true,
+          "optional": true
+        },
         {
           "name": "owner",
           "writable": true,

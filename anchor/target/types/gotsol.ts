@@ -199,6 +199,12 @@ export type Gotsol = {
       ],
       "accounts": [
         {
+          "name": "feePayer",
+          "writable": true,
+          "signer": true,
+          "optional": true
+        },
+        {
           "name": "owner",
           "writable": true,
           "signer": true
@@ -310,6 +316,12 @@ export type Gotsol = {
         125
       ],
       "accounts": [
+        {
+          "name": "feePayer",
+          "writable": true,
+          "signer": true,
+          "optional": true
+        },
         {
           "name": "owner",
           "writable": true,

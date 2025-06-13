@@ -5,12 +5,17 @@ use anchor_lang::prelude::*;
 use solana_security_txt::security_txt;
 
 mod constants;
-mod context;
+// mod context;
 mod errors;
 mod events;
-mod state;
+// mod state;
 
-use crate::context::*;
+// use crate::context::*;
+
+pub mod instructions;
+pub mod state;
+
+use instructions::*;
 
 declare_id!("E6MRtJg483SVLY7EvryXJXPSLybRZyCCTsDY4BhNQYb");
 
