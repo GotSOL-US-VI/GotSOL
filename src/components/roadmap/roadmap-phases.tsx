@@ -32,8 +32,7 @@ const phases: Phase[] = [
       // Product
       { text: 'Multi-asset Point of Sale', completed: false },
       { text: 'Send to Contacts', completed: false },
-      { text: 'Connect to bank account', completed: true },
-      { text: 'Rain', completed: false },
+      { text: 'Withdraw to bank account', completed: true },
       { text: 'Audit', completed: false },
       // Personnel
       { text: 'Chief Tech/Info-sec', completed: false },

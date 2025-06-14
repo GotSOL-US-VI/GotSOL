@@ -13,7 +13,7 @@ import * as anchor from "@coral-xyz/anchor";
 import { formatSolscanDevnetLink } from '@/utils/format-transaction-link';
 import { ParaSolanaWeb3Signer } from "@getpara/solana-web3.js-v1-integration";
 import { getGotsolProgram } from '@/utils/gotsol-exports';
-import { HOUSE, findAssociatedTokenAddress } from '@/utils/token-utils';
+import { HOUSE, GOV, findAssociatedTokenAddress } from '@/utils/token-utils';
 import { parseAnchorError, ErrorToastContent } from '@/utils/error-parser';
 import { createClient } from '@/utils/supabaseClient';
 import { fetchMerchantAccount } from '@/types/anchor';
@@ -237,7 +237,8 @@ export function WithdrawFunds({
         merchantBalance,
         withdrawAmount,
         withdrawAmountU64,
-        tokenDecimals: tokenConfig.info.decimals
+        tokenDecimals: tokenConfig.info.decimals,
+        isFeeEligible
       });
       
       let txid: string;
@@ -341,8 +342,36 @@ export function WithdrawFunds({
             });
 
           txid = await methodBuilder.rpc();
+        } else if (selectedToken === 'USDC') {
+          // Use withdraw_usdc for USDC withdrawals (includes compliance escrow)
+          // Find compliance escrow PDA
+          const [complianceEscrowPda] = PublicKey.findProgramAddressSync(
+            [
+              Buffer.from('compliance_escrow'),
+              merchantPubkey.toBuffer()
+            ],
+            program.programId
+          );
+
+          const methodBuilder = program.methods
+            .withdrawUsdc(new anchor.BN(withdrawAmountU64.toString()))
+            .accountsPartial({
+              owner: ownerPubkey,
+              merchant: merchantPubkey,
+              usdcMint: tokenConfig.mint,
+              merchantUsdcAta: merchantTokenAta,
+              complianceEscrow: complianceEscrowPda,
+              ownerUsdcAta: ownerTokenAta,
+              house: HOUSE,
+              houseUsdcAta: houseTokenAta,
+              tokenProgram: TOKEN_PROGRAM_ID,
+              associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+              systemProgram: anchor.web3.SystemProgram.programId,
+            });
+
+          txid = await methodBuilder.rpc();
         } else {
-          // Use withdraw_spl for SPL token withdrawals
+          // Use withdraw_spl for other SPL token withdrawals
           const methodBuilder = program.methods
             .withdrawSpl(new anchor.BN(withdrawAmountU64.toString()))
             .accountsPartial({
@@ -373,6 +402,11 @@ export function WithdrawFunds({
       toastUtils.success(
         <div>
           <p>Withdrawal successful!</p>
+          {selectedToken === 'USDC' && (
+            <p className="text-xs mt-1 text-blue-600">
+              💡 5% of your withdrawal has been set aside for compliance payments
+            </p>
+          )}
           <p className="text-xs mt-1">
             <a
               href={formatSolscanDevnetLink(txid)}
@@ -503,7 +537,11 @@ export function WithdrawFunds({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <h2 className="text-xl">Withdraw to Owner</h2>
-          <div className="opacity-60 cursor-help" title="1% platform fee on withdrawal amount. 99% to the Merchant&apos;s Owner. You must withdraw here first before withdrawing to a bank or card.">ⓘ</div>
+          <div className="opacity-60 cursor-help" title={
+            selectedToken === 'USDC' 
+              ? "94% to Owner, 5% to compliance escrow, 1% platform fee. USDC withdrawals include automated compliance payments."
+              : "1% platform fee on withdrawal amount. 99% to the Merchant's Owner. You must withdraw here first before withdrawing to a bank or card."
+          }>ⓘ</div>
         </div>
         <button
           onClick={() => toggleBalanceVisibility()}

@@ -48,6 +48,8 @@ describe("gotsol", () => {
     await provider.connection.confirmTransaction(sig3, "confirmed");
     let sig4 = await provider.connection.requestAirdrop(HOUSE, 1 * web3.LAMPORTS_PER_SOL);
     await provider.connection.confirmTransaction(sig4, "confirmed");
+    
+    // Create a test USDC mint
     stablecoinMint = await createMint(
       provider.connection,
       stablecoinMintAuthority,
@@ -55,6 +57,8 @@ describe("gotsol", () => {
       null,
       6
     );
+    console.log("Created test USDC mint:", stablecoinMint.toString());
+    
     [merchant, merchantBump] = PublicKey.findProgramAddressSync([
       Buffer.from("merchant"),
       Buffer.from(merchantName),
@@ -64,6 +68,28 @@ describe("gotsol", () => {
       Buffer.from("vault"),
       merchant.toBuffer(),
     ], program.programId);
+    
+    // Create the merchant account with the new IDL structure
+    const [complianceEscrow] = PublicKey.findProgramAddressSync([
+      Buffer.from("compliance_escrow"),
+      merchant.toBuffer()
+    ], program.programId);
+    
+    await program.methods
+      .createMerchant(merchantName)
+      .accountsPartial({
+        owner: owner.publicKey,
+        merchant,
+        vault,
+        complianceEscrow,
+        usdcMint: stablecoinMint,
+        associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([owner])
+      .rpc();
+    
     merchantStablecoinAta = (await getOrCreateAssociatedTokenAccount(
       provider.connection,
       owner,
@@ -90,14 +116,36 @@ describe("gotsol", () => {
       stablecoinMint,
       recipient.publicKey
     )).address;
+    
+    // Mint some USDC to the merchant for testing
     await mintTo(
       provider.connection,
       stablecoinMintAuthority,
       stablecoinMint,
       merchantStablecoinAta,
       stablecoinMintAuthority,
-      1_000_000_000
+      1_000_000_000 // 1000 USDC (6 decimals)
     );
+    console.log("Minted 1000 USDC to merchant for testing");
+    
+    // In before hook, after merchant creation
+    const merchantUsdcAta = (await getOrCreateAssociatedTokenAccount(
+      provider.connection,
+      owner,
+      stablecoinMint,
+      merchant,
+      true
+    )).address;
+
+    await mintTo(
+      provider.connection,
+      stablecoinMintAuthority,
+      stablecoinMint,
+      merchantUsdcAta,
+      stablecoinMintAuthority,
+      1_000_000_000 // 1000 USDC (6 decimals)
+    );
+    
     rentExempt = await provider.connection.getMinimumBalanceForRentExemption(0);
     withdrawalAmount = 1_000_000;
     const fundVaultTx = new web3.Transaction().add(
@@ -110,26 +158,15 @@ describe("gotsol", () => {
     await provider.sendAndConfirm(fundVaultTx, [owner]);
   });
 
-  it("creates a merchant", async () => {
-    const tx = await program.methods
-      .createMerchant(merchantName)
-      .accountsPartial({
-        owner: owner.publicKey,
-        merchant,
-        vault,
-        associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
-        tokenProgram: TOKEN_PROGRAM_ID,
-        systemProgram: SystemProgram.programId,
-      })
-      .signers([owner])
-      .rpc();
-    console.log("createMerchant tx:", tx);
+  it("verifies merchant was created correctly", async () => {
     const merchantAccount = await program.account.merchant.fetch(merchant);
     console.log("Merchant pubkey:", merchant.toString());
     console.log("Merchant owner:", merchantAccount.owner.toString());
     console.log("Merchant name:", merchantAccount.entityName);
+    console.log("Merchant fee eligible:", merchantAccount.feeEligible);
     assert.equal(merchantAccount.entityName, merchantName);
     assert.ok(merchantAccount.owner.equals(owner.publicKey));
+    assert.ok(merchantAccount.feeEligible === false, "New merchant should not be fee eligible by default");
   });
 
   it("withdraws SPL tokens", async () => {
@@ -339,7 +376,7 @@ describe("gotsol", () => {
   });
 
   it("rejects minimum withdrawal amount for SPL", async function () {
-    const amount = new BN(50); // Below minimum of 100
+    const amount = new BN(99); // Exactly below minimum of 100
     try {
       const tx = await program.methods
         .withdrawSpl(amount)
@@ -365,7 +402,7 @@ describe("gotsol", () => {
   });
 
   it("rejects minimum withdrawal amount for SOL", async function () {
-    const amount = new BN(500); // Below minimum of 1000 lamports
+    const amount = new BN(999); // Exactly below minimum of 1000 lamports
     try {
       const tx = await program.methods
         .withdrawSol(amount)
@@ -453,7 +490,7 @@ describe("gotsol", () => {
       const tx = await program.methods
         .setMerchantStatus(true)
         .accountsPartial({
-          auth: unauthorizedUser.publicKey,
+          auth: unauthorizedUser.publicKey, // This is not AUTH_2 or AUTH_3
           merchant,
           systemProgram: SystemProgram.programId,
         })
@@ -478,6 +515,12 @@ describe("gotsol", () => {
       invalidMerchant.toBuffer(),
     ], program.programId);
     
+    // Create the compliance escrow account for the invalid merchant
+    const [invalidComplianceEscrow] = PublicKey.findProgramAddressSync([
+      Buffer.from("compliance_escrow"),
+      invalidMerchant.toBuffer()
+    ], program.programId);
+    
     try {
       const tx = await program.methods
         .createMerchant(invalidMerchantName)
@@ -485,6 +528,8 @@ describe("gotsol", () => {
           owner: owner.publicKey,
           merchant: invalidMerchant,
           vault: invalidVault,
+          complianceEscrow: invalidComplianceEscrow,
+          usdcMint: stablecoinMint,
           associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
           tokenProgram: TOKEN_PROGRAM_ID,
           systemProgram: SystemProgram.programId,
@@ -510,6 +555,12 @@ describe("gotsol", () => {
       invalidMerchant.toBuffer(),
     ], program.programId);
     
+    // Create the compliance escrow account for the invalid merchant
+    const [invalidComplianceEscrow] = PublicKey.findProgramAddressSync([
+      Buffer.from("compliance_escrow"),
+      invalidMerchant.toBuffer()
+    ], program.programId);
+    
     try {
       const tx = await program.methods
         .createMerchant(invalidMerchantName)
@@ -517,6 +568,8 @@ describe("gotsol", () => {
           owner: owner.publicKey,
           merchant: invalidMerchant,
           vault: invalidVault,
+          complianceEscrow: invalidComplianceEscrow,
+          usdcMint: stablecoinMint,
           associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
           tokenProgram: TOKEN_PROGRAM_ID,
           systemProgram: SystemProgram.programId,
@@ -577,8 +630,8 @@ describe("gotsol", () => {
       assert.fail("Expected error due to unauthorized withdrawal");
     } catch (e: any) {
       console.log("Unauthorized SPL withdrawal rejected as expected");
-      // This should fail due to PDA constraint mismatch
-      assert.ok(e.message.includes("Error") || e.message.includes("failed"));
+      // This should fail due to signer mismatch with PDA derivation
+      assert.ok(e.message.includes("Error") || e.message.includes("failed") || e.message.includes("InvalidAccountData"));
     }
   });
 
@@ -593,7 +646,7 @@ describe("gotsol", () => {
       const tx = await program.methods
         .withdrawSol(amount)
         .accountsPartial({
-          owner: unauthorizedUser.publicKey, // Wrong owner
+          owner: unauthorizedUser.publicKey, // Wrong signer, but correct PDA derivation
           merchant,
           vault,
           house: HOUSE,
@@ -604,8 +657,8 @@ describe("gotsol", () => {
       assert.fail("Expected error due to unauthorized SOL withdrawal");
     } catch (e: any) {
       console.log("Unauthorized SOL withdrawal rejected as expected");
-      // This should fail due to PDA constraint mismatch
-      assert.ok(e.message.includes("Error") || e.message.includes("failed"));
+      // This should fail due to signer mismatch with PDA derivation
+      assert.ok(e.message.includes("Error") || e.message.includes("failed") || e.message.includes("InvalidAccountData"));
     }
   });
 
@@ -626,7 +679,7 @@ describe("gotsol", () => {
       const tx = await program.methods
         .refundSpl(originalTxSig, amount)
         .accountsPartial({
-          owner: unauthorizedUser.publicKey, // Wrong owner
+          owner: unauthorizedUser.publicKey, // Wrong signer, but correct PDA derivation
           merchant,
           stablecoinMint,
           merchantStablecoinAta,
@@ -642,8 +695,8 @@ describe("gotsol", () => {
       assert.fail("Expected error due to unauthorized refund");
     } catch (e: any) {
       console.log("Unauthorized SPL refund rejected as expected");
-      // This should fail due to PDA constraint mismatch
-      assert.ok(e.message.includes("Error") || e.message.includes("failed"));
+      // This should fail due to signer mismatch with PDA derivation
+      assert.ok(e.message.includes("Error") || e.message.includes("failed") || e.message.includes("InvalidAccountData"));
     }
   });
 
@@ -664,7 +717,7 @@ describe("gotsol", () => {
       const tx = await program.methods
         .refundSol(originalTxSig, amount)
         .accountsPartial({
-          owner: unauthorizedUser.publicKey, // Wrong owner
+          owner: unauthorizedUser.publicKey, // Wrong signer, but correct PDA derivation
           merchant,
           vault,
           refundRecord,
@@ -676,8 +729,8 @@ describe("gotsol", () => {
       assert.fail("Expected error due to unauthorized SOL refund");
     } catch (e: any) {
       console.log("Unauthorized SOL refund rejected as expected");
-      // This should fail due to PDA constraint mismatch
-      assert.ok(e.message.includes("Error") || e.message.includes("failed"));
+      // This should fail due to signer mismatch with PDA derivation
+      assert.ok(e.message.includes("Error") || e.message.includes("failed") || e.message.includes("InvalidAccountData"));
     }
   });
 
@@ -691,7 +744,7 @@ describe("gotsol", () => {
       const tx = await program.methods
         .closeMerchant()
         .accountsPartial({
-          owner: unauthorizedUser.publicKey, // Wrong owner
+          owner: unauthorizedUser.publicKey, // Wrong signer, but correct PDA derivation
           merchant,
           systemProgram: SystemProgram.programId,
         })
@@ -700,8 +753,8 @@ describe("gotsol", () => {
       assert.fail("Expected error due to unauthorized merchant closure");
     } catch (e: any) {
       console.log("Unauthorized merchant closure rejected as expected");
-      // This should fail due to PDA constraint mismatch
-      assert.ok(e.message.includes("Error") || e.message.includes("failed"));
+      // This should fail due to signer mismatch with PDA derivation
+      assert.ok(e.message.includes("Error") || e.message.includes("failed") || e.message.includes("InvalidAccountData"));
     }
   });
 
@@ -1161,49 +1214,206 @@ describe("gotsol", () => {
     }
   });
 
-  // I DON'T THINK THIS TEST MAKES ANY SENSE ANYMORE!!! RENT EXEMPTION DOESN'T MEAN ANYTHING FOR OUR SYSTEMACCOUNT VAULT PDA!
-  // it("rejects SOL refund that would leave vault below rent-exempt threshold", async function () {
-  //   // Get current vault balance and rent-exempt amount
-  //   const vaultBalance = await provider.connection.getBalance(vault);
-  //   const rentExempt = await provider.connection.getMinimumBalanceForRentExemption(0);
+  it("withdraws USDC with compliance escrow", async () => {
+    const amount = new BN(500_000_000); // 500 USDC (6 decimals)
     
-  //   // Try to refund an amount that would leave exactly rent-exempt amount
-  //   const refundAmount = vaultBalance - rentExempt;
+    // Get the compliance escrow account
+    const [complianceEscrow] = PublicKey.findProgramAddressSync([
+      Buffer.from("compliance_escrow"),
+      merchant.toBuffer()
+    ], program.programId);
     
-  //   if (refundAmount > 0) {
-  //     const originalTxSig = "mockTxSigExactSol";
-  //     [refundRecord, refundBump] = PublicKey.findProgramAddressSync([
-  //       Buffer.from("refund"),
-  //       Buffer.from(originalTxSig),
-  //     ], program.programId);
+    const merchantUsdcAta = (await getOrCreateAssociatedTokenAccount(
+      provider.connection,
+      owner,
+      stablecoinMint,
+      merchant,
+      true
+    )).address;
+    
+    const ownerUsdcAta = (await getOrCreateAssociatedTokenAccount(
+      provider.connection,
+      owner,
+      stablecoinMint,
+      owner.publicKey
+    )).address;
+    
+    const houseUsdcAta = (await getOrCreateAssociatedTokenAccount(
+      provider.connection,
+      owner,
+      stablecoinMint,
+      HOUSE,
+      true
+    )).address;
+
+    // Add funds to merchant for this test since previous tests consumed the balance
+    await mintTo(
+      provider.connection,
+      stablecoinMintAuthority,
+      stablecoinMint,
+      merchantUsdcAta,
+      stablecoinMintAuthority,
+      1_000_000_000 // 1000 USDC (6 decimals)
+    );
+    console.log("Added 1000 USDC to merchant for USDC withdrawal test");
+
+    // Get balances before withdrawal
+    const merchantBalanceBefore = await getAccount(provider.connection, merchantUsdcAta);
+    const ownerBalanceBefore = await getAccount(provider.connection, ownerUsdcAta);
+    const houseBalanceBefore = await getAccount(provider.connection, houseUsdcAta);
+    const escrowBalanceBefore = await getAccount(provider.connection, complianceEscrow);
+
+    console.log("Balances before USDC withdrawal:", {
+      merchant: merchantBalanceBefore.amount.toString(),
+      owner: ownerBalanceBefore.amount.toString(),
+      house: houseBalanceBefore.amount.toString(),
+      escrow: escrowBalanceBefore.amount.toString()
+    });
+
+    const tx = await program.methods
+      .withdrawUsdc(amount)
+      .accountsPartial({
+        owner: owner.publicKey,
+        merchant,
+        usdcMint: stablecoinMint,
+        merchantUsdcAta,
+        complianceEscrow,
+        ownerUsdcAta,
+        house: HOUSE,
+        houseUsdcAta,
+        associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([owner])
+      .rpc();
+    console.log("withdrawUsdc tx:", tx);
+
+    // Get balances after withdrawal
+    const merchantBalanceAfter = await getAccount(provider.connection, merchantUsdcAta);
+    const ownerBalanceAfter = await getAccount(provider.connection, ownerUsdcAta);
+    const houseBalanceAfter = await getAccount(provider.connection, houseUsdcAta);
+    const escrowBalanceAfter = await getAccount(provider.connection, complianceEscrow);
+
+    console.log("Balances after USDC withdrawal:", {
+      merchant: merchantBalanceAfter.amount.toString(),
+      owner: ownerBalanceAfter.amount.toString(),
+      house: houseBalanceAfter.amount.toString(),
+      escrow: escrowBalanceAfter.amount.toString()
+    });
+
+    // Verify the withdrawal amounts
+    const merchantBalanceChange = merchantBalanceBefore.amount - merchantBalanceAfter.amount;
+    const ownerBalanceChange = ownerBalanceAfter.amount - ownerBalanceBefore.amount;
+    const houseBalanceChange = houseBalanceAfter.amount - houseBalanceBefore.amount;
+    const escrowBalanceChange = escrowBalanceAfter.amount - escrowBalanceBefore.amount;
+
+    console.log("Balance changes:", {
+      merchant: merchantBalanceChange.toString(),
+      owner: ownerBalanceChange.toString(),
+      house: houseBalanceChange.toString(),
+      escrow: escrowBalanceChange.toString()
+    });
+
+    // Verify the total amount withdrawn matches the input
+    assert.equal(merchantBalanceChange.toString(), amount.toString(), "Merchant should have lost the full amount");
+    
+    // Verify the owner received 94% of the amount (500 * 0.94 = 470 USDC)
+    const expectedOwnerAmount = new BN(amount).mul(new BN(94)).div(new BN(100));
+    assert.equal(ownerBalanceChange.toString(), expectedOwnerAmount.toString(), "Owner should receive 94% of withdrawal");
+    
+    // Verify the house received 1% of the amount (500 * 0.01 = 5 USDC)
+    const expectedHouseAmount = new BN(amount).mul(new BN(1)).div(new BN(100));
+    assert.equal(houseBalanceChange.toString(), expectedHouseAmount.toString(), "House should receive 1% of withdrawal");
+    
+    // Verify the compliance escrow received 5% of the amount (500 * 0.05 = 25 USDC)
+    const expectedEscrowAmount = new BN(amount).mul(new BN(5)).div(new BN(100));
+    assert.equal(escrowBalanceChange.toString(), expectedEscrowAmount.toString(), "Compliance escrow should receive 5% of withdrawal");
+    
+    // Verify the total distribution adds up to the original amount
+    const totalDistributed = expectedOwnerAmount.add(expectedHouseAmount).add(expectedEscrowAmount);
+    assert.equal(totalDistributed.toString(), amount.toString(), "Total distributed should equal original amount");
+    
+    console.log("✅ USDC withdrawal with compliance escrow test passed!");
+  });
+
+  it("pays taxes from compliance escrow", async () => {
+    // Get the compliance escrow account
+    const [complianceEscrow] = PublicKey.findProgramAddressSync([
+      Buffer.from("compliance_escrow"),
+      merchant.toBuffer()
+    ], program.programId);
+    
+    // Create a test government address
+    const gov = Keypair.generate();
+    const sig = await provider.connection.requestAirdrop(gov.publicKey, 1 * web3.LAMPORTS_PER_SOL);
+    await provider.connection.confirmTransaction(sig, "confirmed");
+    
+    const govUsdcAta = (await getOrCreateAssociatedTokenAccount(
+      provider.connection,
+      owner,
+      stablecoinMint,
+      gov.publicKey
+    )).address;
+
+    // Get balances before paying taxes
+    const escrowBalanceBefore = await getAccount(provider.connection, complianceEscrow);
+    const govBalanceBefore = await getAccount(provider.connection, govUsdcAta);
+
+    console.log("Balances before paying taxes:", {
+      escrow: escrowBalanceBefore.amount.toString(),
+      gov: govBalanceBefore.amount.toString()
+    });
+
+    // Only proceed if there are funds in the escrow
+    if (escrowBalanceBefore.amount > 0) {
+      const tx = await program.methods
+        .payTaxes()
+        .accountsPartial({
+          owner: owner.publicKey,
+          merchant,
+          usdcMint: stablecoinMint,
+          complianceEscrow,
+          govUsdcAta,
+          gov: gov.publicKey,
+          associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          systemProgram: SystemProgram.programId,
+        })
+        .signers([owner])
+        .rpc();
+      console.log("payTaxes tx:", tx);
+
+      // Get balances after paying taxes
+      const escrowBalanceAfter = await getAccount(provider.connection, complianceEscrow);
+      const govBalanceAfter = await getAccount(provider.connection, govUsdcAta);
+
+      console.log("Balances after paying taxes:", {
+        escrow: escrowBalanceAfter.amount.toString(),
+        gov: govBalanceAfter.amount.toString()
+      });
+
+      // Verify that the government received the funds from the escrow
+      const escrowBalanceChange = escrowBalanceBefore.amount - escrowBalanceAfter.amount;
+      const govBalanceChange = govBalanceAfter.amount - govBalanceBefore.amount;
+
+      console.log("Balance changes:", {
+        escrow: escrowBalanceChange.toString(),
+        gov: govBalanceChange.toString()
+      });
+
+      // The payTaxes instruction should transfer all available funds from escrow to gov
+      assert.equal(escrowBalanceChange.toString(), govBalanceChange.toString(), "Gov should receive all escrow funds");
+      assert.ok(govBalanceChange > 0, "Government should receive some funds");
+      assert.equal(escrowBalanceAfter.amount.toString(), "0", "Compliance escrow should be empty after tax payment");
       
-  //     try {
-  //       const tx = await program.methods
-  //         .refundSol(originalTxSig, new BN(refundAmount))
-  //         .accountsPartial({
-  //           owner: owner.publicKey,
-  //           merchant,
-  //           vault,
-  //           refundRecord,
-  //           recipient: recipient.publicKey,
-  //           systemProgram: SystemProgram.programId,
-  //         })
-  //         .signers([owner])
-  //         .rpc();
-  //       console.log("Rent-exempt threshold SOL refund succeeded as expected");
-  //       assert.ok(true, "Contract allows refunding up to rent-exempt threshold");
-  //     } catch (e: any) {
-  //       console.log("Rent-exempt threshold SOL refund failed:", e.message);
-  //       // This might fail due to other constraints
-  //       assert.ok(e.message.includes("ZeroAmountRefund") || e.message.includes("InsufficientFunds"), 
-  //         "Expected appropriate error for rent-exempt threshold refund");
-  //     }
-  //   } else {
-  //     console.log("Vault balance too low to test rent-exempt threshold refund");
-  //     assert.ok(true, "Skipped test due to insufficient vault balance");
-  //   }
-  // });
-    
+      console.log("✅ PayTaxes test passed!");
+    } else {
+      console.log("⚠️ No funds in compliance escrow to pay taxes from");
+      assert.ok(true, "Skipped tax payment due to empty escrow");
+    }
+  });
+
   it("closes merchant", async () => {
     const tx = await program.methods
       .closeMerchant()

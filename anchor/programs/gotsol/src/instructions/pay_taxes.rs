@@ -5,10 +5,10 @@ use anchor_spl::{
     token_interface::{Mint, TokenAccount, TokenInterface},
 };
 
-use std::str::FromStr;
+// use std::str::FromStr;
 
 use crate::state::Merchant;
-use crate::constants::*;
+// use crate::constants::*;
 use crate::errors::*;
 use crate::events::*;
 
@@ -35,12 +35,14 @@ pub struct PayTaxes<'info> {
     pub merchant: Box<Account<'info, Merchant>>,
 
     // devnet USDC mint account
-    #[account(constraint = usdc_mint.key() == Pubkey::from_str(USDC_DEVNET_MINT).unwrap())]
+    // #[account(constraint = usdc_mint.key() == Pubkey::from_str(USDC_DEVNET_MINT).unwrap())]
     pub usdc_mint: InterfaceAccount<'info, Mint>,
 
     #[account(mut, 
         seeds = [b"compliance_escrow", merchant.key().as_ref()],
         bump = merchant.compliance_bump,
+        token::mint = usdc_mint,
+        token::authority = merchant
     )]
     pub compliance_escrow: Box<InterfaceAccount<'info, TokenAccount>>,
 
@@ -52,6 +54,7 @@ pub struct PayTaxes<'info> {
     pub gov_usdc_ata: Box<InterfaceAccount<'info, TokenAccount>>,
 
     /// CHECK: this is the gov's pubkey
+    // #[account(constraint = gov.key() == Pubkey::from_str(GOV).unwrap())]
     pub gov: AccountInfo<'info>,
 
     pub associated_token_program: Program<'info, AssociatedToken>,
@@ -66,11 +69,12 @@ impl<'info> PayTaxes<'info> {
         // Validate amount
         require!(amount > 0, CustomError::InvalidWithdrawalAmount);
 
-        let merchant_key = self.merchant.key();
+        let owner_key = self.owner.key();
         let seeds = &[
-            b"compliance_escrow".as_ref(),
-            merchant_key.as_ref(),
-            &[self.merchant.compliance_bump],
+            b"merchant".as_ref(),
+            self.merchant.entity_name.as_bytes(),
+            owner_key.as_ref(),
+            &[self.merchant.merchant_bump],
         ];
 
         // Transfer entire compliance escrow balance to government

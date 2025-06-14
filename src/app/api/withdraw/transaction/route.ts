@@ -411,8 +411,38 @@ export async function POST(request: NextRequest) {
         
         transaction.add(withdrawInstruction);
         console.log('Added withdraw_sol instruction');
+      } else if (tokenUpper === 'USDC') {
+        // For USDC withdrawals, use withdraw_usdc instruction (includes compliance escrow)
+        const [complianceEscrowPda] = PublicKey.findProgramAddressSync(
+          [
+            Buffer.from('compliance_escrow'),
+            merchantPubkey.toBuffer()
+          ],
+          program.programId
+        );
+
+        const withdrawInstruction = await program.methods
+          .withdrawUsdc(new anchor.BN(amountLamports))
+          .accounts({
+            ...(usingServerFeePayer && { feePayer }),
+            owner: ownerPubkey,
+            merchant: merchantPubkey,
+            usdcMint: tokenMint!,
+            merchantUsdcAta: merchantTokenAta!,
+            complianceEscrow: complianceEscrowPda,
+            ownerUsdcAta: ownerTokenAta!,
+            house: HOUSE,
+            houseUsdcAta: houseTokenAta!,
+            tokenProgram: TOKEN_PROGRAM_ID,
+            associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+            systemProgram: SystemProgram.programId,
+          })
+          .instruction();
+        
+        transaction.add(withdrawInstruction);
+        console.log('Added withdraw_usdc instruction');
       } else {
-        // For SPL token withdrawals
+        // For other SPL token withdrawals
         const withdrawInstruction = await program.methods
           .withdrawSpl(new anchor.BN(amountLamports))
           .accounts({
@@ -466,6 +496,10 @@ export async function POST(request: NextRequest) {
       ? `Withdraw ${amount} SOL from merchant account`
       : `Withdraw $${amount} ${tokenUpper} from merchant account`;
     
+    if (tokenUpper === 'USDC') {
+      message += ` (5% set aside for compliance payments)`;
+    }
+    
     if (usingServerFeePayer) {
       const services = [];
       if (!isSOLWithdrawal && !ownerAtaExists) {
@@ -499,7 +533,8 @@ export async function POST(request: NextRequest) {
       transactionSize: `${serializedTransaction.length} bytes`,
       feePaidBy: usingServerFeePayer ? 'Server' : 'Owner',
       merchantFeeEligible: isFeeEligible,
-      tokenType: isSOLWithdrawal ? 'SOL' : tokenUpper
+      tokenType: isSOLWithdrawal ? 'SOL' : tokenUpper,
+      complianceFeature: tokenUpper === 'USDC' ? '5% compliance escrow' : 'Standard withdrawal'
     });
 
     return NextResponse.json(response, { 

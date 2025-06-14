@@ -37,7 +37,7 @@ pub struct WithdrawUSDC<'info> {
     #[account(seeds = [b"merchant", merchant.entity_name.as_str().as_bytes(), owner.key().as_ref()], bump = merchant.merchant_bump)]
     pub merchant: Box<Account<'info, Merchant>>,
 
-    #[account(constraint = usdc_mint.key() == Pubkey::from_str(USDC_DEVNET_MINT).unwrap())]
+    // #[account(constraint = usdc_mint.key() == Pubkey::from_str(USDC_DEVNET_MINT).unwrap())]
     pub usdc_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(mut,

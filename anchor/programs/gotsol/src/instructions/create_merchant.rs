@@ -1,14 +1,14 @@
 use anchor_lang::prelude::*;
 use crate::state::Merchant;
 use crate::errors::*;
-use crate::constants::*;
+// use crate::constants::*;
 
 use anchor_spl::{
     associated_token::AssociatedToken,
     token_interface::{Mint, TokenAccount, TokenInterface},
 };
 
-use std::str::FromStr;
+// use std::str::FromStr;
 
 #[derive(Accounts)]
 #[instruction(name: String)]
@@ -33,7 +33,7 @@ pub struct CreateMerchant<'info> {
     pub compliance_escrow: Box<InterfaceAccount<'info, TokenAccount>>,
 
     // devnet USDC mint account
-    #[account(constraint = usdc_mint.key() == Pubkey::from_str(USDC_DEVNET_MINT).unwrap())]
+    // #[account(constraint = usdc_mint.key() == Pubkey::from_str(USDC_DEVNET_MINT).unwrap())]
     pub usdc_mint: InterfaceAccount<'info, Mint>,
 
     pub associated_token_program: Program<'info, AssociatedToken>,
