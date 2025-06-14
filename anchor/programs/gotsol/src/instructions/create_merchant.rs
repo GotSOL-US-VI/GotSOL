@@ -1,11 +1,14 @@
 use anchor_lang::prelude::*;
 use crate::state::Merchant;
 use crate::errors::*;
+use crate::constants::*;
 
 use anchor_spl::{
     associated_token::AssociatedToken,
-    token_interface::TokenInterface,
+    token_interface::{Mint, TokenAccount, TokenInterface},
 };
+
+use std::str::FromStr;
 
 #[derive(Accounts)]
 #[instruction(name: String)]
@@ -18,6 +21,20 @@ pub struct CreateMerchant<'info> {
 
     #[account(mut, seeds = [b"vault", merchant.key().as_ref()], bump)]
     pub vault: SystemAccount<'info>,
+
+    #[account(
+        init,
+        payer = owner,
+        seeds = [b"compliance_escrow", merchant.key().as_ref()],
+        bump,
+        token::mint = usdc_mint,
+        token::authority = merchant
+    )]
+    pub compliance_escrow: Box<InterfaceAccount<'info, TokenAccount>>,
+
+    // devnet USDC mint account
+    #[account(constraint = usdc_mint.key() == Pubkey::from_str(USDC_DEVNET_MINT).unwrap())]
+    pub usdc_mint: InterfaceAccount<'info, Mint>,
 
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub token_program: Interface<'info, TokenInterface>,
@@ -36,6 +53,7 @@ impl<'info> CreateMerchant<'info> {
             fee_eligible: false,
             merchant_bump: bumps.merchant,
             vault_bump: bumps.vault,
+            compliance_bump: bumps.compliance_escrow
         });
         Ok(())
     }

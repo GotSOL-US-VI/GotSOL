@@ -31,8 +31,7 @@ pub struct WithdrawSol<'info> {
     #[account(mut, 
         seeds = [b"vault", merchant.key().as_ref()], 
         bump = merchant.vault_bump,
-        constraint = vault.lamports() >= amount @ CustomError::InsufficientFunds,
-        constraint = vault.lamports().checked_sub(amount).unwrap() >= Rent::get()?.minimum_balance(0) @ CustomError::InsufficientRentBalance)]
+        constraint = vault.lamports() >= amount @ CustomError::InsufficientFunds)]
     pub vault: SystemAccount<'info>,
 
     /// CHECK: This is the HOUSE Squads multi-sig

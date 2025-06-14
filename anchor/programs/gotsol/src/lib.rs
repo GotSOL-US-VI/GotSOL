@@ -74,4 +74,14 @@ pub mod gotsol {
         ctx.accounts.close_refund()?;
         Ok(())
     }
+
+    pub fn withdraw_usdc(ctx: Context<WithdrawUSDC>, amount: u64) -> Result<()> {
+        ctx.accounts.withdraw(amount)?;
+        Ok(())
+    }
+
+    pub fn pay_taxes(ctx: Context<PayTaxes>) -> Result<()> {
+        ctx.accounts.pay_taxes()?;
+        Ok(())
+    }
 }

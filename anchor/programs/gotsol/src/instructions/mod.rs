@@ -6,6 +6,8 @@ pub mod refund_sol;
 pub mod set_merchant_status;
 pub mod close_merchant;
 pub mod close_refund;
+pub mod withdraw_usdc;
+pub mod pay_taxes;
 
 pub use create_merchant::*;
 pub use withdraw_spl::*;
@@ -15,4 +17,5 @@ pub use refund_sol::*;
 pub use set_merchant_status::*;
 pub use close_merchant::*;
 pub use close_refund::*;
-
+pub use withdraw_usdc::*;
+pub use pay_taxes::*;

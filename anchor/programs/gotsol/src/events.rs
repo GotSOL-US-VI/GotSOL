@@ -27,3 +27,11 @@ pub struct WithdrawSolProcessed {
     pub owner_amount: u64,
     pub house_amount: u64,
 }
+
+#[event]
+pub struct TaxesPaid {
+    pub amount: u64,
+    pub merchant: Pubkey,
+    pub gov: Pubkey,
+    pub mint: Pubkey,
+}
